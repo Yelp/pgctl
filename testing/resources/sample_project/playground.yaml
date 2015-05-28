@@ -1,0 +1,10 @@
+-   alias:
+    -   default: dev
+    -   dev: [
+        service_1,
+        serivce_2
+    ]
+    -   test: [
+        service_1,
+        serivce_2
+    ]
