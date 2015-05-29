@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint:disable=redefined-outer-name,unused-argument
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
@@ -11,6 +12,8 @@ import pytest
 
 from yelp_playground.main import get_playground_file
 from yelp_playground.main import main
+
+TOP = os.environ['TOP']
 
 
 @contextlib.contextmanager
@@ -25,8 +28,9 @@ def cwd(path):
 
 @pytest.yield_fixture
 def in_sample_service_dir(tmpdir):
+    template_dir = os.path.join(TOP, 'testing/resources/sample_project')
     project_dir = tmpdir.join('sample_project')
-    shutil.copytree('testing/resources/sample_project', project_dir.strpath)
+    shutil.copytree(template_dir, project_dir.strpath)
 
     with cwd(project_dir.strpath):
         yield project_dir

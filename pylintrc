@@ -1,19 +1,37 @@
 [MESSAGES CONTROL]
-disable=missing-docstring,abstract-method,redefined-builtin,invalid-name,no-value-for-parameter,redefined-outer-name,no-member,bad-open-mode,unused-argument
+disable=
+    locally-disabled,
+    missing-docstring,
+    fixme,
+    star-args,
 
 [REPORTS]
 output-format=colorized
 reports=no
 
 [BASIC]
+good-names=fd
+
+#const-rgx=(([A-Za-z_][A-Za-z0-9_]*)|(__.*__))$
 const-rgx=(([A-Za-z_][A-Za-z0-9_]*)|(__.*__))$
+
+#function-rgx=[a-z_][a-z0-9_]{2,30}$
+function-rgx=[a-z_][a-z0-9_]{2,60}$
+
+#method-rgx=[a-z_][a-z0-9_]{2,30}$
+method-rgx=(%(function-rgx)s|%(const-rgx)s)
+
+#variable-rgx=[a-z_][a-z0-9_]{2,30}$
+variable-rgx=[a-z_][a-z0-9_]{0,30}$
 
 [FORMAT]
 max-line-length=131
 
 [TYPECHECK]
-ignored-classes=pytest
+ignored-classes=pytest,LocalPath
 
 [DESIGN]
 min-public-methods=0
 max-args=6
+
+# vim:ft=dosini:

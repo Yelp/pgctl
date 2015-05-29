@@ -1,0 +1,18 @@
+#!/bin/bash
+set -ex
+export SITEPACKAGES=${SITEPACKAGES:-.}
+export TOP=$(dirname $(readlink -f $0))
+
+PROJECT=yelp_playground
+tests=$TOP/tests
+src=$SITEPACKAGES/$PROJECT
+
+coverage erase
+py.test \
+    --cov $tests --cov $src \
+    --cov-config=$TOP/.coveragerc --cov-report='' \
+    "$@" $tests $src
+coverage combine
+coverage report --rcfile=$TOP/.coveragerc --fail-under 94  # FIXME: should be 100
+
+pre-commit run --all-files

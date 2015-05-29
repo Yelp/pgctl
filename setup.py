@@ -12,7 +12,6 @@ setup(
     version='0.0.1',
     platforms='linux',
     classifiers=[
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
     ],
 
@@ -20,6 +19,7 @@ setup(
     install_requires=[
         'argparse',
     ],
+    # FIXME: all tests still pass if you break this.
     entry_points={
         'console_scripts': [
             'pg = yelp_playground.main:main.py',
