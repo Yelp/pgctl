@@ -3,7 +3,7 @@ set -ex
 export SITEPACKAGES=${SITEPACKAGES:-.}
 export TOP=$(dirname $(readlink -f $0))
 
-PROJECT=yelp_playground
+PROJECT=pgctl
 tests=$TOP/tests
 src=$SITEPACKAGES/$PROJECT
 

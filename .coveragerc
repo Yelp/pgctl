@@ -1,7 +1,7 @@
 [run]
 branch = True
 source =
-    yelp_playground
+    pgctl
     ./tests
 
 [report]

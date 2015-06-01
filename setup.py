@@ -7,7 +7,7 @@ from setuptools import setup
 
 
 setup(
-    name=str('yelp_playground'),
+    name=str('pgctl'),
     description='Tool to setup a yelp playground',
     version='0.0.1',
     platforms='linux',
@@ -22,7 +22,7 @@ setup(
     # FIXME: all tests still pass if you break this.
     entry_points={
         'console_scripts': [
-            'pg = yelp_playground.main:main.py',
+            'pg = pgctl.main:main.py',
         ],
     },
 )

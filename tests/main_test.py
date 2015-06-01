@@ -10,8 +10,8 @@ import shutil
 
 import pytest
 
-from yelp_playground.main import get_playground_file
-from yelp_playground.main import main
+from pgctl.main import get_playground_file
+from pgctl.main import main
 
 TOP = os.environ['TOP']
 

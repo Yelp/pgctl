@@ -15,7 +15,7 @@
 .pydevproject
 .ropeproject
 .toxv
-venv-yelp_playground
+venv-pgctl
 \#*\#
 /.venv.touch
 /bower_components
