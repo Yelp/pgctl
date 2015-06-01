@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name=str('pgctl'),
-    description='Tool to setup a yelp playground',
+    description='A tool to configure and manage developer playgrounds.',
     version='0.0.1',
     platforms='linux',
     classifiers=[
