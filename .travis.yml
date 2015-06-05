@@ -1,6 +1,6 @@
 language: python
 env:
-    - TOXENV=test
+    - TOXENV=python
 python:
     # in order of most-valuable tests first
     - "2.7"
