@@ -11,7 +11,7 @@ def get_playground_file(parser, playground_dir):
     playground_file = os.path.join(playground_dir, 'playground.yaml')
 
     if not os.path.exists(playground_file):
-        parser.error("%s does not exist" % playground_file)
+        parser.error('%s does not exist' % playground_file)
     else:
         return playground_file
 
