@@ -9,7 +9,9 @@ matrix:
     # notify a failed build as soon as anything fails
     fast_finish: true
 
-install: pip install -r requirements.d/travis.txt
+install:
+    - pip install --upgrade pip
+    - pip install -r requirements.d/travis.txt
 script: tox
 after_success:
     - find -name '.coverage*' | xargs mv -t .
