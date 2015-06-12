@@ -1,4 +1,5 @@
 #!/not/executable/bash
-export TOP=$(dirname $(readlink -f $_))
+# TODO: make aactivator cd to the top directory before sourcing
+# TODO: use venv-update to make this much more lightweight
 make venv
-source venv-pgctl/bin/activate
+source .tox/pgctl/bin/activate

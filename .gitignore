@@ -15,7 +15,6 @@
 .pydevproject
 .ropeproject
 .toxv
-venv-pgctl
 \#*\#
 /.venv.touch
 /bower_components
