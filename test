@@ -1,7 +1,10 @@
 #!/bin/bash
-set -ex
-export TOP=$(dirname $(readlink -f $0))
+set -eu
 
+fail() { echo '[31;1mFAIL[m'; }
+trap fail ERR
+
+TOP=$(dirname $(readlink -f $0))
 PROJECT=pgctl
 src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
 
