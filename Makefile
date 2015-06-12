@@ -23,6 +23,10 @@ test: .tox/test.rebuild
 	$(eval REBUILD_FLAG := --recreate)
 	touch $@
 
+.PHONY: docs
+docs:
+	tox -e docs
+
 .PHONY: clean
 clean:
 	find -name '*.pyc' | xargs -r rm
