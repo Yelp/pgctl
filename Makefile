@@ -21,6 +21,7 @@ test: .tox/test.rebuild
 
 %.rebuild: setup.py requirements.d/*.txt Makefile tox.ini
 	$(eval REBUILD_FLAG := --recreate)
+	mkdir -p $(shell dirname $@)
 	touch $@
 
 .PHONY: docs

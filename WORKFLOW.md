@@ -13,4 +13,4 @@ Filter which tests to run:
     * py.test tests -k "test and stop"
 
 Run a particular test:
-    * py.test tests/main_test.py::test_stop 
+    * py.test tests/main_test.py::test_stop

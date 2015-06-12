@@ -4,6 +4,7 @@ disable=
     missing-docstring,
     fixme,
     star-args,
+    redefined-builtin,
 
 [REPORTS]
 output-format=colorized
