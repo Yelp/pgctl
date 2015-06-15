@@ -10,8 +10,8 @@ import shutil
 
 import pytest
 
-from pgctl.main import get_playground_file
-from pgctl.main import main
+from pgctl.cli import get_playground_file
+from pgctl.cli import main
 
 TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

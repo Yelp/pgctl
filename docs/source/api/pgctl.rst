@@ -4,10 +4,10 @@ pgctl package
 Submodules
 ----------
 
-pgctl.main module
+pgctl.cli module
 -----------------
 
-.. automodule:: pgctl.main
+.. automodule:: pgctl.cli
     :members:
     :undoc-members:
     :show-inheritance:
