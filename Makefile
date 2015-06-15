@@ -25,8 +25,8 @@ test: .tox/test.rebuild
 	touch $@
 
 .PHONY: docs
-docs:
-	tox -e docs
+docs: .tox/docs.rebuild
+	tox $(REBUILD_FLAG) -e docs
 
 .PHONY: clean
 clean:
