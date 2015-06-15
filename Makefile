@@ -1,32 +1,25 @@
-REBUILD_FLAG =
-
 .PHONY: all
 all: venv test
 
 .PHONY: venv
-venv:  .tox/venv
-.tox/venv: .tox/venv.rebuild
+venv:  .tox/pgctl .tox/venv
 	# it's simpler to not try to make tox do this.
-	mkdir -p .tox
-	rm -rf .tox/pgctl
-	virtualenv .tox/pgctl --python=python2.7
-	.tox/pgctl/bin/pip install --upgrade pip
+	virtualenv --python=python2.7 .tox/pgctl
 	.tox/pgctl/bin/pip install --upgrade -r requirements.d/dev.txt
 	ln -sf pgctl .tox/venv
 
 .PHONY: tests test
 tests: test
-test: .tox/test.rebuild
-	tox $(REBUILD_FLAG) -- "$(ARGS)"
-
-%.rebuild: setup.py requirements.d/*.txt Makefile tox.ini
-	$(eval REBUILD_FLAG := --recreate)
-	mkdir -p $(shell dirname $@)
-	touch $@
+test: .tox/test
+	tox -- "$(ARGS)"
 
 .PHONY: docs
-docs: .tox/docs.rebuild
-	tox $(REBUILD_FLAG) -e docs
+docs: .tox/docs
+	tox -e docs
+
+# start the tox from scratch if any of these files change
+.tox/%: setup.py requirements.d/*.txt Makefile tox.ini
+	rm -rf .tox/$*
 
 .PHONY: clean
 clean:

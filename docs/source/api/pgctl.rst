@@ -5,7 +5,7 @@ Submodules
 ----------
 
 pgctl.cli module
------------------
+----------------
 
 .. automodule:: pgctl.cli
     :members:
