@@ -29,7 +29,26 @@ independantly restartable and debuggable.
 ``pgctl`` aims to solve this problem in a unified, language-agnostic
 framework (although the tool happens to be written in Python).
 
-.. TODO-DOC: tiny demo
+
+As a simple example, let's say that we want a `date` service in our playground,
+that ensures our `now.date` file always has the current date. 
+
+::
+
+   $ cat playground/date/run
+   date > now.date
+
+   $ pgctl-2015 start
+   $ pgctl-2015 status
+   date -- up (0 seconds)
+
+   $ cat now.date
+   Fri Jun 26 15:21:26 PDT 2015
+
+   $ pgctl-2015 stop
+   $ pgctl-2015 status
+   date -- down (0 seconds)
+
 
 Feature Support
 ---------------
