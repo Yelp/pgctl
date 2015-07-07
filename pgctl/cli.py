@@ -16,25 +16,25 @@ def get_playground_file(parser, playground_dir):
         return playground_file
 
 
-def start(playground_config_path):
-    print('Starting:', playground_config_path)
+class PgCtlApp(object):
+    def __init__(self, playground_config_path):
+        self.playground_config_path = playground_config_path
 
+    def start(self):
+        print('Starting:', self)
 
-def stop(playground_config_path):
-    print('Stopping:', playground_config_path)
+    def stop(self):
+        print('Stopping:', self)
 
+    def status(self):
+        print('Status:', self)
 
-def status(playground_config_path):
-    print('Status:', playground_config_path)
+    def restart(self):
+        self.stop()
+        self.start()
 
-
-def restart(playground_config_path):
-    stop(playground_config_path)
-    start(playground_config_path)
-
-
-def debug(playground_config_path):
-    print('Starting Debug:', playground_config_path)
+    def debug(self):
+        print('Debugging:', self)
 
 
 def _add_common(parser):
@@ -61,26 +61,17 @@ def main(argv=None):
         _add_common(p)
 
     args = parser.parse_args(argv)
+    app = PgCtlApp(args.playground_config_path)
 
     if args.command == 'start':
-        start(
-            args.playground_config_path
-        )
+        app.start()
     elif args.command == 'stop':
-        stop(
-            args.playground_config_path
-        )
+        app.stop()
     elif args.command == 'status':
-        status(
-            args.playground_config_path
-        )
+        app.status()
     elif args.command == 'restart':
-        restart(
-            args.playground_config_path
-        )
+        app.restart()
     elif args.command == 'debug':
-        debug(
-            args.playground_config_path
-        )
+        app.debug()
     else:
         raise NotImplementedError
