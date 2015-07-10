@@ -1,18 +1,29 @@
 .PHONY: all
-all: venv test
+all: devenv test
 
-.PHONY: venv
-venv:  .tox/venv
-.tox/venv: .tox/pgctl 
+.PHONY: devenv
+devenv:  .tox/devenv
+.tox/devenv: .tox/pgctl 
 	# it's simpler to not try to make tox do this.
 	virtualenv --python=python2.7 .tox/pgctl
 	.tox/pgctl/bin/pip install --upgrade -r requirements.d/dev.txt
-	ln -sf pgctl .tox/venv
+	ln -sf pgctl .tox/devenv
 
 .PHONY: tests test
 tests: test
 test: .tox/test
-	tox -- "$(ARGS)"
+	tox -e test -- "$(ARGS)"
+
+.PHONY: integration unit
+integration:
+	$(eval ARGS := -k integration)
+unit:
+	$(eval ARGS := -k unit)
+
+.PHONY: coverage-server
+coverage-server:
+	mkdir -p coverage-html
+	cd coverage-html && python -m SimpleHTTPServer 0
 
 .PHONY: docs
 docs: .tox/docs
@@ -28,3 +39,13 @@ clean:
 	find -name '__pycache__' | xargs -r rm -r
 	rm -rf .tox
 	rm -rf docs/build
+
+
+
+# disable default implicit rules
+.SUFFIXES:
+%: %,v
+%: RCS/%,v
+%: RCS/%
+%: s.%
+%: SCCS/s.%

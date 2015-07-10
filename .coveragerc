@@ -1,8 +1,10 @@
 [run]
+parallel = True
 branch = True
 source =
     pgctl
-    ./tests
+    $TOP/tests
+data_file = $TOP/.coverage
 
 [report]
 exclude_lines =
@@ -22,6 +24,6 @@ exclude_lines =
 show_missing = True
 
 [html]
-directory = coverage-html
+directory = $TOP/coverage-html
 
 # vim:ft=dosini

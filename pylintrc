@@ -6,6 +6,7 @@ disable=
     star-args,
     redefined-builtin,
     no-init,
+    redefined-outer-name,
 
 
 [REPORTS]

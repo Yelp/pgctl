@@ -6,6 +6,17 @@ from __future__ import unicode_literals
 import argparse
 import os
 
+from .config import Config
+
+PGCTL_CONFIG = Config(
+    projectname='pgctl',
+    defaults={
+        'pgdir': 'playground',
+        'pgconf': 'conf.yaml',
+        'services': ('default',),
+    },
+)
+
 
 def get_playground_file(parser, playground_dir):
     playground_file = os.path.join(playground_dir, 'playground.yaml')
@@ -16,7 +27,7 @@ def get_playground_file(parser, playground_dir):
         return playground_file
 
 
-class PgCtlApp(object):
+class PgctlApp(object):
     def __init__(self, playground_config_path):
         self.playground_config_path = playground_config_path
 
@@ -46,7 +57,7 @@ def _add_common(parser):
     )
 
 
-def main(argv=None):
+def parser():
     parser = argparse.ArgumentParser()
 
     subparsers = parser.add_subparsers(dest='command')
@@ -60,8 +71,13 @@ def main(argv=None):
     for p in [add_parser, stop_parser, status_parser, restart_parser, debug_parser]:
         _add_common(p)
 
-    args = parser.parse_args(argv)
-    app = PgCtlApp(args.playground_config_path)
+    return parser
+
+
+def main(argv=None):
+    args = parser().parse_args(argv)
+    config = PGCTL_CONFIG.combined()
+    app = PgctlApp(config)
 
     if args.command == 'start':
         app.start()
@@ -75,3 +91,7 @@ def main(argv=None):
         app.debug()
     else:
         raise NotImplementedError
+
+
+if __name__ == '__main__':
+    exit(main())
