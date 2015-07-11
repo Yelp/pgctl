@@ -28,6 +28,7 @@ def get_playground_file(parser, playground_dir):
 
 
 class PgctlApp(object):
+
     def __init__(self, playground_config_path):
         self.playground_config_path = playground_config_path
 

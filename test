@@ -16,14 +16,12 @@ export PROJECT=pgctl
 export src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
 
 # See: http://nedbatchelder.com/code/coverage/subprocess.html
-export COVERAGE_PROCESS_START=$TOP/.coveragerc
-export COVERAGE_OPTIONS='--rcfile=$TOP/.coveragerc'
 python $TOP/tests/testing/install_coverage_pth.py
 
 coverage erase --rcfile=$TOP/.coveragerc
-py.test "$@" $TOP/tests $src
+COVERAGE_PROCESS_START=$TOP/.coveragerc py.test "$@" $TOP/tests $src
 coverage combine --rcfile=$TOP/.coveragerc
 coverage html --rcfile=$TOP/.coveragerc
-coverage report --rcfile=$TOP/.coveragerc --fail-under 94  # FIXME: should be 100
+coverage report --rcfile=$TOP/.coveragerc
 
 pre-commit run --all-files

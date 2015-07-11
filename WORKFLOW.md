@@ -22,7 +22,7 @@ Looking at Coverage
 -------------------
 
 It's good practice to look at unit coverage separately from integration
-coverage. First, 
+coverage. First,
 
     make unit test
 

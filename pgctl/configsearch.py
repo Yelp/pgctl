@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-## stolen from aactivator
+"""stolen from aactivator"""
 # TODO: package and share
 from __future__ import absolute_import
 from __future__ import print_function
@@ -32,8 +32,8 @@ def insecure(path):
     # If the file is owned by me (or root) at this point, we're good.
     elif owner == 0 or owner == os.getuid():
         pass
-    # Otherwise, if it's writable by the owner, no dice.
-    elif mode & stat.S_IWUSR:
+    # Otherwise, no dice.
+    else:
         return path
 
 
@@ -59,7 +59,7 @@ def any_insecure_path_segment(path):
 
 def glob(pattern):
     from glob import glob
-    for fname in glob(pattern):
+    for fname in sorted(glob(pattern)):
         if not any_insecure_path_segment(fname):
             yield fname
 

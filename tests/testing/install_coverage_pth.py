@@ -5,6 +5,9 @@ interpreter in subsequent runs.
 
 See: http://nedbatchelder.com/code/coverage/subprocess.html
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from distutils.sysconfig import get_python_lib  # pylint:disable=import-error
 from os.path import join
 

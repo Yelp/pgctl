@@ -1,4 +1,7 @@
-#pylint:disable=no-self-use
+# pylint:disable=no-self-use
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import pytest
 parametrize = pytest.mark.parametrize
 
@@ -76,6 +79,7 @@ services:
 
 
 class DescribeConfig(object):
+
     @example1.parameters
     def it_can_parse_files(self, tmpdir, format, suffix):
         conffile = tmpdir.join('my.' + suffix)
@@ -110,6 +114,7 @@ class DescribeConfig(object):
 
 
 class DescribeFromEnviron(object):
+
     def it_can_parse(self):
         config = C.Config(projectname='my')
         assert config.from_environ({'MY_X': 2, 'MYY': 3, 'Z': 4}) == {'x': 2}
@@ -127,6 +132,7 @@ class DescribeFromEnviron(object):
 
 
 class DescribeMerge(object):
+
     def it_handles_None_gracefully(self):
         assert C.Config.merge((
             {1: 1, 2: 2},
@@ -136,6 +142,7 @@ class DescribeMerge(object):
 
 
 class DescribeFromPathPrefix(object):
+
     @example1.parameters
     def it_can_find_configs(self, tmpdir, format, suffix):
         conffile = tmpdir.join('prefix-example1.' + suffix)
@@ -163,12 +170,14 @@ class DescribeFromPathPrefix(object):
         conffile = tmpdir.join('example1.conf')
         conffile.write(example1.ini)
         with ShouldRaise(
-            C.AmbiguousConfig(S(r'multiple configurations found at .*/example1\.\*'))
+            C.AmbiguousConfig(
+                S(r'multiple configurations found at .*/example1\.\*'))
         ):
             example1.config.from_path_prefix(tmpdir.strpath + '/')
 
 
 class DescribeFromApp(object):
+
     def it_searches_pwd(self, tmpdir):
         conffile = tmpdir.join('example1.json')
         conffile.write(example1.json)

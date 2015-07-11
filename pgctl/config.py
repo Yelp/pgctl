@@ -11,14 +11,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import logging
 from os import environ
 from os.path import join
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
 try:
     from yaml import load as yaml_load
 except ImportError:
@@ -43,6 +40,7 @@ class Dummy(object):
 
 
 class Config(object):
+
     def __init__(self, projectname, defaults=None):
         self.projectname = projectname
         self.defaults = defaults

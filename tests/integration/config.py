@@ -1,6 +1,9 @@
-#pylint:disable=no-self-use
-from contextlib import contextmanager
+# pylint:disable=no-self-use
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
+from contextlib import contextmanager
 
 import mock
 
@@ -41,6 +44,7 @@ apps_list =
 
 
 class DescribeCombined(object):
+
     def it_combines_all_the_configs(self, tmpdir):
         config = Config('my', {'default': 'default'})
         with setup(tmpdir):
@@ -66,21 +70,21 @@ class DescribeCombined(object):
 
         assert config == '''\
 {
-    "app": "app",
-    "app/a": "app/a",
-    "app/b": "app/b",
+    "app": "app", 
+    "app/a": "app/a", 
+    "app/b": "app/b", 
     "apps": [
-        "1",
-        "2",
+        "1", 
+        "2", 
         "3"
-    ],
-    "environ": "environ",
+    ], 
+    "environ": "environ", 
     "environs": [
-        "1",
-        "2",
+        "1", 
+        "2", 
         "3"
-    ],
-    "etc": "etc",
+    ], 
+    "etc": "etc", 
     "home": "home"
 }
-'''
+'''  # noqa
