@@ -112,7 +112,7 @@ class Config(object):
         pattern = self.projectname + '.*'
         return self.merge(
             self.from_glob(join(parentdir, pattern))
-            for parentdir in search_parent_directories(path)
+            for parentdir in reversed(tuple(search_parent_directories(path)))
         )
 
     @staticmethod

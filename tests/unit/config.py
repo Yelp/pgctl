@@ -2,6 +2,9 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import os
+
+import mock
 import pytest
 parametrize = pytest.mark.parametrize
 
@@ -103,14 +106,15 @@ class DescribeConfig(object):
     def it_can_be_derived_from_homedir(self, tmpdir):
         conffile = tmpdir.join('.example1.ini')
         conffile.write(example1.ini)
-        import mock
-        import os
         with mock.patch.dict(os.environ, {'HOME': tmpdir.strpath}):
             conf = example1.config.from_homedir()
         assert conf == example1.parsed
 
-    def it_wont_find_anything_at_system_level(self):
-        assert example1.config.from_system() is None
+    def it_can_find_system_level_config(self, tmpdir):
+        conffile = tmpdir.join('etc/example1.yaml').ensure()
+        conffile.write(example1.yaml)
+        with mock.patch.dict(os.environ, {'PREFIX': tmpdir.strpath}):
+            assert example1.config.from_system() == example1.parsed
 
 
 class DescribeFromEnviron(object):
@@ -124,8 +128,6 @@ class DescribeFromEnviron(object):
         assert config.from_environ(example1.environ) == example1.parsed
 
     def it_can_parse_the_environ(self):
-        import mock
-        import os
         config = C.Config(projectname='example1')
         with mock.patch.dict(os.environ, example1.environ):
             assert config.from_environ() == example1.parsed
@@ -138,7 +140,8 @@ class DescribeMerge(object):
             {1: 1, 2: 2},
             None,
             {1: 'one', 3: 'three'},
-        )) == {1: 'one', 2: 2, 3: 'three'}
+            {'four': 'four'},
+        )) == {1: 'one', 2: 2, 3: 'three', 'four': 'four'}
 
 
 class DescribeFromPathPrefix(object):
@@ -191,3 +194,10 @@ class DescribeFromApp(object):
         with tmpdir.join('a', 'b', 'c').ensure_dir().as_cwd():
             conf = example1.config.from_app()
         assert conf == example1.parsed
+
+    def it_merges_parent_Configs(self, tmpdir):
+        tmpdir.join('example1.json').write('''{"a":1, "b":2}''')
+        tmpdir.join('a/b/c/example1.yaml').ensure().write('''{"b":3, "c":4}''')
+        with tmpdir.join('a', 'b', 'c').ensure_dir().as_cwd():
+            conf = example1.config.from_app()
+        assert conf == {'a': 1, 'b': 3, 'c': 4}
