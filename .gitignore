@@ -15,7 +15,6 @@
 .pydevproject
 .ropeproject
 .toxv
-venv-pgctl
 \#*\#
 /.venv.touch
 /bower_components
@@ -23,3 +22,4 @@ venv-pgctl
 /dist
 /virtualenv_run
 /coverage-html
+docs/build

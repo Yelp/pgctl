@@ -13,7 +13,7 @@ import pytest
 from pgctl.main import get_playground_file
 from pgctl.main import main
 
-TOP = os.environ['TOP']
+TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @contextlib.contextmanager

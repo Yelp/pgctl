@@ -1,17 +1,18 @@
 #!/bin/bash
-set -ex
-export SITEPACKAGES=${SITEPACKAGES:-.}
-export TOP=$(dirname $(readlink -f $0))
+set -eu
 
+fail() { echo '[31;1mFAIL[m'; }
+trap fail ERR
+
+TOP=$(dirname $(readlink -f $0))
 PROJECT=pgctl
-tests=$TOP/tests
-src=$SITEPACKAGES/$PROJECT
+src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
 
 coverage erase
 py.test \
-    --cov $tests --cov $src \
+    --cov $TOP/tests --cov $src \
     --cov-config=$TOP/.coveragerc --cov-report='' \
-    "$@" $tests $src
+    "$@" $TOP/tests $src
 coverage combine
 coverage report --rcfile=$TOP/.coveragerc --fail-under 94  # FIXME: should be 100
 
