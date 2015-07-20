@@ -23,7 +23,7 @@ def main():
         # FIXME: all tests still pass if you break this.
         entry_points={
             'console_scripts': [
-                'pg = pgctl.main:main.py',
+                'pgctl-2015 = pgctl.cli:main',
             ],
         },
     )
