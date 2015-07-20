@@ -1,1 +1,4 @@
+# packages installed during `make docs`
+
 sphinx
+sphinx_rtd_theme
