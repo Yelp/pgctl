@@ -12,15 +12,13 @@ matrix:
 before_install:
     # the travis default umask is 002, but ubuntu's is 022
     - umask 022
+    - export TOP=$PWD
 install:
     - pip install --upgrade pip
     - pip install -r requirements.d/travis.txt
 script: tox
-after_success:
-    - find -name '.coverage*' | xargs mv -t .
-    - coverage combine
-    - coveralls
-
+after_success: coveralls
+ 
 # sudo:false gives us the new, faster cluster and enables caches for public repos
 # http://docs.travis-ci.com/user/workers/container-based-infrastructure/
 sudo: false
@@ -28,3 +26,4 @@ cache:
     directories:
         - $HOME/.pip
         - $HOME/.pre-commit
+        - $HOME/.cache
