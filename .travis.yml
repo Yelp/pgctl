@@ -9,6 +9,9 @@ matrix:
     # notify a failed build as soon as anything fails
     fast_finish: true
 
+before_install:
+    # the travis default umask is 002, but ubuntu's is 022
+    - umask 022
 install:
     - pip install --upgrade pip
     - pip install -r requirements.d/travis.txt

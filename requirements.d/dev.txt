@@ -1,4 +1,7 @@
+# packages installed during interactive development
+
 -e .
+-r docs.txt
 -r test.txt
 pip
 

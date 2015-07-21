@@ -1,35 +1,51 @@
-REBUILD_FLAG =
-
 .PHONY: all
-all: venv test
+all: devenv test
 
-.PHONY: venv
-venv:  .tox/venv
-.tox/venv: .tox/venv.rebuild
+.PHONY: devenv
+devenv:  .tox/devenv
+.tox/devenv: .tox/pgctl 
 	# it's simpler to not try to make tox do this.
-	mkdir -p .tox
-	rm -rf .tox/pgctl
-	virtualenv .tox/pgctl --python=python2.7
-	.tox/pgctl/bin/pip install --upgrade pip
+	virtualenv --python=python2.7 .tox/pgctl
 	.tox/pgctl/bin/pip install --upgrade -r requirements.d/dev.txt
-	ln -sf pgctl .tox/venv
+	ln -sf pgctl .tox/devenv
 
 .PHONY: tests test
 tests: test
-test: .tox/test.rebuild
-	tox $(REBUILD_FLAG) -- "$(ARGS)"
+test: .tox/test
+	tox -e test -- "$(ARGS)"
 
-%.rebuild: setup.py requirements.d/*.txt Makefile tox.ini
-	$(eval REBUILD_FLAG := --recreate)
-	mkdir -p $(shell dirname $@)
-	touch $@
+.PHONY: integration unit
+integration:
+	$(eval ARGS := -k integration)
+unit:
+	$(eval ARGS := -k unit)
+
+.PHONY: coverage-server
+coverage-server:
+	mkdir -p coverage-html
+	cd coverage-html && python -m SimpleHTTPServer 0
 
 .PHONY: docs
-docs:
+docs: .tox/docs
 	tox -e docs
+
+# start the tox from scratch if any of these files change
+.tox/%: setup.py requirements.d/*.txt Makefile tox.ini
+	rm -rf .tox/$*
 
 .PHONY: clean
 clean:
 	find -name '*.pyc' | xargs -r rm
 	find -name '__pycache__' | xargs -r rm -r
 	rm -rf .tox
+	rm -rf docs/build
+
+
+
+# disable default implicit rules
+.SUFFIXES:
+%: %,v
+%: RCS/%,v
+%: RCS/%
+%: s.%
+%: SCCS/s.%

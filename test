@@ -4,16 +4,24 @@ set -eu
 fail() { echo '[31;1mFAIL[m'; }
 trap fail ERR
 
-TOP=$(dirname $(readlink -f $0))
-PROJECT=pgctl
-src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
+if [ -n "$VIRTUAL_ENV" -a -d $VIRTUAL_ENV/local ]; then
+    # see: https://bitbucket.org/ned/coveragepy/issue/340/keyerror-subpy
+    rm -rf $VIRTUAL_ENV/local
+    find $VIRTUAL_ENV -name '*.pyc' | xargs -r rm
+    find $VIRTUAL_ENV -name '__pycache__' | xargs -r rmdir
+fi
 
-coverage erase
-py.test \
-    --cov $TOP/tests --cov $src \
-    --cov-config=$TOP/.coveragerc --cov-report='' \
-    "$@" $TOP/tests $src
-coverage combine
-coverage report --rcfile=$TOP/.coveragerc --fail-under 94  # FIXME: should be 100
+export TOP=$(dirname $(readlink -f $0))
+export PROJECT=pgctl
+export src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
+
+# See: http://nedbatchelder.com/code/coverage/subprocess.html
+python $TOP/tests/testing/install_coverage_pth.py
+
+coverage erase --rcfile=$TOP/.coveragerc
+COVERAGE_PROCESS_START=$TOP/.coveragerc py.test "$@" $TOP/tests $src
+coverage combine --rcfile=$TOP/.coveragerc
+coverage html --rcfile=$TOP/.coveragerc
+coverage report --rcfile=$TOP/.coveragerc
 
 pre-commit run --all-files
