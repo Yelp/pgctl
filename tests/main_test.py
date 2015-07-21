@@ -63,5 +63,13 @@ def test_restart(in_sample_service_dir):
     main(['restart'])
 
 
+def test_reload(in_sample_service_dir):
+    main(['reload'])
+
+
+def test_log(in_sample_service_dir):
+    main(['log'])
+
+
 def test_debug(in_sample_service_dir):
     main(['debug'])
