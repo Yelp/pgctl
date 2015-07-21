@@ -45,6 +45,12 @@ class PgctlApp(object):
         self.stop()
         self.start()
 
+    def reload(self):
+        print('reload:', self)
+
+    def log(self):
+        print('Log:', self)
+
     def debug(self):
         print('Debugging:', self)
 
@@ -67,9 +73,19 @@ def parser():
     stop_parser = subparsers.add_parser('stop')
     status_parser = subparsers.add_parser('status')
     restart_parser = subparsers.add_parser('restart')
+    reload_parser = subparsers.add_parser('reload')
+    log_parser = subparsers.add_parser('log')
     debug_parser = subparsers.add_parser('debug')
 
-    for p in [add_parser, stop_parser, status_parser, restart_parser, debug_parser]:
+    for p in [
+            add_parser,
+            stop_parser,
+            status_parser,
+            restart_parser,
+            reload_parser,
+            log_parser,
+            debug_parser
+    ]:
         _add_common(p)
 
     return parser
@@ -88,6 +104,10 @@ def main(argv=None):
         app.status()
     elif args.command == 'restart':
         app.restart()
+    elif args.command == 'reload':
+        app.reload()
+    elif args.command == 'log':
+        app.log()
     elif args.command == 'debug':
         app.debug()
     else:
