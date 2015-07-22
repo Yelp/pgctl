@@ -4,114 +4,78 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
-import os
 
 from .config import Config
 
-PGCTL_CONFIG = Config(
-    projectname='pgctl',
-    defaults={
-        'pgdir': 'playground',
-        'pgconf': 'conf.yaml',
-        'services': ('default',),
-    },
-)
-
-
-def get_playground_file(parser, playground_dir):
-    playground_file = os.path.join(playground_dir, 'playground.yaml')
-
-    if not os.path.exists(playground_file):
-        parser.error('%s does not exist' % playground_file)
-    else:
-        return playground_file
+PGCTL_DEFAULTS = {
+    'pgdir': 'playground',
+    'pgconf': 'conf.yaml',
+    'services': ('default',),
+}
 
 
 class PgctlApp(object):
 
-    def __init__(self, playground_config_path):
-        self.playground_config_path = playground_config_path
+    def __init__(self, config):
+        self._config = config
+
+    def __call__(self):
+        command = getattr(self, self._config['command'], None)
+        if command is None:
+            return "No such command: '%s'" % self.config['command']
+        return command()
 
     def start(self):
-        print('Starting:', self)
+        print('Starting:', self._config['services'])
 
     def stop(self):
-        print('Stopping:', self)
+        print('Stopping:', self._config['services'])
 
     def status(self):
-        print('Status:', self)
+        print('Status:', self._config['services'])
 
     def restart(self):
         self.stop()
         self.start()
 
     def reload(self):
-        print('reload:', self)
+        print('reload:', self._config['services'])
 
     def log(self):
-        print('Log:', self)
+        print('Log:', self._config['services'])
 
     def debug(self):
-        print('Debugging:', self)
+        print('Debugging:', self._config['services'])
 
+    def config(self):
+        print(self._config)
 
-def _add_common(parser):
-    parser.add_argument(
-        '--playground-path',
-        default='.',
-        dest='playground_config_path',
-        type=lambda x: get_playground_file(parser, x)
-    )
+    commands = (start, stop, status, restart, reload, log, debug, config)
 
 
 def parser():
+    commands = [command.__name__ for command in PgctlApp.commands]
     parser = argparse.ArgumentParser()
-
-    subparsers = parser.add_subparsers(dest='command')
-
-    add_parser = subparsers.add_parser('start')
-    stop_parser = subparsers.add_parser('stop')
-    status_parser = subparsers.add_parser('status')
-    restart_parser = subparsers.add_parser('restart')
-    reload_parser = subparsers.add_parser('reload')
-    log_parser = subparsers.add_parser('log')
-    debug_parser = subparsers.add_parser('debug')
-
-    for p in [
-            add_parser,
-            stop_parser,
-            status_parser,
-            restart_parser,
-            reload_parser,
-            log_parser,
-            debug_parser
-    ]:
-        _add_common(p)
+    parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
+    parser.add_argument('--pgconf', help='name the playground config file', default=argparse.SUPPRESS)
+    parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
+    parser.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
 
     return parser
 
 
 def main(argv=None):
-    args = parser().parse_args(argv)
-    config = PGCTL_CONFIG.combined()
+    p = parser()
+    args = p.parse_args(argv)
+    config = Config('pgctl')
+
+    print(config.from_app())
+
+    config = config.combined(PGCTL_DEFAULTS, args)
+
     app = PgctlApp(config)
 
-    if args.command == 'start':
-        app.start()
-    elif args.command == 'stop':
-        app.stop()
-    elif args.command == 'status':
-        app.status()
-    elif args.command == 'restart':
-        app.restart()
-    elif args.command == 'reload':
-        app.reload()
-    elif args.command == 'log':
-        app.log()
-    elif args.command == 'debug':
-        app.debug()
-    else:
-        raise NotImplementedError
+    return app()
 
 
 if __name__ == '__main__':
