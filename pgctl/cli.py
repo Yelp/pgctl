@@ -20,9 +20,10 @@ class PgctlApp(object):
         self._config = config
 
     def __call__(self):
-        command = getattr(self, self._config['command'], None)
-        if command is None:
-            return "No such command: '%s'" % self.config['command']
+        # config guarantees this is set
+        command = self._config['command']
+        # argparse guarantees this is an attribute
+        command = getattr(self, command)
         return command()
 
     def start(self):
@@ -48,7 +49,8 @@ class PgctlApp(object):
         print('Debugging:', self._config['services'])
 
     def config(self):
-        print(self._config)
+        import json
+        print(json.dumps(self._config, sort_keys=True, indent=4))
 
     commands = (start, stop, status, restart, reload, log, debug, config)
 
@@ -68,11 +70,7 @@ def main(argv=None):
     p = parser()
     args = p.parse_args(argv)
     config = Config('pgctl')
-
-    print(config.from_app())
-
     config = config.combined(PGCTL_DEFAULTS, args)
-
     app = PgctlApp(config)
 
     return app()

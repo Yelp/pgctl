@@ -8,6 +8,7 @@ import os
 import shutil
 
 import pytest
+from testfixtures import ShouldRaise
 
 from pgctl.cli import main
 
@@ -60,3 +61,12 @@ def test_log(in_sample_service_dir):
 
 def test_debug(in_sample_service_dir):
     main(['debug'])
+
+
+def test_config(in_sample_service_dir):
+    main(['config'])
+
+
+def test_nonsense(in_sample_service_dir):
+    with ShouldRaise(SystemExit(2)):
+        main(['nonsense'])
