@@ -128,8 +128,9 @@ class Config(object):
             result.update(config)
         return result
 
-    def combined(self, args=Dummy()):
+    def combined(self, defaults=(), args=Dummy()):
         return self.merge((
+            defaults,
             self.from_system(),
             self.from_homedir(),
             self.from_environ(),
