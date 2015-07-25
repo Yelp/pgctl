@@ -14,6 +14,26 @@ from testing import run
 from pgctl.cli import svstat
 
 
+class DescribeLoggingExample(object):
+
+    @fixture
+    def service_name(self):
+        yield 'logging'
+
+    def it_logs_a_service(self, in_example_dir):
+        assert not os.path.isfile('playground/printstuff/log/current')
+        check_call(('pgctl-2015', 'start', 'printstuff'))
+        try:
+            assert os.path.isfile('playground/printstuff/log/current')
+            with open('playground/printstuff/log/current', 'r') as f:
+                contents = f.read()
+            lines = contents.splitlines()
+            assert lines[0].split(' ')[1] == 'sweet'
+            assert lines[1].split(' ')[1] == 'sweet_error'
+        finally:
+            check_call(('pgctl-2015', 'stop', 'printstuff'))
+
+
 class DescribeDateExample(object):
 
     @fixture

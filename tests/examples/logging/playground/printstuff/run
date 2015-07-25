@@ -1,0 +1,10 @@
+#!/bin/bash
+exec 2>&1
+
+echo sweet
+>&2 echo sweet_error
+
+while true
+do
+    true;
+done
