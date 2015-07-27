@@ -1,5 +1,5 @@
 -   repo: git://github.com/pre-commit/pre-commit-hooks
-    sha: cf550fcab3f12015f8676b8278b30e1a5bc10e70
+    sha: 516cc9fa72ad09699f2c03ffbd0aa7f60d75b59a
     hooks:
     -   id: autopep8-wrapper
     -   id: check-added-large-files
@@ -19,10 +19,11 @@
     sha: 3d86483455ab5bd06cc1069fdd5ac57be5463f10
     hooks:
     -   id: reorder-python-imports
-        args: [
-            '--add-import', 'from __future__ import absolute_import',
-            '--add-import', 'from __future__ import unicode_literals',
-        ]
+        args:
+        - --add-import
+        - from __future__ import absolute_import
+        - --add-import
+        - from __future__ import unicode_literals
 -   repo: local
     hooks:
     -   id: system
