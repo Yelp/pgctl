@@ -44,6 +44,11 @@ class DescribeTailExample(object):
 
 class DescribeStart(object):
 
+    def it_fails_given_unknown(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'start', 'sad'))
+        p.wait()
+        assert p.returncode == 2
+
     def it_is_idempotent(self, in_example_dir):
         p = Popen(('pgctl-2015', 'start', 'date'))
         p.wait()
