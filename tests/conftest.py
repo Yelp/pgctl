@@ -7,8 +7,9 @@ import contextlib
 import os
 import shutil
 
-import pytest
-TOP = os.path.dirname(os.path.abspath(__file__))
+from pytest import yield_fixture as fixture
+
+TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @contextlib.contextmanager
@@ -21,11 +22,17 @@ def cwd(path):
         os.chdir(pwd)
 
 
-@pytest.yield_fixture
-def in_example_dir(tmpdir):
-    template_dir = os.path.join(TOP, 'examples/sample_project')
-    project_dir = tmpdir.join('sample_project')
-    shutil.copytree(template_dir, project_dir.strpath)
+@fixture
+def in_example_dir(tmpdir, service_name):
+    template_dir = os.path.join(TOP, 'tests/examples', service_name)
+    tmpdir = tmpdir.join(service_name)
+    shutil.copytree(template_dir, tmpdir.strpath)
 
-    with cwd(project_dir.strpath):
-        yield project_dir
+    with tmpdir.as_cwd():
+        yield tmpdir
+
+
+@fixture
+def service_name():
+    # this fixture will be overridden by some tests
+    yield 'date'
