@@ -68,11 +68,21 @@ def svc(*args):
 def svstat(*args):
     # svstat *always* exits with code zero...
     p = Popen(('svstat',) + tuple(args), stdout=PIPE)
-    status, _ = p.communicate()
+    status_group, _ = p.communicate()
 
+    state_group = []
+    #status is listed per line for each argument
+    status_group = status_group.split('\n')[:-1]
+    for status in status_group:
+        state_group.append(get_state(status))
+
+    return state_group
+
+
+def get_state(status):
     _, status = status.split(':', 1)
-    status, _ = status.split(None, 1)
-    return status
+    state, _ = status.split(None, 1)
+    return state
 
 
 class PgctlApp(object):
@@ -93,8 +103,8 @@ class PgctlApp(object):
         with self.pgdir.as_cwd():
             # TODO-TEST: it can {start,stop} multiple services at once
             try:
-                while svstat(self.service) != state:
-                    svc(opt, self.service)
+                while svstat(*self.service) != [state for _ in range(len(self.service))]:
+                    svc(opt, *self.service)
                 print(xed, self.service)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service
@@ -127,7 +137,10 @@ class PgctlApp(object):
 
     @cached_property
     def service(self):
-        return self._config['services'][0]
+        if self._config['services'][0] == 'default':
+            return [item for item in os.listdir(os.getcwd()) if os.path.isdir(item)]
+        else:
+            return self._config['services']
 
     @cached_property
     def pgdir(self):
