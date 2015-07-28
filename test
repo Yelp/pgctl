@@ -30,4 +30,11 @@ combine
 coverage html --rcfile=$TOP/.coveragerc
 coverage report --rcfile=$TOP/.coveragerc
 
-pre-commit run --all-files
+if [ "$TEST_STATUS" == "0" ]; then
+    coverage html --rcfile=$TOP/.coveragerc
+    coverage report --rcfile=$TOP/.coveragerc
+
+    pre-commit run --all-files
+fi
+
+exit $TEST_STATUS
