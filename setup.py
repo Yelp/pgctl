@@ -19,6 +19,8 @@ def main():
         packages=find_packages(exclude=('tests*',)),
         install_requires=[
             'argparse',
+            'cached-property',
+            'six',
         ],
         # FIXME: all tests still pass if you break this.
         entry_points={

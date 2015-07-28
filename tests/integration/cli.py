@@ -2,7 +2,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from subprocess import Popen, PIPE
+from subprocess import PIPE
+from subprocess import Popen
 
 
 class DescribeCli(object):

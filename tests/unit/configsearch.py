@@ -33,7 +33,7 @@ class DescribeAnyInsecurePathSegment(object):
 
     def it_doesnt_allow_directory_writable_by_others(self, testfile):
         parentdir = testfile.join('../..')
-        parentdir.chmod(0o557)
+        parentdir.chmod(0o757)
         assert configsearch.any_insecure_path_segment(testfile.strpath) == parentdir.strpath
 
     def it_doesnt_allow_writable_by_wrong_owner(self, testfile):

@@ -4,14 +4,32 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+from subprocess import Popen
+
+from cached_property import cached_property
+from py._path.local import LocalPath as Path
 
 from .config import Config
+from .flock import flock
+from .flock import Locked
 
 PGCTL_DEFAULTS = {
     'pgdir': 'playground',
     'pgconf': 'conf.yaml',
     'services': ('default',),
 }
+
+
+def idempotent_svscan(pgdir):
+    try:
+        with flock(pgdir):
+            Popen(('svscan', pgdir))
+    except Locked:
+        pass
+
+
+def svc(*args):
+    return Popen(('svc',) + tuple(args)).wait()
 
 
 class PgctlApp(object):
@@ -27,7 +45,10 @@ class PgctlApp(object):
         return command()
 
     def start(self):
-        print('Starting:', self._config['services'])
+        idempotent_svscan(self.pgdir.strpath)
+        with self.pgdir.as_cwd():
+            # TODO-TEST: it can start multiple services at once
+            svc('-u', self._config['services'][0])
 
     def stop(self):
         print('Stopping:', self._config['services'])
@@ -51,6 +72,10 @@ class PgctlApp(object):
     def config(self):
         import json
         print(json.dumps(self._config, sort_keys=True, indent=4))
+
+    @cached_property
+    def pgdir(self):
+        return Path(self._config['pgdir'])
 
     commands = (start, stop, status, restart, reload, log, debug, config)
 

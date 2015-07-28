@@ -21,7 +21,7 @@ def tmpfile(tmpdir):
 def assert_locked(tmpfile):
     with ShouldRaise(Locked(11)):
         with flock(tmpfile):
-            assert False, "this should not work"
+            assert False, 'this should not work'
 
 
 class DescribeFlock(object):
