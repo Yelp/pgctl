@@ -14,6 +14,7 @@ before_install:
     - umask 022
     - export TOP=$PWD
 install:
+    - sudo apt-get install daemontools
     - pip install --upgrade pip
     - pip install -r requirements.d/travis.txt
 script: tox
@@ -21,7 +22,7 @@ after_success: coveralls
  
 # sudo:false gives us the new, faster cluster and enables caches for public repos
 # http://docs.travis-ci.com/user/workers/container-based-infrastructure/
-sudo: false
+sudo: true
 cache:
     directories:
         - $HOME/.pip
