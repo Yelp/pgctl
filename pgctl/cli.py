@@ -53,8 +53,22 @@ class NoSuchService(Exception):
 def svc(*args):
     p = Popen(('svc',) + tuple(args), stdout=PIPE, stderr=PIPE)
     _, stderr = p.communicate()
-    if 'file does not exist' in stderr:
+    if 'unable to chdir' in stderr:
         raise NoSuchService(stderr)
+    return p.returncode
+
+
+def stat(*args):
+    p = Popen(('svstat',) + tuple(args), stdout=PIPE)
+    stdout, _ = p.communicate()
+    return stdout
+
+
+def spin(option, service, check_str):
+    exit_code = 0
+    while check_str not in stat(service):
+        exit_code = svc(option, service)
+    return exit_code
 
 
 class PgctlApp(object):
@@ -72,17 +86,26 @@ class PgctlApp(object):
     def start(self):
         idempotent_svscan(self.pgdir.strpath)
         with self.pgdir.as_cwd():
-            # TODO-TEST: it can start multiple services at once
+            exit_code = 0
             try:
-                return svc('-u', self.service)
+                check_str = '{}: up'.format(self.service)
+                exit_code = exit_code or spin('-u', self.service, check_str)
+                print('Started:', self.service)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service
+            return exit_code
 
     def stop(self):
-        print('Stopping:', self._config['services'])
+        idempotent_svscan(self.pgdir.strpath)
+        with self.pgdir.as_cwd():
+            exit_code = 0
+            check_str = '{}: down'.format(self.service)
+            exit_code = exit_code or spin('-d', self.service, check_str)
+            print('Stopped:', self.service)
+            return exit_code
 
     def status(self):
-        print('Status:', self._config['services'])
+        print('Status:', self.service)
 
     def restart(self):
         self.stop()

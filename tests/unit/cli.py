@@ -5,22 +5,26 @@ from __future__ import unicode_literals
 
 from testfixtures import ShouldRaise
 
+import pgctl.cli
 from pgctl.cli import main
 
 
-def test_start(in_example_dir):
-    assert main(['start']) == "No such playground service: 'default'"
+def test_start(in_example_dir, monkeypatch):
+    monkeypatch.setattr(pgctl.cli, 'spin', lambda *args: 0)
+    assert main(['start']) == 0  # "No such playground service: 'default'"
 
 
-def test_stop(in_example_dir):
-    assert main(['stop']) is None
+def test_stop(in_example_dir, monkeypatch):
+    monkeypatch.setattr(pgctl.cli, 'spin', lambda *args: 0)
+    assert main(['stop']) == 0
 
 
 def test_status(in_example_dir):
     assert main(['status']) is None
 
 
-def test_restart(in_example_dir):
+def test_restart(in_example_dir, monkeypatch):
+    monkeypatch.setattr(pgctl.cli, 'spin', lambda *args: 0)
     assert main(['restart']) is None
 
 
