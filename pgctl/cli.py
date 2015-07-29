@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import os
+import time
 from subprocess import PIPE
 from subprocess import Popen
 
@@ -27,15 +28,22 @@ def close_fds():
     The builtin Popen close_fds doesn't close stdout, stderr,
     but we must in order to daemonize properly.
     """
-    os.closerange(0, 256)
+    os.closerange(0, 3)  # close stdout et al to avoid deadlock when reading from parent
+
+    # run our atexits before exec'ing our new process, to produce proper coverage reports.
+    # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
+    #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
+    import atexit
+    atexit._run_exitfuncs()  # pragma:no cover pylint:disable=protected-access
 
 
 def idempotent_svscan(pgdir):
     try:
         with flock(pgdir):
             Popen(('svscan', pgdir), preexec_fn=close_fds)
+            time.sleep(.1)  # TODO: fixit
     except Locked:
-        pass
+        return
 
 
 class NoSuchService(Exception):

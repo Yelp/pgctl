@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint:disable=redefined-outer-name, unused-argument
+# pylint:disable=redefined-outer-name,unused-argument
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
