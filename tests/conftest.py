@@ -13,7 +13,7 @@ TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @contextlib.contextmanager
-def cwd(path):
+def cwd(path):  # pragma: no cover
     pwd = os.getcwd()
     os.chdir(path)
     try:
