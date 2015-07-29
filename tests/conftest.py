@@ -3,23 +3,12 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import contextlib
 import os
 import shutil
 
 from pytest import yield_fixture as fixture
 
 TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-@contextlib.contextmanager
-def cwd(path):
-    pwd = os.getcwd()
-    os.chdir(path)
-    try:
-        yield
-    finally:
-        os.chdir(pwd)
 
 
 @fixture

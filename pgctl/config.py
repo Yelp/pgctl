@@ -18,7 +18,7 @@ from os.path import join
 
 try:
     from yaml import load as yaml_load
-except ImportError:
+except ImportError:  # pragma: no cover
     def yaml_load(dummy_file):
         pass
 

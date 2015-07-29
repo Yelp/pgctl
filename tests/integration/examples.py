@@ -1,11 +1,14 @@
 # pylint:disable=no-self-use, unused-argument
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
+from subprocess import PIPE
 from subprocess import Popen
 
 from pytest import yield_fixture as fixture
+from testing import run
 
 
 class DescribeDateExample(object):
@@ -43,6 +46,13 @@ class DescribeTailExample(object):
 
 
 class DescribeStart(object):
+
+    def it_fails_given_unknown(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'start', 'unknown'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stdout == ''
+        assert "No such playground service: 'unknown'" in stderr
+        assert p.returncode == 1
 
     def it_is_idempotent(self, in_example_dir):
         p = Popen(('pgctl-2015', 'start', 'date'))
