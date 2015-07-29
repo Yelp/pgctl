@@ -18,7 +18,6 @@ export src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
 # See: http://nedbatchelder.com/code/coverage/subprocess.html
 python $TOP/tests/testing/install_coverage_pth.py
 
-
 # careful not to leave .coverage.$HOST.$RANDOM files laying about on failure.
 combine() { coverage combine --rcfile=$TOP/.coveragerc; }
 trap combine ERR
@@ -30,11 +29,4 @@ combine
 coverage html --rcfile=$TOP/.coveragerc
 coverage report --rcfile=$TOP/.coveragerc
 
-if [ "$TEST_STATUS" == "0" ]; then
-    coverage html --rcfile=$TOP/.coveragerc
-    coverage report --rcfile=$TOP/.coveragerc
-
-    pre-commit run --all-files
-fi
-
-exit $TEST_STATUS
+pre-commit run --all-files

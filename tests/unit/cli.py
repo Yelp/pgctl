@@ -9,35 +9,35 @@ from pgctl.cli import main
 
 
 def test_start(in_example_dir):
-    main(['start'])
+    assert main(['start']) == "No such playground service: 'default'"
 
 
 def test_stop(in_example_dir):
-    main(['stop'])
+    assert main(['stop']) is None
 
 
 def test_status(in_example_dir):
-    main(['status'])
+    assert main(['status']) is None
 
 
 def test_restart(in_example_dir):
-    main(['restart'])
+    assert main(['restart']) is None
 
 
 def test_reload(in_example_dir):
-    main(['reload'])
+    assert main(['reload']) is None
 
 
 def test_log(in_example_dir):
-    main(['log'])
+    assert main(['log']) is None
 
 
 def test_debug(in_example_dir):
-    main(['debug'])
+    assert main(['debug']) is None
 
 
 def test_config(in_example_dir):
-    main(['config'])
+    assert main(['config']) is None
 
 
 def test_nonsense(in_example_dir):
