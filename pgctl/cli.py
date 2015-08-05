@@ -42,7 +42,8 @@ def idempotent_svscan(pgdir):
     try:
         with flock(pgdir):
             Popen(('svscan', pgdir), preexec_fn=close_fds)
-            time.sleep(.1)  # TODO: fixit
+            # TODO: factor out this silly sleep.
+            time.sleep(.1)  # pragma: no branch (see https://bitbucket.org/ned/coveragepy/issues/146)
     except Locked:
         return
 
