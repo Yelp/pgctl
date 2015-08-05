@@ -67,22 +67,43 @@ def svc(*args):
 
 def svstat(*args):
     # svstat *always* exits with code zero...
-    p = Popen(('svstat',) + tuple(args), stdout=PIPE)
+    cmd = ('svstat',) + tuple(args)
+    p = Popen(cmd, stdout=PIPE)
     status_group, _ = p.communicate()
 
     state_group = []
     #status is listed per line for each argument
-    status_group = status_group.split('\n')[:-1]
-    for status in status_group:
+    for status in status_group.splitlines():
         state_group.append(get_state(status))
 
     return state_group
 
 
 def get_state(status):
-    _, status = status.split(':', 1)
-    state, _ = status.split(None, 1)
-    return state
+    r"""
+    Parse a single line of svstat output.
+
+    >>> get_state("date: up (pid 1202562) 1 seconds\n")
+    'up'
+
+    >>> get_state("date: down 0 seconds, normally up, want up")
+    'starting'
+
+    >>> get_state("playground/date: down 0 seconds, normally up")
+    'down'
+
+    >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
+    'stopping'
+    """
+    status = status.rstrip()
+    if status.endswith(' want up'):
+        state = 'starting'
+    elif status.endswith(' want down'):
+        state = 'stopping'
+    else:
+        _, status = status.split(':', 1)
+        state, _ = status.split(None, 1)
+    return str(state)
 
 
 class PgctlApp(object):
@@ -97,14 +118,18 @@ class PgctlApp(object):
         command = getattr(self, command)
         return command()
 
-    def __change_state(self, opt, state, xing, xed):
+    def __change_state(self, opt, expected_state, xing, xed):
         print(xing, self.service)
         idempotent_svscan(self.pgdir.strpath)
         with self.pgdir.as_cwd():
             # TODO-TEST: it can {start,stop} multiple services at once
             try:
-                while svstat(*self.service) != [state for _ in range(len(self.service))]:
+                while True:  # a poor man's do/while
                     svc(opt, *self.service)
+                    if all(state == expected_state for state in svstat(*self.service)):
+                        break
+                    else:
+                        time.sleep(.01)
                 print(xed, self.service)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service
@@ -138,7 +163,11 @@ class PgctlApp(object):
     @cached_property
     def service(self):
         if self._config['services'][0] == 'default':
-            return [item for item in os.listdir(os.getcwd()) if os.path.isdir(item)]
+            return [
+                service.basename
+                for service in self.pgdir.listdir()
+                if service.check(dir=True)
+            ]
         else:
             return self._config['services']
 
