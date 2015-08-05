@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import argparse
 import os
 import time
+from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
 
@@ -41,7 +42,8 @@ def idempotent_svscan(pgdir):
     try:
         with flock(pgdir):
             Popen(('svscan', pgdir), preexec_fn=close_fds)
-            time.sleep(.1)  # TODO: fixit
+            # TODO: factor out this silly sleep.
+            time.sleep(.1)  # pragma: no branch (see https://bitbucket.org/ned/coveragepy/issues/146)
     except Locked:
         return
 
@@ -51,24 +53,26 @@ class NoSuchService(Exception):
 
 
 def svc(*args):
-    p = Popen(('svc',) + tuple(args), stdout=PIPE, stderr=PIPE)
-    _, stderr = p.communicate()
-    if 'unable to chdir' in stderr:
-        raise NoSuchService(stderr)
-    return p.returncode
+    # svc never writes to stdout.
+    cmd = ('svc',) + tuple(args)
+    p = Popen(cmd, stderr=PIPE)
+    _, error = p.communicate()
+    if 'unable to chdir' in error:
+        raise NoSuchService(error)
+    if p.returncode:  # pragma: no cover: there's no known way to hit this.
+        import sys
+        sys.stderr.write(error)
+        raise CalledProcessError(p.returncode, cmd)
 
 
-def stat(*args):
+def svstat(*args):
+    # svstat *always* exits with code zero...
     p = Popen(('svstat',) + tuple(args), stdout=PIPE)
-    stdout, _ = p.communicate()
-    return stdout
+    status, _ = p.communicate()
 
-
-def spin(option, service, check_str):
-    exit_code = 0
-    while check_str not in stat(service):
-        exit_code = svc(option, service)
-    return exit_code
+    _, status = status.split(':', 1)
+    status, _ = status.split(None, 1)
+    return status
 
 
 class PgctlApp(object):
@@ -83,26 +87,23 @@ class PgctlApp(object):
         command = getattr(self, command)
         return command()
 
-    def start(self):
+    def __change_state(self, opt, state, xing, xed):
+        print(xing, self.service)
         idempotent_svscan(self.pgdir.strpath)
         with self.pgdir.as_cwd():
-            exit_code = 0
+            # TODO-TEST: it can {start,stop} multiple services at once
             try:
-                check_str = '{}: up'.format(self.service)
-                exit_code = exit_code or spin('-u', self.service, check_str)
-                print('Started:', self.service)
+                while svstat(self.service) != state:
+                    svc(opt, self.service)
+                print(xed, self.service)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service
-            return exit_code
+
+    def start(self):
+        return self.__change_state('-u', 'up', 'Starting:', 'Started:')
 
     def stop(self):
-        idempotent_svscan(self.pgdir.strpath)
-        with self.pgdir.as_cwd():
-            exit_code = 0
-            check_str = '{}: down'.format(self.service)
-            exit_code = exit_code or spin('-d', self.service, check_str)
-            print('Stopped:', self.service)
-            return exit_code
+        return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def status(self):
         print('Status:', self.service)
