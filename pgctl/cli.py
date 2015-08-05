@@ -87,29 +87,23 @@ class PgctlApp(object):
         command = getattr(self, command)
         return command()
 
-    def start(self):
-        print('Starting:', self.service)
+    def __change_state(self, opt, state, xing, xed):
+        print(xing, self.service)
         idempotent_svscan(self.pgdir.strpath)
         with self.pgdir.as_cwd():
-            # TODO-TEST: it can start multiple services at once
+            # TODO-TEST: it can {start,stop} multiple services at once
             try:
-                while svstat(self.service) != 'up':
-                    svc('-u', self.service)
-                print('Started:', self.service)
+                while svstat(self.service) != state:
+                    svc(opt, self.service)
+                print(xed, self.service)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service
 
+    def start(self):
+        return self.__change_state('-u', 'up', 'Starting:', 'Started:')
+
     def stop(self):
-        print('Stopping:', self.service)
-        idempotent_svscan(self.pgdir.strpath)
-        with self.pgdir.as_cwd():
-            # TODO-TEST: it can stop multiple services at once
-            try:
-                while svstat(self.service) != 'down':
-                    svc('-d', self.service)
-                print('Stopped:', self.service)
-            except NoSuchService:
-                return "No such playground service: '%s'" % self.service
+        return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def status(self):
         print('Status:', self.service)
