@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import argparse
 import os
 import time
+from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
 
@@ -41,7 +42,8 @@ def idempotent_svscan(pgdir):
     try:
         with flock(pgdir):
             Popen(('svscan', pgdir), preexec_fn=close_fds)
-            time.sleep(.1)  # TODO: fixit
+            # TODO: factor out this silly sleep.
+            time.sleep(.1)  # pragma: no branch (see https://bitbucket.org/ned/coveragepy/issues/146)
     except Locked:
         return
 
@@ -51,10 +53,26 @@ class NoSuchService(Exception):
 
 
 def svc(*args):
-    p = Popen(('svc',) + tuple(args), stdout=PIPE, stderr=PIPE)
-    _, stderr = p.communicate()
-    if 'file does not exist' in stderr:
-        raise NoSuchService(stderr)
+    # svc never writes to stdout.
+    cmd = ('svc',) + tuple(args)
+    p = Popen(cmd, stderr=PIPE)
+    _, error = p.communicate()
+    if 'unable to chdir' in error:
+        raise NoSuchService(error)
+    if p.returncode:  # pragma: no cover: there's no known way to hit this.
+        import sys
+        sys.stderr.write(error)
+        raise CalledProcessError(p.returncode, cmd)
+
+
+def svstat(*args):
+    # svstat *always* exits with code zero...
+    p = Popen(('svstat',) + tuple(args), stdout=PIPE)
+    status, _ = p.communicate()
+
+    _, status = status.split(':', 1)
+    status, _ = status.split(None, 1)
+    return status
 
 
 class PgctlApp(object):
@@ -69,20 +87,26 @@ class PgctlApp(object):
         command = getattr(self, command)
         return command()
 
-    def start(self):
+    def __change_state(self, opt, state, xing, xed):
+        print(xing, self.service)
         idempotent_svscan(self.pgdir.strpath)
         with self.pgdir.as_cwd():
-            # TODO-TEST: it can start multiple services at once
+            # TODO-TEST: it can {start,stop} multiple services at once
             try:
-                return svc('-u', self.service)
+                while svstat(self.service) != state:
+                    svc(opt, self.service)
+                print(xed, self.service)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service
 
+    def start(self):
+        return self.__change_state('-u', 'up', 'Starting:', 'Started:')
+
     def stop(self):
-        print('Stopping:', self._config['services'])
+        return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def status(self):
-        print('Status:', self._config['services'])
+        print('Status:', self.service)
 
     def restart(self):
         self.stop()

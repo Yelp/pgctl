@@ -8,20 +8,8 @@ from testfixtures import ShouldRaise
 from pgctl.cli import main
 
 
-def test_start(in_example_dir):
-    assert main(['start']) == "No such playground service: 'default'"
-
-
-def test_stop(in_example_dir):
-    assert main(['stop']) is None
-
-
 def test_status(in_example_dir):
     assert main(['status']) is None
-
-
-def test_restart(in_example_dir):
-    assert main(['restart']) is None
 
 
 def test_reload(in_example_dir):
