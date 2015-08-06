@@ -19,6 +19,7 @@ def main():
         packages=find_packages(exclude=('tests*',)),
         install_requires=[
             'argparse',
+            'frozendict',
             'cached-property',
             'six',
         ],

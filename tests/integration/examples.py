@@ -54,8 +54,8 @@ class DescribeStart(object):
     def it_fails_given_unknown(self, in_example_dir):
         p = Popen(('pgctl-2015', 'start', 'unknown'), stdout=PIPE, stderr=PIPE)
         stdout, stderr = run(p)
-        assert stdout == "Starting: ['unknown']\n"
-        assert "No such playground service: '['unknown']'\n" == stderr
+        assert stdout == "Starting: ('unknown',)\n"
+        assert "No such playground service: 'unknown'\n" == stderr
         assert p.returncode == 1
 
     def it_is_idempotent(self, in_example_dir):
@@ -80,8 +80,8 @@ class DescribeStop(object):
     def it_fails_given_unknown(self, in_example_dir):
         p = Popen(('pgctl-2015', 'stop', 'unknown'), stdout=PIPE, stderr=PIPE)
         stdout, stderr = run(p)
-        assert stdout == "Stopping: ['unknown']\n"
-        assert "No such playground service: '['unknown']'\n" == stderr
+        assert stdout == "Stopping: ('unknown',)\n"
+        assert "No such playground service: 'unknown'\n" == stderr
         assert p.returncode == 1
 
 
@@ -91,10 +91,10 @@ class DescribeRestart(object):
         p = Popen(('pgctl-2015', 'restart', 'date'), stdout=PIPE, stderr=PIPE)
         stdout, stderr = run(p)
         assert stdout == '''\
-Stopping: ['date']
-Stopped: ['date']
-Starting: ['date']
-Started: ['date']
+Stopping: ('date',)
+Stopped: ('date',)
+Starting: ('date',)
+Started: ('date',)
 '''
         assert '' == stderr
         assert p.returncode == 0
