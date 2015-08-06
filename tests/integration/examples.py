@@ -140,8 +140,7 @@ class DescribeStartMultipleServices(object):
 
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
-            assert svstat('playground/date') == ['down']
-            assert svstat('playground/tail') == ['down']
+            assert svstat('playground/date', 'playground/tail') == ['down', 'down']
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
@@ -149,5 +148,7 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start'))
 
+            assert svstat('playground/date') == ['up']
+            assert svstat('playground/tail') == ['up']
         finally:
             check_call(('pgctl-2015', 'stop'))

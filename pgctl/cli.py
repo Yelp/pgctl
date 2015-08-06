@@ -60,14 +60,12 @@ def svstat(*args):
     # svstat *always* exits with code zero...
     cmd = ('svstat',) + tuple(args)
     p = Popen(cmd, stdout=PIPE)
-    status_group, _ = p.communicate()
+    status, _ = p.communicate()
 
-    state_group = []
     #status is listed per line for each argument
-    for status in status_group.splitlines():
-        state_group.append(get_state(status))
-
-    return state_group
+    return [
+        get_state(status_line) for status_line in status.splitlines()
+    ]
 
 
 def get_state(status):
