@@ -11,8 +11,8 @@ devenv:  .tox/devenv
 
 .PHONY: tests test
 tests: test
-test: .tox/python
-	tox -e python -- $(ARGS)
+test: .tox/py27
+	tox -e py27 -- $(ARGS)
 
 .PHONY: integration unit
 integration:
