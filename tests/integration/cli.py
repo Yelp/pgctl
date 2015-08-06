@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 from subprocess import PIPE
 from subprocess import Popen
 
-from pgctl.cli import idempotent_svscan
+from pgctl.cli import PgctlApp
 
 
 class DescribeCli(object):
@@ -38,7 +38,7 @@ class DescribeCli(object):
 class DescribeSvscan(object):
 
     def it_does_not_deadlock(self, in_example_dir):
-        idempotent_svscan('bad_service')
+        PgctlApp().idempotent_svscan()
         p = Popen(('date'), stdout=PIPE, stderr=PIPE)
         _, _ = p.communicate()
         assert True

@@ -1,0 +1,3 @@
+#!/bin/bash
+cd ../..
+exec tail -f input > output

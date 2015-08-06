@@ -11,17 +11,18 @@ from subprocess import PIPE
 from subprocess import Popen
 
 from cached_property import cached_property
+from frozendict import frozendict
 from py._path.local import LocalPath as Path
 
 from .config import Config
 from .flock import flock
 from .flock import Locked
 
-PGCTL_DEFAULTS = {
+PGCTL_DEFAULTS = frozendict({
     'pgdir': 'playground',
     'pgconf': 'conf.yaml',
     'services': ('default',),
-}
+})
 
 
 def close_fds():
@@ -36,16 +37,6 @@ def close_fds():
     #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
     import atexit
     atexit._run_exitfuncs()  # pragma:no cover pylint:disable=protected-access
-
-
-def idempotent_svscan(pgdir):
-    try:
-        with flock(pgdir):
-            Popen(('svscan', pgdir), preexec_fn=close_fds)
-            # TODO: factor out this silly sleep.
-            time.sleep(.1)  # pragma: no branch (see https://bitbucket.org/ned/coveragepy/issues/146)
-    except Locked:
-        return
 
 
 class NoSuchService(Exception):
@@ -67,17 +58,46 @@ def svc(*args):
 
 def svstat(*args):
     # svstat *always* exits with code zero...
-    p = Popen(('svstat',) + tuple(args), stdout=PIPE)
+    cmd = ('svstat',) + tuple(args)
+    p = Popen(cmd, stdout=PIPE)
     status, _ = p.communicate()
 
-    _, status = status.split(':', 1)
-    status, _ = status.split(None, 1)
-    return status
+    #status is listed per line for each argument
+    return [
+        get_state(status_line) for status_line in status.splitlines()
+    ]
+
+
+def get_state(status):
+    r"""
+    Parse a single line of svstat output.
+
+    >>> get_state("date: up (pid 1202562) 1 seconds\n")
+    'up'
+
+    >>> get_state("date: down 0 seconds, normally up, want up")
+    'starting'
+
+    >>> get_state("playground/date: down 0 seconds, normally up")
+    'down'
+
+    >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
+    'stopping'
+    """
+    status = status.rstrip()
+    if status.endswith(' want up'):
+        state = 'starting'
+    elif status.endswith(' want down'):
+        state = 'stopping'
+    else:
+        _, status = status.split(':', 1)
+        state, _ = status.split(None, 1)
+    return str(state)
 
 
 class PgctlApp(object):
 
-    def __init__(self, config):
+    def __init__(self, config=PGCTL_DEFAULTS):
         self._config = config
 
     def __call__(self):
@@ -87,17 +107,21 @@ class PgctlApp(object):
         command = getattr(self, command)
         return command()
 
-    def __change_state(self, opt, state, xing, xed):
-        print(xing, self.service)
-        idempotent_svscan(self.pgdir.strpath)
+    def __change_state(self, opt, expected_state, xing, xed):
+        print(xing, self.services)
+        self.idempotent_svscan()
         with self.pgdir.as_cwd():
             # TODO-TEST: it can {start,stop} multiple services at once
             try:
-                while svstat(self.service) != state:
-                    svc(opt, self.service)
-                print(xed, self.service)
+                while True:  # a poor man's do/while
+                    svc(opt, *self.services)
+                    if all(state == expected_state for state in svstat(*self.services)):
+                        break
+                    else:
+                        time.sleep(.01)
+                print(xed, self.services)
             except NoSuchService:
-                return "No such playground service: '%s'" % self.service
+                return "No such playground service: '%s'" % self.services
 
     def start(self):
         return self.__change_state('-u', 'up', 'Starting:', 'Started:')
@@ -106,7 +130,7 @@ class PgctlApp(object):
         return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def status(self):
-        print('Status:', self.service)
+        print('Status:', self.services)
 
     def restart(self):
         self.stop()
@@ -126,8 +150,40 @@ class PgctlApp(object):
         print(json.dumps(self._config, sort_keys=True, indent=4))
 
     @cached_property
-    def service(self):
-        return self._config['services'][0]
+    def services(self):
+        return sum(
+            tuple([
+                self.aliases.get(service, (service,))
+                for service in self._config['services']
+            ]),
+            (),
+        )
+
+    @cached_property
+    def all_services(self):
+        return tuple([
+            service.basename
+            for service in self.pgdir.listdir()
+            if service.check(dir=True)
+        ])
+
+    @cached_property
+    def aliases(self):
+        ## for now don't worry about config file
+        return frozendict({
+            'default': self.all_services
+        })
+
+    def idempotent_svscan(self):
+        # ensure all services start in a down state
+        for service in self.all_services:
+            self.pgdir.join(service).ensure('down')
+        try:
+            with flock(self.pgdir.strpath):
+                # (see https://bitbucket.org/ned/coveragepy/issues/146)
+                Popen(('svscan', self.pgdir.strpath), preexec_fn=close_fds)  # pragma: no branch
+        except Locked:
+            return
 
     @cached_property
     def pgdir(self):

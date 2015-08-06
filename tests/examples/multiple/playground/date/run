@@ -1,0 +1,3 @@
+#!/bin/bash
+cd ../..
+exec date > now.date
