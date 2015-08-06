@@ -12,7 +12,7 @@ devenv:  .tox/devenv
 .PHONY: tests test
 tests: test
 test: .tox/python
-	tox -e python -- "$(ARGS)"
+	tox -e python -- $(ARGS)
 
 .PHONY: integration unit
 integration:

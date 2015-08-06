@@ -7,8 +7,8 @@ trap fail ERR
 if [ -n "$VIRTUAL_ENV" -a -d $VIRTUAL_ENV/local ]; then
     # see: https://bitbucket.org/ned/coveragepy/issue/340/keyerror-subpy
     rm -rf $VIRTUAL_ENV/local
-    find $VIRTUAL_ENV -name '*.pyc' | xargs -r rm
-    find $VIRTUAL_ENV -name '__pycache__' | xargs -r rmdir
+    find $VIRTUAL_ENV -name '*.pyc' -print0 | xargs -0r rm
+    find $VIRTUAL_ENV -name '__pycache__' -print0 | xargs -0r rmdir
 fi
 
 export TOP=$(dirname $(readlink -f $0))
