@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import uuid
 from subprocess import PIPE
 from subprocess import Popen
 from sys import executable
@@ -14,19 +15,20 @@ class DescribeCombined(object):
         b = a.ensure_dir('b')
         c = b.ensure_dir('c')
 
-        tmpdir.ensure('my.ini')
-        a.ensure('my.yaml')
-        b.ensure('my.conf')
-        c.ensure('my.a')
-        c.ensure('my.b').chmod(0o666)
+        prefix = str(uuid.uuid4())
+        tmpdir.ensure(prefix + '.ini')
+        a.ensure(prefix + '.yaml')
+        b.ensure(prefix + '.conf')
+        c.ensure(prefix + '.a')
+        c.ensure(prefix + '.b').chmod(0o666)
 
         with c.as_cwd():
-            config = Popen((executable, '-m', 'pgctl.configsearch', 'my*'), stdout=PIPE)
+            config = Popen((executable, '-m', 'pgctl.configsearch', prefix + '*'), stdout=PIPE)
             config, _ = config.communicate()
 
         assert config == '''\
-{tmpdir}/a/b/c/my.a
-{tmpdir}/a/b/my.conf
-{tmpdir}/a/my.yaml
-{tmpdir}/my.ini
-'''.format(tmpdir=tmpdir.strpath)
+{tmpdir}/a/b/c/{prefix}.a
+{tmpdir}/a/b/{prefix}.conf
+{tmpdir}/a/{prefix}.yaml
+{tmpdir}/{prefix}.ini
+'''.format(tmpdir=tmpdir.strpath, prefix=prefix)

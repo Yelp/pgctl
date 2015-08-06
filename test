@@ -13,10 +13,10 @@ fi
 
 export TOP=$(dirname $(readlink -f $0))
 export PROJECT=pgctl
-export src=$(dirname $(python -c "import $PROJECT as p; print p.__file__"))
+export src=$(dirname $($TOP/tests/testing/get_modulefile.py $PROJECT))
 
 # See: http://nedbatchelder.com/code/coverage/subprocess.html
-python $TOP/tests/testing/install_coverage_pth.py
+$TOP/tests/testing/install_coverage_pth.py
 
 # careful not to leave .coverage.$HOST.$RANDOM files laying about on failure.
 combine() { coverage combine --rcfile=$TOP/.coveragerc; }

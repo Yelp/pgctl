@@ -35,8 +35,8 @@ docs: .tox/docs
 
 .PHONY: clean
 clean:
-	find -name '*.pyc' | xargs -r rm
-	find -name '__pycache__' | xargs -r rm -r
+	find -name '*.pyc' -print0 | xargs -0r rm
+	find -name '__pycache__' -print0 | xargs -0r rm -r
 	rm -rf .tox
 	rm -rf docs/build
 
