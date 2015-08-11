@@ -23,7 +23,7 @@ Introduction
 Often projects have various processes that should run in the backround
 (*services*) during development. These services amount to a miniature staging
 environment that we term *playground*. Each service must have a well-defined
-state at all times (it should be starting, up or down), and should be
+state at all times (it should be starting, up, stopping, or down), and should be
 independantly restartable and debuggable.
 
 ``pgctl`` aims to solve this problem in a unified, language-agnostic
@@ -70,6 +70,7 @@ instructions for getting the most out of Requests.
    :maxdepth: 2
 
    user/install
+   user/usage
    user/quickstart
    user/advanced
 
