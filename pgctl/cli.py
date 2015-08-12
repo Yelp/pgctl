@@ -4,7 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
-import os
 import time
 from subprocess import CalledProcessError
 from subprocess import PIPE
@@ -15,28 +14,12 @@ from frozendict import frozendict
 from py._path.local import LocalPath as Path
 
 from .config import Config
-from .flock import flock
-from .flock import Locked
 
 PGCTL_DEFAULTS = frozendict({
     'pgdir': 'playground',
     'pgconf': 'conf.yaml',
     'services': ('default',),
 })
-
-
-def close_fds():
-    """
-    The builtin Popen close_fds doesn't close stdout, stderr,
-    but we must in order to daemonize properly.
-    """
-    os.closerange(0, 3)  # close stdout et al to avoid deadlock when reading from parent
-
-    # run our atexits before exec'ing our new process, to produce proper coverage reports.
-    # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
-    #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
-    import atexit
-    atexit._run_exitfuncs()  # pragma:no cover pylint:disable=protected-access
 
 
 class NoSuchService(Exception):
@@ -109,7 +92,7 @@ class PgctlApp(object):
 
     def __change_state(self, opt, expected_state, xing, xed):
         print(xing, self.services)
-        self.idempotent_svscan()
+        self.idempotent_supervise()
         with self.pgdir.as_cwd():
             # TODO-TEST: it can {start,stop} multiple services at once
             try:
@@ -174,16 +157,22 @@ class PgctlApp(object):
             'default': self.all_services
         })
 
-    def idempotent_svscan(self):
-        # ensure all services start in a down state
+    def idempotent_supervise(self):
+        """
+        ensure all services are supervised starting in a down state
+        by contract, running this method repeatedly should have no negative consequences
+        """
         for service in self.all_services:
-            self.pgdir.join(service).ensure('down')
-        try:
-            with flock(self.pgdir.strpath):
-                # (see https://bitbucket.org/ned/coveragepy/issues/146)
-                Popen(('svscan', self.pgdir.strpath), preexec_fn=close_fds)  # pragma: no branch
-        except Locked:
-            return
+            service = self.pgdir.join(service)
+            service.ensure('down')
+            # supervise is already essentially idempotent
+            # it dies with code 111 and a single line printed to stderr
+            Popen(
+                ('supervise', service.strpath),
+                stdout=service.join('stdout.log').open('w'),
+                stderr=service.join('stderr.log').open('w'),
+            )  # pragma: no branch
+            # (see https://bitbucket.org/ned/coveragepy/issues/146)
 
     @cached_property
     def pgdir(self):

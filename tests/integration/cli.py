@@ -5,8 +5,6 @@ from __future__ import unicode_literals
 from subprocess import PIPE
 from subprocess import Popen
 
-from pgctl.cli import PgctlApp
-
 
 class DescribeCli(object):
 
@@ -33,12 +31,3 @@ class DescribeCli(object):
         p = Popen(('pgctl-2015',))
         assert p.wait() == 2  # too few arguments
         # TODO assert the output
-
-
-class DescribeSvscan(object):
-
-    def it_does_not_deadlock(self, in_example_dir):
-        PgctlApp().idempotent_svscan()
-        p = Popen(('date'), stdout=PIPE, stderr=PIPE)
-        _, _ = p.communicate()
-        assert True
