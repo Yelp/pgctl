@@ -152,3 +152,15 @@ class DescribeStartMultipleServices(object):
             assert svstat('playground/tail') == ['up']
         finally:
             check_call(('pgctl-2015', 'stop'))
+
+
+class DescribeStatus(object):
+
+    def it_displays_the_status_of_a_service(self):
+        """Expect service, status, and PID"""
+
+    def it_displays_the_status_of_multiple_services(self):
+        """Expect multiple services with status and PID"""
+
+    def it_displays_the_status_of_all_services(self):
+        """Expect all services to provide status when no service is specified"""
