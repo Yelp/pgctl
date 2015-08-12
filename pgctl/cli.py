@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import time
+from collections import namedtuple
 from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
@@ -26,7 +27,7 @@ class NoSuchService(Exception):
     pass
 
 
-def svc(*args):
+def svc(args):
     """Wrapper for daemontools svc cmd"""
     # svc never writes to stdout.
     cmd = ('svc',) + tuple(args)
@@ -40,7 +41,25 @@ def svc(*args):
         raise CalledProcessError(process.returncode, cmd)
 
 
-def svstat(*args):
+class SvStat(
+        namedtuple('SvStat', ['name', 'state', 'pid', 'seconds', 'process'])
+):
+    UNSUPERVISED = 'could not get status, supervisor is down'
+    INVALID = 'no such service'
+
+    def __repr__(self):
+        format = '{0.name}: {0.state}'
+        if self.pid is not None:
+            format += ' (pid {0.pid})'
+        if self.seconds is not None:
+            format += ' {0.seconds} seconds'
+        if self.process is not None:
+            format += ', {0.process}'
+
+        return format.format(self)
+
+
+def svstat_string(args):
     """Wrapper for daemon tools svstat cmd"""
     # svstat *always* exits with code zero...
     cmd = ('svstat',) + tuple(args)
@@ -48,36 +67,83 @@ def svstat(*args):
     status, _ = process.communicate()
 
     #status is listed per line for each argument
-    return [
-        get_state(status_line) for status_line in status.splitlines()
-    ]
+    return status
 
 
-def get_state(status):
-    r"""
-    Parse a single line of svstat output.
+def svstat_parse(svstat_string):
+    r'''
+    >>> svstat_parse('date: up (pid 1202562) 100 seconds\n')
+    date: up (pid 1202562) 100 seconds
 
-    >>> get_state("date: up (pid 1202562) 1 seconds\n")
-    'up'
+    >>> svstat_parse('date: down 4334 seconds, normally up, want up')
+    date: down 4334 seconds, starting
 
-    >>> get_state("date: down 0 seconds, normally up, want up")
-    'starting'
+    >>> svstat_parse('playground/date: down 0 seconds, normally up')
+    playground/date: down 0 seconds
 
-    >>> get_state("playground/date: down 0 seconds, normally up")
-    'down'
+    >>> svstat_parse('date: up (pid 1202) 1 seconds, want down\n')
+    date: up (pid 1202) 1 seconds, stopping
 
-    >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
-    'stopping'
-    """
-    status = status.rstrip()
-    if status.endswith(' want up'):
-        state = 'starting'
-    elif status.endswith(' want down'):
-        state = 'stopping'
+    >>> svstat_parse('playground/date: down 0 seconds, normally up')
+    playground/date: down 0 seconds
+
+    >>> svstat_parse('playground/date: down 0 seconds, normally up')
+    playground/date: down 0 seconds
+
+    >>> svstat_parse('docs: unable to open supervise/ok: file does not exist')
+    docs: could not get status, supervisor is down
+
+    >>> svstat_parse('d: unable to chdir: file does not exist')
+    d: no such service
+
+    >>> svstat_parse('d: totally unpredictable error message')
+    d: totally unpredictable error message
+    '''
+    status = svstat_string.strip()
+    name, status = status.split(': ', 1)
+
+    first, rest = status.split(None, 1)
+    if first in ('up', 'down'):
+        state, status = first, rest
+    elif status.startswith('unable to chdir:'):
+        state, status = SvStat.INVALID, rest
+    elif status.startswith('unable to open supervise/ok:'):
+        state, status = SvStat.UNSUPERVISED, rest
+    else:  # unknown errors
+        state, status = status, ''
+
+    if status.startswith('(pid '):
+        pid, status = status[4:].rsplit(') ', 1)
+        pid = int(pid)
     else:
-        _, status = status.split(':', 1)
-        state, _ = status.split(None, 1)
-    return str(state)
+        pid = None
+
+    try:
+        seconds, status = status.split(' seconds', 1)
+        seconds = int(seconds)
+    except ValueError:
+        seconds = None
+
+    if status.endswith(', want up'):
+        process = 'starting'
+    elif status.endswith(', want down'):
+        process = 'stopping'
+    else:
+        process = None
+
+    return SvStat(name, state, pid, seconds, process)
+
+
+def svstat(*services):
+    from collections import OrderedDict
+    stats = (
+        svstat_parse(line)
+        for line in svstat_string(services).splitlines()
+    )
+    return OrderedDict(
+        (stat.name, stat)
+        for stat in stats
+    )
 
 
 class PgctlApp(object):
@@ -99,8 +165,12 @@ class PgctlApp(object):
         with self.pgdir.as_cwd():
             try:
                 while True:  # a poor man's do/while
-                    svc(opt, *self.services)
-                    if all(state == expected_state for state in svstat(*self.services)):
+                    svc((opt,) + self.services)
+                    status_list = svstat(*self.services).values()
+                    if all(
+                            status.process is None and status.state == expected_state
+                            for status in status_list
+                    ):
                         break
                     else:
                         time.sleep(.01)
@@ -118,7 +188,9 @@ class PgctlApp(object):
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
-        print('Status:', self.services)
+        with self.pgdir.as_cwd():
+            for status in svstat(*self.services).values():
+                print(status)
 
     def restart(self):
         """Starts and stops a service"""
@@ -156,11 +228,11 @@ class PgctlApp(object):
     @cached_property
     def all_services(self):
         """Return a tuple of all of the services"""
-        return tuple([
+        return tuple(sorted(
             service.basename
             for service in self.pgdir.listdir()
             if service.check(dir=True)
-        ])
+        ))
 
     @cached_property
     def aliases(self):
