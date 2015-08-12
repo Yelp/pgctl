@@ -14,13 +14,64 @@ from testing import run
 from pgctl.cli import svstat
 
 
-class DescribeLoggingExample(object):
+class DescribePgctlLog(object):
 
     @fixture
     def service_name(self):
-        yield 'logging'
+        yield 'output'
 
-    def it_logs_a_service(self, in_example_dir):
+    def it_is_empty_before_anything_starts(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stdout == stderr == ''
+
+    def it_shows_stdout_and_stderr(self, in_example_dir):
+        check_call(('pgctl-2015', 'start', 'printstuff'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stdout == 'sweet\nsweet_error\n'
+        assert stderr == ''
+        assert p.returncode == 0
+
+        check_call(('pgctl-2015', 'restart', 'printstuff'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stdout == 'sweet\nsweet_error\nsweet\nsweet_error\n'
+        assert stderr == ''
+        assert p.returncode == 0
+
+    def it_is_line_buffered(self):
+        """
+        Show that the interleaved output of ohhi becomes separated per-line.
+        """
+
+    def it_distinguishes_multiple_services(self):
+        """
+        There's some indication of which output came from which services.
+        A (colorized?) [servicename] prefix.
+        """
+
+    def it_distinguishes_stderr(self):
+        """
+        There's some indication of which output came from stderr.
+        Red, with [error] prefix.
+        """
+
+    def it_has_timestamps(self):
+        """By default each line of output is timestamped"""
+
+    def it_can_disable_timestamps(self):
+        """Users should be able to turn off the timestamp output. V3"""
+
+    def it_can_disable_coloring(self):
+        """Users should be able to turn off colored output. V3"""
+
+    def it_automatically_disables_color_for_nontty(self):
+        """When printing to a file, don't produce color, by default. V3"""
+
+    def it_has_this_implementation(self, in_example_dir):
         assert not os.path.isfile('playground/printstuff/log/current')
         check_call(('pgctl-2015', 'start', 'printstuff'))
         try:

@@ -1,2 +1,0 @@
-#!/bin/bash
-exec multilog t s10485760 n5 .
