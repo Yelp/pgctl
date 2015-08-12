@@ -3,45 +3,40 @@
 Installation
 ============
 
-This part of the documentation covers the installation of Requests.
+This part of the documentation covers the installation of pgctl.
 The first step to using any software package is getting it properly installed.
 
 
 Distribute & Pip
 ----------------
 
-Installing Requests is simple with `pip <https://pip.pypa.io>`_, just run
+Installing pgctl is simple with `pip <https://pip.pypa.io>`_, just run
 this in your terminal::
 
-    $ pip install requests
-
-or, with `easy_install <http://pypi.python.org/pypi/setuptools>`_::
-
-    $ easy_install requests
-
-But, you really `shouldn't do that <https://stackoverflow.com/questions/3220404/why-use-pip-over-easy-install>`_.
+    $ pip install pgctl
 
 
 Get the Code
 ------------
 
-Requests is actively developed on GitHub, where the code is
-`always available <https://github.com/kennethreitz/requests>`_.
+pgctl is actively developed on GitHub, where the code is
+`always available <https://github.com/Yelp/pgctl>`_.
 
 You can either clone the public repository::
 
-    $ git clone git://github.com/kennethreitz/requests.git
+    $ git clone git://github.com/yelp/pgctl.git
 
-Download the `tarball <https://github.com/kennethreitz/requests/tarball/master>`_::
+Download the `tarball <https://github.com/yelp/pgctl/tarball/master>`_::
 
-    $ curl -OL https://github.com/kennethreitz/requests/tarball/master
+    $ curl -OL https://github.com/yelp/pgctl/tarball/master
 
-Or, download the `zipball <https://github.com/kennethreitz/requests/zipball/master>`_::
+Or, download the `zipball <https://github.com/yelp/pgctl/zipball/master>`_::
 
-    $ curl -OL https://github.com/kennethreitz/requests/zipball/master
-
+    $ curl -OL https://github.com/yelp/pgctl/zipball/master
 
 Once you have a copy of the source, you can embed it in your Python package,
 or install it into your site-packages easily::
 
     $ python setup.py install
+
+

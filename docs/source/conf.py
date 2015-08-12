@@ -60,7 +60,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'pgctl'
-copyright = u'2015, Buck Evan'
+copyright = u'2015 Yelp Inc.'
 author = u'Buck Evan'
 
 # The version info for the project you're documenting, acts as replacement for
