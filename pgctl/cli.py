@@ -27,23 +27,25 @@ class NoSuchService(Exception):
 
 
 def svc(*args):
+    """Wrapper for daemontools svc cmd"""
     # svc never writes to stdout.
     cmd = ('svc',) + tuple(args)
-    p = Popen(cmd, stderr=PIPE)
-    _, error = p.communicate()
+    process = Popen(cmd, stderr=PIPE)
+    _, error = process.communicate()
     if 'unable to chdir' in error:
         raise NoSuchService(error)
-    if p.returncode:  # pragma: no cover: there's no known way to hit this.
+    if process.returncode:  # pragma: no cover: there's no known way to hit this.
         import sys
         sys.stderr.write(error)
-        raise CalledProcessError(p.returncode, cmd)
+        raise CalledProcessError(process.returncode, cmd)
 
 
 def svstat(*args):
+    """Wrapper for daemon tools svstat cmd"""
     # svstat *always* exits with code zero...
     cmd = ('svstat',) + tuple(args)
-    p = Popen(cmd, stdout=PIPE)
-    status, _ = p.communicate()
+    process = Popen(cmd, stdout=PIPE)
+    status, _ = process.communicate()
 
     #status is listed per line for each argument
     return [
@@ -91,10 +93,10 @@ class PgctlApp(object):
         return command()
 
     def __change_state(self, opt, expected_state, xing, xed):
+        """Changes the state of a supervised service using the svc command"""
         print(xing, self.services)
         self.idempotent_supervise()
         with self.pgdir.as_cwd():
-            # TODO-TEST: it can {start,stop} multiple services at once
             try:
                 while True:  # a poor man's do/while
                     svc(opt, *self.services)
@@ -107,33 +109,42 @@ class PgctlApp(object):
                 return "No such playground service: '%s'" % self.services
 
     def start(self):
+        """Idempotent start of a service or group of services"""
         return self.__change_state('-u', 'up', 'Starting:', 'Started:')
 
     def stop(self):
+        """Idempotent stop of a service or group of services"""
         return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def status(self):
+        """Retrieve the PID and state of a service or group of services"""
         print('Status:', self.services)
 
     def restart(self):
+        """Starts and stops a service"""
         self.stop()
         self.start()
 
     def reload(self):
+        """Reloads the configuration for a service"""
         print('reload:', self._config['services'])
 
     def log(self):
+        """Displays the stdout and stderr for a service or group of services"""
         print('Log:', self._config['services'])
 
     def debug(self):
+        """Allow a service to run in the foreground"""
         print('Debugging:', self._config['services'])
 
     def config(self):
+        """Print the configuration for a service"""
         import json
         print(json.dumps(self._config, sort_keys=True, indent=4))
 
     @cached_property
     def services(self):
+        """Return a tuple of the services for a command"""
         return sum(
             tuple([
                 self.aliases.get(service, (service,))
@@ -144,6 +155,7 @@ class PgctlApp(object):
 
     @cached_property
     def all_services(self):
+        """Return a tuple of all of the services"""
         return tuple([
             service.basename
             for service in self.pgdir.listdir()
@@ -152,6 +164,7 @@ class PgctlApp(object):
 
     @cached_property
     def aliases(self):
+        """A dictionary of aliases that can be expanded to services"""
         ## for now don't worry about config file
         return frozendict({
             'default': self.all_services
@@ -176,6 +189,7 @@ class PgctlApp(object):
 
     @cached_property
     def pgdir(self):
+        """Retrieve the set playground directory"""
         return Path(self._config['pgdir'])
 
     commands = (start, stop, status, restart, reload, log, debug, config)
