@@ -13,7 +13,6 @@ fi
 
 export TOP=$(dirname $(readlink -f $0))
 export PROJECT=pgctl
-export src=$($TOP/tests/testing/get_modulefile.py $PROJECT)
 
 # See: http://nedbatchelder.com/code/coverage/subprocess.html
 $TOP/tests/testing/install_coverage_pth.py
@@ -24,7 +23,12 @@ trap combine ERR
 
 combine
 coverage erase --rcfile=$TOP/.coveragerc
-COVERAGE_PROCESS_START=$TOP/.coveragerc py.test "$@" $TOP/tests $src
+
+export COVERAGE_PROCESS_START=$TOP/.coveragerc
+src=$($TOP/tests/testing/get_modulefile.py $PROJECT)
+py.test "$@" $TOP/tests $src
+unset COVERAGE_PROCESS_START
+
 combine
 coverage html --rcfile=$TOP/.coveragerc
 coverage report --rcfile=$TOP/.coveragerc
