@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import time
+from collections import namedtuple
 from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
@@ -48,25 +49,23 @@ def svstat(*args):
     status, _ = process.communicate()
 
     #status is listed per line for each argument
-    return [
-        get_state(status_line) for status_line in status.splitlines()
-    ]
+    return status
 
 
-def get_state(status):
+def stat_state(status):
     r"""
     Parse a single line of svstat output.
 
-    >>> get_state("date: up (pid 1202562) 1 seconds\n")
+    >>> stat_state("date: up (pid 1202562) 1 seconds\n")
     'up'
 
-    >>> get_state("date: down 0 seconds, normally up, want up")
+    >>> stat_state("date: down 0 seconds, normally up, want up")
     'starting'
 
-    >>> get_state("playground/date: down 0 seconds, normally up")
+    >>> stat_state("playground/date: down 0 seconds, normally up")
     'down'
 
-    >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
+    >>> stat_state("date: up (pid 1202562) 1 seconds, want down\n")
     'stopping'
     """
     status = status.rstrip()
@@ -78,6 +77,49 @@ def get_state(status):
         _, status = status.split(':', 1)
         state, _ = status.split(None, 1)
     return str(state)
+
+
+def stat_service(status):
+    r"""
+    Parse a single line of svstat output.
+
+    >>> stat_service("date: up (pid 1202562) 1 seconds\n")
+    'date'
+
+    >>> stat_service("playground/date: down 0 seconds, normally up")
+    'playground/date'
+
+    """
+    return str(status.split(':')[0])
+
+
+def stat_pid(status):
+    r"""
+    Parse a single line of svstat output.
+
+    >>> stat_pid("date: up (pid 1202562) 1 seconds\n")
+    '1202562'
+
+    >>> stat_pid("playground/date: down 0 seconds, normally up")
+    ''
+
+    """
+    status = status.rstrip()
+    if 'pid' not in status:
+        return str('')
+    return str(status.split(' ')[3].replace(')', ''))
+
+
+def stat_parse(status):
+    status_list = status.splitlines()
+    parsed_service_status_dict = {}
+    for status in status_list:
+        service_info = namedtuple('status', ['name', 'state', 'pid'])
+        service_state = stat_state(status)
+        service_name = stat_service(status)
+        service_pid = stat_pid(status)
+        parsed_service_status_dict[service_name] = service_info(service_name, service_state, service_pid)
+    return parsed_service_status_dict
 
 
 class PgctlApp(object):
@@ -100,7 +142,8 @@ class PgctlApp(object):
             try:
                 while True:  # a poor man's do/while
                     svc(opt, *self.services)
-                    if all(state == expected_state for state in svstat(*self.services)):
+                    status_list = svstat(*self.services)
+                    if all(status.state == expected_state for status in stat_parse(status_list).values()):
                         break
                     else:
                         time.sleep(.01)
@@ -118,7 +161,10 @@ class PgctlApp(object):
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
-        print('Status:', self.services)
+        with self.pgdir.as_cwd():
+            status_list = svstat(*self.services).splitlines()
+            for status in status_list:
+                print(status)
 
     def restart(self):
         """Starts and stops a service"""
