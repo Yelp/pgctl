@@ -1,0 +1,4 @@
+#!/bin/bash -eux
+
+yes oh, hi! | pv -qL 100 &
+yes error | pv -qL 100 >&2

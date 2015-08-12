@@ -1,0 +1,5 @@
+#!/bin/bash
+echo sweet
+echo sweet_error >&2
+
+sleep infinity
