@@ -10,8 +10,7 @@ Usage
 .. note::
 
     With no arguments, ``pgctl <cmd>`` is equivalent to ``pgctl <cmd> default``.
-    By default, default maps to all services.  See Aliases. 
-..
+    By default, default maps to all services.  See :ref:`aliases`.
 
 start
 ~~~~~
