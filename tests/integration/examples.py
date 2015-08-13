@@ -9,9 +9,11 @@ from subprocess import PIPE
 from subprocess import Popen
 
 from pytest import yield_fixture as fixture
+from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 from testing import run
 
+from pgctl.cli import SvStat
 from pgctl.cli import svstat
 
 
@@ -76,7 +78,7 @@ class DescribeStop(object):
         check_call(('pgctl-2015', 'start', 'date'))
         check_call(('pgctl-2015', 'stop', 'date'))
 
-        assert svstat('playground/date')['playground/date'].state == 'down'
+        assert svstat('playground/date') == [C(SvStat, state='down')]
 
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl-2015', 'stop', 'date'))
@@ -105,20 +107,21 @@ def pty_normalize_newlines(fd):
     T.tcsetattr(fd, T.TCSANOW, attrs)
 
 
+def read_line(fd):
+    # read one-byte-at-a-time to avoid deadlocking by reading too much
+    line = ''
+    byte = None
+    while byte not in ('\n', ''):
+        byte = os.read(fd, 1).decode('utf-8')
+        line += byte
+    return line
+
+
 class DescribeDebug(object):
 
     @fixture
     def service_name(self):
         yield 'greeter'
-
-    def read_line(self, fd):
-        # read one-byte-at-a-time to avoid deadlocking by reading too much
-        line = ''
-        byte = None
-        while byte not in ('\n', ''):
-            byte = os.read(fd, 1).decode('utf-8')
-            line += byte
-        return line
 
     def assert_works_interactively(self):
         read, write = os.openpty()
@@ -127,17 +130,17 @@ class DescribeDebug(object):
         os.close(write)
 
         try:
-            assert self.read_line(read) == 'What is your name?\n'
+            assert read_line(read) == 'What is your name?\n'
             proc.stdin.write('Buck\n')
-            assert self.read_line(read) == 'Hello, Buck.\n'
+            assert read_line(read) == 'Hello, Buck.\n'
 
             # the service should re-start
-            assert self.read_line(read) == 'What is your name?\n'
+            assert read_line(read) == 'What is your name?\n'
         finally:
             proc.kill()
 
     def it_works_with_nothing_running(self, in_example_dir):
-        assert svstat('playground/greeter') == ['unsupervised']
+        assert svstat('playground/greeter') == [C(SvStat, state=SvStat.UNSUPERVISED)]
         self.assert_works_interactively()
 
     def it_fails_with_multiple_services(self, in_example_dir):
@@ -151,7 +154,7 @@ class DescribeDebug(object):
 
     def it_first_stops_the_background_service_if_running(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'greeter'))
-        assert svstat('playground/greeter') == ['up']
+        assert svstat('playground/greeter') == [C(SvStat, state='up')]
 
         self.assert_works_interactively()
 
@@ -169,11 +172,11 @@ Started: ('date',)
 '''
         assert stdout == ''
         assert p.returncode == 0
-        assert svstat('playground/date')['playground/date'].state == 'up'
+        assert svstat('playground/date') == [C(SvStat, state='up')]
 
     def it_also_works_when_up(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
-        assert svstat('playground/date')['playground/date'].state == 'up'
+        assert svstat('playground/date') == [C(SvStat, state='up')]
 
         self.it_is_just_stop_then_start(in_example_dir)
 
@@ -188,8 +191,8 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start', 'date'))
 
-            assert svstat('playground/date')['playground/date'].state == 'up'
-            assert svstat('playground/tail')['playground/tail'].state == 'down'
+            assert svstat('playground/date') == [C(SvStat, state='up')]
+            assert svstat('playground/tail') == [C(SvStat, state='down')]
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -197,8 +200,8 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start', 'date', 'tail'))
 
-            assert svstat('playground/date')['playground/date'].state == 'up'
-            assert svstat('playground/tail')['playground/tail'].state == 'up'
+            assert svstat('playground/date') == [C(SvStat, state='up')]
+            assert svstat('playground/tail') == [C(SvStat, state='up')]
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
@@ -206,14 +209,15 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start', 'date', 'tail'))
 
-            assert svstat('playground/date')['playground/date'].state == 'up'
-            assert svstat('playground/tail')['playground/tail'].state == 'up'
+            assert svstat('playground/date') == [C(SvStat, state='up')]
+            assert svstat('playground/tail') == [C(SvStat, state='up')]
 
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
-            status = svstat('playground/date', 'playground/tail')
-            assert status['playground/date'].state == 'down'
-            assert status['playground/tail'].state == 'down'
+            assert svstat('playground/date', 'playground/tail') == [
+                C(SvStat, state='down'),
+                C(SvStat, state='down'),
+            ]
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
@@ -221,8 +225,8 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start'))
 
-            assert svstat('playground/date')['playground/date'].state == 'up'
-            assert svstat('playground/tail')['playground/tail'].state == 'up'
+            assert svstat('playground/date') == [C(SvStat, state='up')]
+            assert svstat('playground/tail') == [C(SvStat, state='up')]
         finally:
             check_call(('pgctl-2015', 'stop'))
 

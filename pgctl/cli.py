@@ -141,15 +141,10 @@ def svstat_parse(svstat_string):
 
 
 def svstat(*services):
-    from collections import OrderedDict
-    stats = (
+    return [
         svstat_parse(line)
         for line in svstat_string(services).splitlines()
-    )
-    return OrderedDict(
-        (stat.name, stat)
-        for stat in stats
-    )
+    ]
 
 
 def exec_(argv):  # pragma: no cover
@@ -186,7 +181,7 @@ class PgctlApp(object):
             try:
                 while True:  # a poor man's do/while
                     svc((opt,) + self.services)
-                    status_list = svstat(*self.services).values()
+                    status_list = svstat(*self.services)
                     if all(
                             status.process is None and status.state == expected_state
                             for status in status_list
@@ -209,7 +204,7 @@ class PgctlApp(object):
     def unsupervise(self):
         return self.__change_state(
             '-dx',
-            'unsupervised',
+            SvStat.UNSUPERVISED,
             'Stopping supervise:',
             'Stopped supervise:',
         )
@@ -217,7 +212,7 @@ class PgctlApp(object):
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
         with self.pgdir.as_cwd():
-            for status in svstat(*self.services).values():
+            for status in svstat(*self.services):
                 print(status)
 
     def restart(self):
