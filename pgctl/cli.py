@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import os
 import time
 from collections import namedtuple
 from subprocess import CalledProcessError
@@ -19,6 +20,7 @@ from .config import Config
 PGCTL_DEFAULTS = frozendict({
     'pgdir': 'playground',
     'pgconf': 'conf.yaml',
+    'pghome': os.path.join(os.environ.get('XDG_RUNTIME_DIR') or os.path.expanduser('~/.run'), 'pgctl'),
     'services': ('default',),
 })
 
@@ -147,7 +149,7 @@ def svstat(*services):
     ]
 
 
-def exec_(argv):  # pragma: no cover
+def exec_(argv, env=os.environ):  # pragma: no cover, pylint:disable=dangerous-default-value
     """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
     Like os.execv, this function never returns.
     """
@@ -156,8 +158,8 @@ def exec_(argv):  # pragma: no cover
     import atexit
     atexit._run_exitfuncs()  # pylint:disable=protected-access
 
-    from os import execvp
-    execvp(argv[0], argv)  # never returns
+    from os import execvpe
+    execvpe(argv[0], argv, env)  # never returns
 
 
 class PgctlApp(object):
@@ -240,7 +242,7 @@ class PgctlApp(object):
         # start supervise in the foreground with the service up
         service = self.pgdir.join(self.services[0])
         service.join('down').remove()
-        exec_(('supervise', service.strpath))  # pragma:no cover
+        exec_(('supervise', service.strpath), env=self.supervise_env(service))  # pragma:no cover
 
     def config(self):
         """Print the configuration for a service"""
@@ -275,6 +277,35 @@ class PgctlApp(object):
             'default': self.all_services
         })
 
+    def ensure_scratch_dir_exists(self, service_path):
+        """Ensure that the scratch directory exists and symlinks supervise.
+
+        Due to quirks in pip and potentially other package managers, we don't
+        want named FIFOs on disk inside the project repo (they'll end up in
+        tarballs and other junk).
+
+        Instead, we stick them in a scratch directory outside of the repo.
+        """
+        home_path = self.scratch_dir(service_path)
+
+        # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
+        supervise_in_scratch = home_path.join('supervise')
+        supervise_in_scratch.ensure_dir()
+
+        supervise_in_repo = service_path.join('supervise')
+        if supervise_in_repo.exists():
+            if supervise_in_repo.islink():
+                # The user probably moved the repo, relinking is pretty safe.
+                if supervise_in_repo.readlink() != supervise_in_scratch.strpath:
+                    supervise_in_repo.remove()
+            else:
+                raise ValueError('{} exists and is not a symlink, please remove it!'.format(
+                    supervise_in_repo.strpath,
+                ))
+
+        if not supervise_in_repo.exists():
+            service_path.join('supervise').mksymlinkto(supervise_in_scratch)
+
     def idempotent_supervise(self):
         """
         ensure all services are supervised starting in a down state
@@ -282,6 +313,8 @@ class PgctlApp(object):
         """
         for service in self.all_services:
             service = self.pgdir.join(service)
+            self.ensure_scratch_dir_exists(service)
+
             service.ensure('down')
             # supervise is already essentially idempotent
             # it dies with code 111 and a single line printed to stderr
@@ -289,13 +322,40 @@ class PgctlApp(object):
                 ('supervise', service.strpath),
                 stdout=service.join('stdout.log').open('w'),
                 stderr=service.join('stderr.log').open('w'),
+                env=self.supervise_env(service),
             )  # pragma: no branch
             # (see https://bitbucket.org/ned/coveragepy/issues/146)
+
+    def supervise_env(self, service_path):
+        """Returns an environment dict to use for running supervise."""
+        return dict(
+            os.environ,
+            PGCTL_SCRATCH=self.scratch_dir(service_path).realpath().strpath,
+        )
+
+    def scratch_dir(self, service_path):
+        """Return the scratch path for a service.
+
+        Scratch directories are located at
+           {pghome}/{absolute path of service}/
+        """
+        return self.pghome.join(
+            # chop the leading `/` off of the absolute path
+            service_path.realpath().strpath[1:],
+        )
 
     @cached_property
     def pgdir(self):
         """Retrieve the set playground directory"""
         return Path(self._config['pgdir'])
+
+    @cached_property
+    def pghome(self):
+        """Retrieve the set pgctl home directory.
+
+        By default, this is "$XDG_RUNTIME_DIR/pgctl".
+        """
+        return Path(self._config['pghome'])
 
     commands = (start, stop, status, restart, reload, log, debug, config)
 
@@ -304,6 +364,7 @@ def parser():
     commands = [command.__name__ for command in PgctlApp.commands]
     parser = argparse.ArgumentParser()
     parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
+    parser.add_argument('--pghome', help='directory to keep user-level playground state', default=argparse.SUPPRESS)
     parser.add_argument('--pgconf', help='name the playground config file', default=argparse.SUPPRESS)
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
     parser.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
