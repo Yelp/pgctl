@@ -11,6 +11,7 @@ from subprocess import Popen
 from pytest import yield_fixture as fixture
 from testing import run
 
+from pgctl.cli import stat_parse
 from pgctl.cli import svstat
 
 
@@ -72,7 +73,7 @@ class DescribeStop(object):
         check_call(('pgctl-2015', 'start', 'date'))
         check_call(('pgctl-2015', 'stop', 'date'))
 
-        assert svstat('playground/date') == ['down']
+        assert stat_parse(svstat('playground/date'))['playground/date'].state == 'down'
 
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl-2015', 'stop', 'date'))
@@ -98,11 +99,11 @@ Started: ('date',)
 '''
         assert '' == stderr
         assert p.returncode == 0
-        assert svstat('playground/date') == ['up']
+        assert stat_parse(svstat('playground/date'))['playground/date'].state == 'up'
 
     def it_also_works_when_up(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
-        assert svstat('playground/date') == ['up']
+        assert stat_parse(svstat('playground/date'))['playground/date'].state == 'up'
 
         self.it_is_just_stop_then_start(in_example_dir)
 
@@ -117,8 +118,8 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start', 'date'))
 
-            assert svstat('playground/date') == ['up']
-            assert svstat('playground/tail') == ['down']
+            assert stat_parse(svstat('playground/date'))['playground/date'].state == 'up'
+            assert stat_parse(svstat('playground/tail'))['playground/tail'].state == 'down'
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -126,8 +127,8 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start', 'date', 'tail'))
 
-            assert svstat('playground/date') == ['up']
-            assert svstat('playground/tail') == ['up']
+            assert stat_parse(svstat('playground/date'))['playground/date'].state == 'up'
+            assert stat_parse(svstat('playground/tail'))['playground/tail'].state == 'up'
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
@@ -135,12 +136,14 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start', 'date', 'tail'))
 
-            assert svstat('playground/date') == ['up']
-            assert svstat('playground/tail') == ['up']
+            assert stat_parse(svstat('playground/date'))['playground/date'].state == 'up'
+            assert stat_parse(svstat('playground/tail'))['playground/tail'].state == 'up'
 
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
-            assert svstat('playground/date', 'playground/tail') == ['down', 'down']
+            status = stat_parse(svstat('playground/date', 'playground/tail'))
+            assert status['playground/date'].state == 'down'
+            assert status['playground/tail'].state == 'down'
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
@@ -148,7 +151,64 @@ class DescribeStartMultipleServices(object):
         try:
             check_call(('pgctl-2015', 'start'))
 
-            assert svstat('playground/date') == ['up']
-            assert svstat('playground/tail') == ['up']
+            assert stat_parse(svstat('playground/date'))['playground/date'].state == 'up'
+            assert stat_parse(svstat('playground/tail'))['playground/tail'].state == 'up'
         finally:
             check_call(('pgctl-2015', 'stop'))
+
+
+class DescribeStatus(object):
+
+    @fixture
+    def service_name(self):
+        yield 'multiple'
+
+    def it_displays_down_when_the_service_is_down(self, in_example_dir):
+        check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl-2015', 'stop', 'date'))
+        p = Popen(('pgctl-2015', 'status', 'date'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stat_parse(stdout)['date'].state == 'down'
+        assert stderr == ''
+
+    def it_displays_up_when_the_service_is_up(self, in_example_dir):
+        check_call(('pgctl-2015', 'start', 'date'))
+        p = Popen(('pgctl-2015', 'status', 'date'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stat_parse(stdout)['date'].state == 'up'
+        assert stderr == ''
+        check_call(('pgctl-2015', 'stop', 'date'))
+
+    def it_displays_the_pid_when_the_service_is_up(self, in_example_dir):
+        check_call(('pgctl-2015', 'start', 'date'))
+        p = Popen(('pgctl-2015', 'status', 'date'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stat_parse(stdout)['date'].pid != ''
+        assert stderr == ''
+
+    def it_displays_the_status_of_a_service(self, in_example_dir):
+        """Expect service, status, and PID"""
+        check_call(('pgctl-2015', 'start', 'date'))
+        p = Popen(('pgctl-2015', 'status', 'date'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert len(stat_parse(stdout)) == 1
+        assert stderr == ''
+        assert p.returncode == 0
+
+    def it_displays_the_status_of_multiple_services(self, in_example_dir):
+        """Expect multiple services with status and PID"""
+        check_call(('pgctl-2015', 'start', 'date', 'tail'))
+        p = Popen(('pgctl-2015', 'status', 'date', 'tail'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert len(stat_parse(stdout)) == 2
+        assert stderr == ''
+        assert p.returncode == 0
+
+    def it_displays_the_status_of_all_services(self, in_example_dir):
+        """Expect all services to provide status when no service is specified"""
+        check_call(('pgctl-2015', 'start'))
+        p = Popen(('pgctl-2015', 'status'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert len(stat_parse(stdout)) == 2
+        assert stderr == ''
+        assert p.returncode == 0

@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import time
+from collections import namedtuple
 from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
@@ -27,44 +28,44 @@ class NoSuchService(Exception):
 
 
 def svc(*args):
+    """Wrapper for daemontools svc cmd"""
     # svc never writes to stdout.
     cmd = ('svc',) + tuple(args)
-    p = Popen(cmd, stderr=PIPE)
-    _, error = p.communicate()
+    process = Popen(cmd, stderr=PIPE)
+    _, error = process.communicate()
     if 'unable to chdir' in error:
         raise NoSuchService(error)
-    if p.returncode:  # pragma: no cover: there's no known way to hit this.
+    if process.returncode:  # pragma: no cover: there's no known way to hit this.
         import sys
         sys.stderr.write(error)
-        raise CalledProcessError(p.returncode, cmd)
+        raise CalledProcessError(process.returncode, cmd)
 
 
 def svstat(*args):
+    """Wrapper for daemon tools svstat cmd"""
     # svstat *always* exits with code zero...
     cmd = ('svstat',) + tuple(args)
-    p = Popen(cmd, stdout=PIPE)
-    status, _ = p.communicate()
+    process = Popen(cmd, stdout=PIPE)
+    status, _ = process.communicate()
 
     #status is listed per line for each argument
-    return [
-        get_state(status_line) for status_line in status.splitlines()
-    ]
+    return status
 
 
-def get_state(status):
+def stat_state(status):
     r"""
     Parse a single line of svstat output.
 
-    >>> get_state("date: up (pid 1202562) 1 seconds\n")
+    >>> stat_state("date: up (pid 1202562) 1 seconds\n")
     'up'
 
-    >>> get_state("date: down 0 seconds, normally up, want up")
+    >>> stat_state("date: down 0 seconds, normally up, want up")
     'starting'
 
-    >>> get_state("playground/date: down 0 seconds, normally up")
+    >>> stat_state("playground/date: down 0 seconds, normally up")
     'down'
 
-    >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
+    >>> stat_state("date: up (pid 1202562) 1 seconds, want down\n")
     'stopping'
     """
     status = status.rstrip()
@@ -76,6 +77,49 @@ def get_state(status):
         _, status = status.split(':', 1)
         state, _ = status.split(None, 1)
     return str(state)
+
+
+def stat_service(status):
+    r"""
+    Parse a single line of svstat output.
+
+    >>> stat_service("date: up (pid 1202562) 1 seconds\n")
+    'date'
+
+    >>> stat_service("playground/date: down 0 seconds, normally up")
+    'playground/date'
+
+    """
+    return str(status.split(':')[0])
+
+
+def stat_pid(status):
+    r"""
+    Parse a single line of svstat output.
+
+    >>> stat_pid("date: up (pid 1202562) 1 seconds\n")
+    '1202562'
+
+    >>> stat_pid("playground/date: down 0 seconds, normally up")
+    ''
+
+    """
+    status = status.rstrip()
+    if 'pid' not in status:
+        return str('')
+    return str(status.split(' ')[3].replace(')', ''))
+
+
+def stat_parse(status):
+    status_list = status.splitlines()
+    parsed_service_status_dict = {}
+    for status in status_list:
+        service_info = namedtuple('status', ['name', 'state', 'pid'])
+        service_state = stat_state(status)
+        service_name = stat_service(status)
+        service_pid = stat_pid(status)
+        parsed_service_status_dict[service_name] = service_info(service_name, service_state, service_pid)
+    return parsed_service_status_dict
 
 
 class PgctlApp(object):
@@ -91,14 +135,15 @@ class PgctlApp(object):
         return command()
 
     def __change_state(self, opt, expected_state, xing, xed):
+        """Changes the state of a supervised service using the svc command"""
         print(xing, self.services)
         self.idempotent_supervise()
         with self.pgdir.as_cwd():
-            # TODO-TEST: it can {start,stop} multiple services at once
             try:
                 while True:  # a poor man's do/while
                     svc(opt, *self.services)
-                    if all(state == expected_state for state in svstat(*self.services)):
+                    status_list = svstat(*self.services)
+                    if all(status.state == expected_state for status in stat_parse(status_list).values()):
                         break
                     else:
                         time.sleep(.01)
@@ -107,33 +152,45 @@ class PgctlApp(object):
                 return "No such playground service: '%s'" % self.services
 
     def start(self):
+        """Idempotent start of a service or group of services"""
         return self.__change_state('-u', 'up', 'Starting:', 'Started:')
 
     def stop(self):
+        """Idempotent stop of a service or group of services"""
         return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def status(self):
-        print('Status:', self.services)
+        """Retrieve the PID and state of a service or group of services"""
+        with self.pgdir.as_cwd():
+            status_list = svstat(*self.services).splitlines()
+            for status in status_list:
+                print(status)
 
     def restart(self):
+        """Starts and stops a service"""
         self.stop()
         self.start()
 
     def reload(self):
+        """Reloads the configuration for a service"""
         print('reload:', self._config['services'])
 
     def log(self):
+        """Displays the stdout and stderr for a service or group of services"""
         print('Log:', self._config['services'])
 
     def debug(self):
+        """Allow a service to run in the foreground"""
         print('Debugging:', self._config['services'])
 
     def config(self):
+        """Print the configuration for a service"""
         import json
         print(json.dumps(self._config, sort_keys=True, indent=4))
 
     @cached_property
     def services(self):
+        """Return a tuple of the services for a command"""
         return sum(
             tuple([
                 self.aliases.get(service, (service,))
@@ -144,6 +201,7 @@ class PgctlApp(object):
 
     @cached_property
     def all_services(self):
+        """Return a tuple of all of the services"""
         return tuple([
             service.basename
             for service in self.pgdir.listdir()
@@ -152,6 +210,7 @@ class PgctlApp(object):
 
     @cached_property
     def aliases(self):
+        """A dictionary of aliases that can be expanded to services"""
         ## for now don't worry about config file
         return frozendict({
             'default': self.all_services
@@ -176,6 +235,7 @@ class PgctlApp(object):
 
     @cached_property
     def pgdir(self):
+        """Retrieve the set playground directory"""
         return Path(self._config['pgdir'])
 
     commands = (start, stop, status, restart, reload, log, debug, config)
