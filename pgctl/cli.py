@@ -58,24 +58,48 @@ def get_state(status):
     >>> get_state("date: up (pid 1202562) 1 seconds\n")
     'up'
 
-    >>> get_state("date: down 0 seconds, normally up, want up")
+    >>> get_state("date: down 0 seconds, normally up, want up\n")
     'starting'
 
-    >>> get_state("playground/date: down 0 seconds, normally up")
+    >>> get_state("playground/date: down 0 seconds, normally up\n")
     'down'
 
     >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
     'stopping'
+
+    >>> get_state("date: supervise not running\n")
+    'unsupervised'
+
+    >>> get_state('playground/greeter: unable to open supervise/ok: file does not exist')
+    'unsupervised'
     """
     status = status.rstrip()
     if status.endswith(' want up'):
         state = 'starting'
     elif status.endswith(' want down'):
         state = 'stopping'
+    elif (
+            status.endswith(': supervise not running') or
+            'unable to open supervise/ok' in status
+    ):
+        state = 'unsupervised'
     else:
         _, status = status.split(':', 1)
         state, _ = status.split(None, 1)
     return str(state)
+
+
+def exec_(argv):  # pragma: no cover
+    """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
+    Like os.execv, this function never returns.
+    """
+    # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
+    #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
+    import atexit
+    atexit._run_exitfuncs()  # pylint:disable=protected-access
+
+    from os import execvp
+    execvp(argv[0], argv)  # never returns
 
 
 class PgctlApp(object):
@@ -91,7 +115,8 @@ class PgctlApp(object):
         return command()
 
     def __change_state(self, opt, expected_state, xing, xed):
-        print(xing, self.services)
+        import sys
+        print(xing, self.services, file=sys.stderr)
         self.idempotent_supervise()
         with self.pgdir.as_cwd():
             # TODO-TEST: it can {start,stop} multiple services at once
@@ -102,7 +127,7 @@ class PgctlApp(object):
                         break
                     else:
                         time.sleep(.01)
-                print(xed, self.services)
+                print(xed, self.services, file=sys.stderr)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.services
 
@@ -111,6 +136,14 @@ class PgctlApp(object):
 
     def stop(self):
         return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
+
+    def unsupervise(self):
+        return self.__change_state(
+            '-dx',
+            'unsupervised',
+            'Stopping supervise:',
+            'Stopped supervise:',
+        )
 
     def status(self):
         print('Status:', self.services)
@@ -126,7 +159,17 @@ class PgctlApp(object):
         print('Log:', self._config['services'])
 
     def debug(self):
-        print('Debugging:', self._config['services'])
+        if len(self.services) != 1:
+            return 'Must debug exactly one service, not: {0}'.format(
+                ', '.join(self.services),
+            )
+
+        self.unsupervise()
+
+        # start supervise in the foreground with the service up
+        service = self.pgdir.join(self.services[0])
+        service.join('down').remove()
+        exec_(('supervise', service.strpath))  # pragma:no cover
 
     def config(self):
         import json

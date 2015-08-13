@@ -20,10 +20,6 @@ def test_log(in_example_dir):
     assert main(['log']) is None
 
 
-def test_debug(in_example_dir):
-    assert main(['debug']) is None
-
-
 def test_config(in_example_dir):
     assert main(['config']) is None
 
