@@ -10,7 +10,7 @@ def main():
     setup(
         name=str('pgctl'),
         description='A tool to configure and manage developer playgrounds.',
-        version='0.0.1',
+        version='0.0.2',
         platforms='linux',
         classifiers=[
             'Programming Language :: Python :: 2.7',
