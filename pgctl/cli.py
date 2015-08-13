@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import time
+from collections import namedtuple
 from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
@@ -26,67 +27,124 @@ class NoSuchService(Exception):
     pass
 
 
-def svc(*args):
+def svc(args):
+    """Wrapper for daemontools svc cmd"""
     # svc never writes to stdout.
     cmd = ('svc',) + tuple(args)
-    p = Popen(cmd, stderr=PIPE)
-    _, error = p.communicate()
+    process = Popen(cmd, stderr=PIPE)
+    _, error = process.communicate()
     if 'unable to chdir' in error:
         raise NoSuchService(error)
-    if p.returncode:  # pragma: no cover: there's no known way to hit this.
+    if process.returncode:  # pragma: no cover: there's no known way to hit this.
         import sys
         sys.stderr.write(error)
-        raise CalledProcessError(p.returncode, cmd)
+        raise CalledProcessError(process.returncode, cmd)
 
 
-def svstat(*args):
+class SvStat(
+        namedtuple('SvStat', ['name', 'state', 'pid', 'seconds', 'process'])
+):
+    UNSUPERVISED = 'could not get status, supervisor is down'
+    INVALID = 'no such service'
+
+    def __repr__(self):
+        format = '{0.name}: {0.state}'
+        if self.pid is not None:
+            format += ' (pid {0.pid})'
+        if self.seconds is not None:
+            format += ' {0.seconds} seconds'
+        if self.process is not None:
+            format += ', {0.process}'
+
+        return format.format(self)
+
+
+def svstat_string(args):
+    """Wrapper for daemon tools svstat cmd"""
     # svstat *always* exits with code zero...
     cmd = ('svstat',) + tuple(args)
-    p = Popen(cmd, stdout=PIPE)
-    status, _ = p.communicate()
+    process = Popen(cmd, stdout=PIPE)
+    status, _ = process.communicate()
 
     #status is listed per line for each argument
-    return [
-        get_state(status_line) for status_line in status.splitlines()
-    ]
+    return status
 
 
-def get_state(status):
-    r"""
-    Parse a single line of svstat output.
+def svstat_parse(svstat_string):
+    r'''
+    >>> svstat_parse('date: up (pid 1202562) 100 seconds\n')
+    date: up (pid 1202562) 100 seconds
 
-    >>> get_state("date: up (pid 1202562) 1 seconds\n")
-    'up'
+    >>> svstat_parse('date: down 4334 seconds, normally up, want up')
+    date: down 4334 seconds, starting
 
-    >>> get_state("date: down 0 seconds, normally up, want up\n")
-    'starting'
+    >>> svstat_parse('playground/date: down 0 seconds, normally up')
+    playground/date: down 0 seconds
 
-    >>> get_state("playground/date: down 0 seconds, normally up\n")
-    'down'
+    >>> svstat_parse('date: up (pid 1202) 1 seconds, want down\n')
+    date: up (pid 1202) 1 seconds, stopping
 
-    >>> get_state("date: up (pid 1202562) 1 seconds, want down\n")
-    'stopping'
+    >>> svstat_parse('playground/date: down 0 seconds, normally up')
+    playground/date: down 0 seconds
 
-    >>> get_state("date: supervise not running\n")
-    'unsupervised'
+    >>> svstat_parse('playground/date: down 0 seconds, normally up')
+    playground/date: down 0 seconds
 
-    >>> get_state('playground/greeter: unable to open supervise/ok: file does not exist')
-    'unsupervised'
-    """
-    status = status.rstrip()
-    if status.endswith(' want up'):
-        state = 'starting'
-    elif status.endswith(' want down'):
-        state = 'stopping'
-    elif (
-            status.endswith(': supervise not running') or
-            'unable to open supervise/ok' in status
-    ):
-        state = 'unsupervised'
+    >>> svstat_parse('docs: unable to open supervise/ok: file does not exist')
+    docs: could not get status, supervisor is down
+
+    >>> svstat_parse("date: supervise not running\n")
+    date: could not get status, supervisor is down
+
+    >>> svstat_parse('d: unable to chdir: file does not exist')
+    d: no such service
+
+    >>> svstat_parse('d: totally unpredictable error message')
+    d: totally unpredictable error message
+    '''
+    status = svstat_string.strip()
+    name, status = status.split(': ', 1)
+
+    first, rest = status.split(None, 1)
+    if first in ('up', 'down'):
+        state, status = first, rest
+    elif status.startswith('unable to chdir:'):
+        state, status = SvStat.INVALID, rest
+    elif status.startswith((
+            'unable to open supervise/ok:',
+            'supervise not running',
+    )):
+        state, status = SvStat.UNSUPERVISED, rest
+    else:  # unknown errors
+        state, status = status, ''
+
+    if status.startswith('(pid '):
+        pid, status = status[4:].rsplit(') ', 1)
+        pid = int(pid)
     else:
-        _, status = status.split(':', 1)
-        state, _ = status.split(None, 1)
-    return str(state)
+        pid = None
+
+    try:
+        seconds, status = status.split(' seconds', 1)
+        seconds = int(seconds)
+    except ValueError:
+        seconds = None
+
+    if status.endswith(', want up'):
+        process = 'starting'
+    elif status.endswith(', want down'):
+        process = 'stopping'
+    else:
+        process = None
+
+    return SvStat(name, state, pid, seconds, process)
+
+
+def svstat(*services):
+    return [
+        svstat_parse(line)
+        for line in svstat_string(services).splitlines()
+    ]
 
 
 def exec_(argv):  # pragma: no cover
@@ -115,15 +173,19 @@ class PgctlApp(object):
         return command()
 
     def __change_state(self, opt, expected_state, xing, xed):
+        """Changes the state of a supervised service using the svc command"""
         import sys
         print(xing, self.services, file=sys.stderr)
         self.idempotent_supervise()
         with self.pgdir.as_cwd():
-            # TODO-TEST: it can {start,stop} multiple services at once
             try:
                 while True:  # a poor man's do/while
-                    svc(opt, *self.services)
-                    if all(state == expected_state for state in svstat(*self.services)):
+                    svc((opt,) + self.services)
+                    status_list = svstat(*self.services)
+                    if all(
+                            status.process is None and status.state == expected_state
+                            for status in status_list
+                    ):
                         break
                     else:
                         time.sleep(.01)
@@ -132,33 +194,42 @@ class PgctlApp(object):
                 return "No such playground service: '%s'" % self.services
 
     def start(self):
+        """Idempotent start of a service or group of services"""
         return self.__change_state('-u', 'up', 'Starting:', 'Started:')
 
     def stop(self):
+        """Idempotent stop of a service or group of services"""
         return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
 
     def unsupervise(self):
         return self.__change_state(
             '-dx',
-            'unsupervised',
+            SvStat.UNSUPERVISED,
             'Stopping supervise:',
             'Stopped supervise:',
         )
 
     def status(self):
-        print('Status:', self.services)
+        """Retrieve the PID and state of a service or group of services"""
+        with self.pgdir.as_cwd():
+            for status in svstat(*self.services):
+                print(status)
 
     def restart(self):
+        """Starts and stops a service"""
         self.stop()
         self.start()
 
     def reload(self):
+        """Reloads the configuration for a service"""
         print('reload:', self._config['services'])
 
     def log(self):
+        """Displays the stdout and stderr for a service or group of services"""
         print('Log:', self._config['services'])
 
     def debug(self):
+        """Allow a service to run in the foreground"""
         if len(self.services) != 1:
             return 'Must debug exactly one service, not: {0}'.format(
                 ', '.join(self.services),
@@ -172,11 +243,13 @@ class PgctlApp(object):
         exec_(('supervise', service.strpath))  # pragma:no cover
 
     def config(self):
+        """Print the configuration for a service"""
         import json
         print(json.dumps(self._config, sort_keys=True, indent=4))
 
     @cached_property
     def services(self):
+        """Return a tuple of the services for a command"""
         return sum(
             tuple([
                 self.aliases.get(service, (service,))
@@ -187,14 +260,16 @@ class PgctlApp(object):
 
     @cached_property
     def all_services(self):
-        return tuple([
+        """Return a tuple of all of the services"""
+        return tuple(sorted(
             service.basename
             for service in self.pgdir.listdir()
             if service.check(dir=True)
-        ])
+        ))
 
     @cached_property
     def aliases(self):
+        """A dictionary of aliases that can be expanded to services"""
         ## for now don't worry about config file
         return frozendict({
             'default': self.all_services
@@ -219,6 +294,7 @@ class PgctlApp(object):
 
     @cached_property
     def pgdir(self):
+        """Retrieve the set playground directory"""
         return Path(self._config['pgdir'])
 
     commands = (start, stop, status, restart, reload, log, debug, config)
