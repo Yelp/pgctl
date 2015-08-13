@@ -93,6 +93,9 @@ def svstat_parse(svstat_string):
     >>> svstat_parse('docs: unable to open supervise/ok: file does not exist')
     docs: could not get status, supervisor is down
 
+    >>> svstat_parse("date: supervise not running\n")
+    date: could not get status, supervisor is down
+
     >>> svstat_parse('d: unable to chdir: file does not exist')
     d: no such service
 
@@ -107,7 +110,10 @@ def svstat_parse(svstat_string):
         state, status = first, rest
     elif status.startswith('unable to chdir:'):
         state, status = SvStat.INVALID, rest
-    elif status.startswith('unable to open supervise/ok:'):
+    elif status.startswith((
+            'unable to open supervise/ok:',
+            'supervise not running',
+    )):
         state, status = SvStat.UNSUPERVISED, rest
     else:  # unknown errors
         state, status = status, ''
@@ -146,6 +152,19 @@ def svstat(*services):
     )
 
 
+def exec_(argv):  # pragma: no cover
+    """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
+    Like os.execv, this function never returns.
+    """
+    # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
+    #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
+    import atexit
+    atexit._run_exitfuncs()  # pylint:disable=protected-access
+
+    from os import execvp
+    execvp(argv[0], argv)  # never returns
+
+
 class PgctlApp(object):
 
     def __init__(self, config=PGCTL_DEFAULTS):
@@ -160,7 +179,8 @@ class PgctlApp(object):
 
     def __change_state(self, opt, expected_state, xing, xed):
         """Changes the state of a supervised service using the svc command"""
-        print(xing, self.services)
+        import sys
+        print(xing, self.services, file=sys.stderr)
         self.idempotent_supervise()
         with self.pgdir.as_cwd():
             try:
@@ -174,7 +194,7 @@ class PgctlApp(object):
                         break
                     else:
                         time.sleep(.01)
-                print(xed, self.services)
+                print(xed, self.services, file=sys.stderr)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.services
 
@@ -185,6 +205,14 @@ class PgctlApp(object):
     def stop(self):
         """Idempotent stop of a service or group of services"""
         return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
+
+    def unsupervise(self):
+        return self.__change_state(
+            '-dx',
+            'unsupervised',
+            'Stopping supervise:',
+            'Stopped supervise:',
+        )
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
@@ -207,7 +235,17 @@ class PgctlApp(object):
 
     def debug(self):
         """Allow a service to run in the foreground"""
-        print('Debugging:', self._config['services'])
+        if len(self.services) != 1:
+            return 'Must debug exactly one service, not: {0}'.format(
+                ', '.join(self.services),
+            )
+
+        self.unsupervise()
+
+        # start supervise in the foreground with the service up
+        service = self.pgdir.join(self.services[0])
+        service.join('down').remove()
+        exec_(('supervise', service.strpath))  # pragma:no cover
 
     def config(self):
         """Print the configuration for a service"""
