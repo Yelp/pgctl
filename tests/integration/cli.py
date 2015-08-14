@@ -19,7 +19,14 @@ class DescribeCli(object):
             ('', '~/.run/pgctl'),
         ],
     )
-    def it_can_show_its_configuration(self, xdg_runtime_dir, expected_pghome, tmpdir):
+    def it_can_show_its_configuration(
+            self,
+            xdg_runtime_dir,
+            expected_pghome,
+            tmpdir,
+            in_example_dir,
+            homedir,
+    ):
         env = dict(os.environ, XDG_RUNTIME_DIR=xdg_runtime_dir)
         config1 = Popen(('pgctl-2015', 'config'), stdout=PIPE, cwd=tmpdir.strpath, env=env)
         config1, _ = config1.communicate()
@@ -33,7 +40,7 @@ class DescribeCli(object):
         "default"
     ]
 }}
-'''.format(pghome=os.path.expanduser(expected_pghome))  # noqa
+'''.format(pghome=expected_pghome)  # noqa
 
         from sys import executable
         config2 = Popen((executable, '-m', 'pgctl.cli', 'config'), stdout=PIPE, cwd=tmpdir.strpath, env=env)

@@ -13,8 +13,9 @@ TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @fixture
-def in_example_dir(tmpdir, service_name):
-    os.environ['XDG_RUNTIME_DIR'] = tmpdir.join('.run').strpath
+def in_example_dir(tmpdir, homedir, service_name):
+    os.environ['HOME'] = homedir.strpath
+    os.environ.pop('XDG_RUNTIME_DIR', None)
 
     template_dir = os.path.join(TOP, 'tests/examples', service_name)
     tmpdir = tmpdir.join(service_name)
@@ -30,8 +31,13 @@ def scratch_dir(pghome_dir, service_name, in_example_dir):
 
 
 @fixture
-def pghome_dir(tmpdir):
-    yield tmpdir.join('.run', 'pgctl')
+def pghome_dir(homedir):
+    yield homedir.join('.run', 'pgctl')
+
+
+@fixture
+def homedir(tmpdir):
+    yield tmpdir.join('home')
 
 
 @fixture

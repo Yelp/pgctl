@@ -19,10 +19,12 @@ from py._path.local import LocalPath as Path
 from .config import Config
 from pgctl.service import Service
 
+
+XDG_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR') or '~/.run'
 PGCTL_DEFAULTS = frozendict({
     'pgdir': 'playground',
     'pgconf': 'conf.yaml',
-    'pghome': Path(os.environ.get('XDG_RUNTIME_DIR') or '~/.run', expanduser=True).join('pgctl').strpath,
+    'pghome': os.path.join(XDG_RUNTIME_DIR, 'pgctl'),
     'services': ('default',),
 })
 
