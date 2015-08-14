@@ -10,8 +10,4 @@ from pgctl.service import Service
 
 def test_str_and_repr():
     service = Service(Path('/tmp/magic-service'), Path('/tmp/magic-service-scratch'))
-
     assert str(service) == 'magic-service'
-    assert (
-        repr(service) == "Service(path='/tmp/magic-service', scratch_dir='/tmp/magic-service-scratch')"
-    )

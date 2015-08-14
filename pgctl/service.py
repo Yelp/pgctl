@@ -12,12 +12,6 @@ from cached_property import cached_property
 
 class Service(namedtuple('Service', ['path', 'scratch_dir'])):
 
-    def __repr__(self):
-        return "Service(path='{path}', scratch_dir='{scratch_dir}')".format(
-            path=self.path.strpath,
-            scratch_dir=self.scratch_dir.strpath,
-        )
-
     def __str__(self):
         return self.name
 
