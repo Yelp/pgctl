@@ -7,6 +7,7 @@ import argparse
 import os
 import time
 from collections import namedtuple
+from operator import attrgetter
 from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
@@ -16,11 +17,12 @@ from frozendict import frozendict
 from py._path.local import LocalPath as Path
 
 from .config import Config
+from pgctl.service import Service
 
 PGCTL_DEFAULTS = frozendict({
     'pgdir': 'playground',
     'pgconf': 'conf.yaml',
-    'pghome': os.path.join(os.environ.get('XDG_RUNTIME_DIR') or os.path.expanduser('~/.run'), 'pgctl'),
+    'pghome': Path(os.environ.get('XDG_RUNTIME_DIR') or '~/.run', expanduser=True).join('pgctl').strpath,
     'services': ('default',),
 })
 
@@ -62,7 +64,7 @@ class SvStat(
 
 
 def svstat_string(args):
-    """Wrapper for daemon tools svstat cmd"""
+    """Wrapper for daemontools svstat cmd"""
     # svstat *always* exits with code zero...
     cmd = ('svstat',) + tuple(args)
     process = Popen(cmd, stdout=PIPE)
@@ -142,17 +144,20 @@ def svstat_parse(svstat_string):
     return SvStat(name, state, pid, seconds, process)
 
 
-def svstat(*services):
+def svstat(*args):
     return [
         svstat_parse(line)
-        for line in svstat_string(services).splitlines()
+        for line in svstat_string(args).splitlines()
     ]
 
 
-def exec_(argv, env=os.environ):  # pragma: no cover, pylint:disable=dangerous-default-value
+def exec_(argv, env=None):  # pragma: no cover
     """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
     Like os.execv, this function never returns.
     """
+    if env is None:
+        env = os.environ
+
     # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
     #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
     import atexit
@@ -177,13 +182,13 @@ class PgctlApp(object):
     def __change_state(self, opt, expected_state, xing, xed):
         """Changes the state of a supervised service using the svc command"""
         import sys
-        print(xing, self.services, file=sys.stderr)
+        print(xing, self.services_string, file=sys.stderr)
         self.idempotent_supervise()
         with self.pgdir.as_cwd():
             try:
                 while True:  # a poor man's do/while
-                    svc((opt,) + self.services)
-                    status_list = svstat(*self.services)
+                    svc((opt,) + tuple(self.service_names))
+                    status_list = svstat(*self.service_names)
                     if all(
                             status.process is None and status.state == expected_state
                             for status in status_list
@@ -191,7 +196,7 @@ class PgctlApp(object):
                         break
                     else:
                         time.sleep(.01)
-                print(xed, self.services, file=sys.stderr)
+                print(xed, self.services_string, file=sys.stderr)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.services
 
@@ -214,7 +219,7 @@ class PgctlApp(object):
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
         with self.pgdir.as_cwd():
-            for status in svstat(*self.services):
+            for status in svstat(*self.service_names):
                 print(status)
 
     def restart(self):
@@ -234,15 +239,15 @@ class PgctlApp(object):
         """Allow a service to run in the foreground"""
         if len(self.services) != 1:
             return 'Must debug exactly one service, not: {0}'.format(
-                ', '.join(self.services),
+                self.services_string,
             )
 
         self.unsupervise()
 
         # start supervise in the foreground with the service up
-        service = self.pgdir.join(self.services[0])
-        service.join('down').remove()
-        exec_(('supervise', service.strpath), env=self.supervise_env(service))  # pragma:no cover
+        service = self.services[0]
+        service.path.join('down').remove()
+        exec_(('supervise', service.path.strpath), env=service.supervise_env)  # pragma: no cover
 
     def config(self):
         """Print the configuration for a service"""
@@ -251,10 +256,13 @@ class PgctlApp(object):
 
     @cached_property
     def services(self):
-        """Return a tuple of the services for a command"""
+        """Return a tuple of the services for a command
+
+        :return: tuple of Service objects
+        """
         return sum(
             tuple([
-                self.aliases.get(service, (service,))
+                self.aliases.get(service, (Service(self.pgdir.join(service), self),))
                 for service in self._config['services']
             ]),
             (),
@@ -262,11 +270,17 @@ class PgctlApp(object):
 
     @cached_property
     def all_services(self):
-        """Return a tuple of all of the services"""
+        """Return a tuple of all of the Services.
+
+        :return: tuple of Service objects
+        """
         return tuple(sorted(
-            service.basename
-            for service in self.pgdir.listdir()
-            if service.check(dir=True)
+            (
+                Service(service_path, self)
+                for service_path in self.pgdir.listdir()
+                if service_path.check(dir=True)
+            ),
+            key=attrgetter('name'),
         ))
 
     @cached_property
@@ -277,72 +291,31 @@ class PgctlApp(object):
             'default': self.all_services
         })
 
-    def ensure_scratch_dir_exists(self, service_path):
-        """Ensure that the scratch directory exists and symlinks supervise.
-
-        Due to quirks in pip and potentially other package managers, we don't
-        want named FIFOs on disk inside the project repo (they'll end up in
-        tarballs and other junk).
-
-        Instead, we stick them in a scratch directory outside of the repo.
-        """
-        home_path = self.scratch_dir(service_path)
-
-        # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
-        supervise_in_scratch = home_path.join('supervise')
-        supervise_in_scratch.ensure_dir()
-
-        supervise_in_repo = service_path.join('supervise')
-        if supervise_in_repo.exists():
-            if supervise_in_repo.islink():
-                # The user probably moved the repo, relinking is pretty safe.
-                if supervise_in_repo.readlink() != supervise_in_scratch.strpath:
-                    supervise_in_repo.remove()
-            else:
-                raise ValueError('{} exists and is not a symlink, please remove it!'.format(
-                    supervise_in_repo.strpath,
-                ))
-
-        if not supervise_in_repo.exists():
-            service_path.join('supervise').mksymlinkto(supervise_in_scratch)
-
     def idempotent_supervise(self):
         """
         ensure all services are supervised starting in a down state
         by contract, running this method repeatedly should have no negative consequences
         """
         for service in self.all_services:
-            service = self.pgdir.join(service)
-            self.ensure_scratch_dir_exists(service)
+            service.ensure_correct_directory_structure()
 
-            service.ensure('down')
             # supervise is already essentially idempotent
             # it dies with code 111 and a single line printed to stderr
             Popen(
-                ('supervise', service.strpath),
-                stdout=service.join('stdout.log').open('w'),
-                stderr=service.join('stderr.log').open('w'),
-                env=self.supervise_env(service),
+                ('supervise', service.path.strpath),
+                stdout=service.path.join('stdout.log').open('w'),
+                stderr=service.path.join('stderr.log').open('w'),
+                env=service.supervise_env,
             )  # pragma: no branch
             # (see https://bitbucket.org/ned/coveragepy/issues/146)
 
-    def supervise_env(self, service_path):
-        """Returns an environment dict to use for running supervise."""
-        return dict(
-            os.environ,
-            PGCTL_SCRATCH=self.scratch_dir(service_path).realpath().strpath,
-        )
+    @cached_property
+    def services_string(self):
+        return ', '.join(self.service_names)
 
-    def scratch_dir(self, service_path):
-        """Return the scratch path for a service.
-
-        Scratch directories are located at
-           {pghome}/{absolute path of service}/
-        """
-        return self.pghome.join(
-            # chop the leading `/` off of the absolute path
-            service_path.realpath().strpath[1:],
-        )
+    @cached_property
+    def service_names(self):
+        return [service.name for service in self.services]
 
     @cached_property
     def pgdir(self):
@@ -355,7 +328,7 @@ class PgctlApp(object):
 
         By default, this is "$XDG_RUNTIME_DIR/pgctl".
         """
-        return Path(self._config['pghome'])
+        return Path(self._config['pghome'], expanduser=True)
 
     commands = (start, stop, status, restart, reload, log, debug, config)
 

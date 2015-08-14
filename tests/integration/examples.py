@@ -23,11 +23,11 @@ class DescribeDateExample(object):
     def service_name(self):
         yield 'date'
 
-    def it_does_start(self, in_example_dir):
-        assert not os.path.isfile('now.date')
+    def it_does_start(self, in_example_dir, scratch_dir):
+        assert not scratch_dir.join('now.date').isfile()
         check_call(('pgctl-2015', 'start', 'date'))
         try:
-            assert os.path.isfile('now.date')
+            assert scratch_dir.join('now.date').isfile()
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -59,7 +59,7 @@ class DescribeStart(object):
         stdout, stderr = run(p)
         assert stdout == ''
         assert stderr == (
-            "Starting: ('unknown',)\n"
+            'Starting: unknown\n'
             "No such playground service: 'unknown'\n"
         )
         assert p.returncode == 1
@@ -88,7 +88,7 @@ class DescribeStop(object):
         stdout, stderr = run(p)
         assert stdout == ''
         assert stderr == (
-            "Stopping: ('unknown',)\n"
+            'Stopping: unknown\n'
             "No such playground service: 'unknown'\n"
         )
         assert p.returncode == 1
@@ -165,10 +165,10 @@ class DescribeRestart(object):
         p = Popen(('pgctl-2015', 'restart', 'date'), stdout=PIPE, stderr=PIPE)
         stdout, stderr = run(p)
         assert stderr == '''\
-Stopping: ('date',)
-Stopped: ('date',)
-Starting: ('date',)
-Started: ('date',)
+Stopping: date
+Stopped: date
+Starting: date
+Started: date
 '''
         assert stdout == ''
         assert p.returncode == 0

@@ -15,6 +15,7 @@ class DescribeCli(object):
         ('xdg_runtime_dir', 'expected_pghome'),
         [
             ('/herp/derp', '/herp/derp/pgctl'),
+            ('~/.herp', '~/.herp/pgctl'),
             ('', '~/.run/pgctl'),
         ],
     )
@@ -27,7 +28,7 @@ class DescribeCli(object):
     "command": "config", 
     "pgconf": "conf.yaml", 
     "pgdir": "playground", 
-    "pghome": "{pghome}",
+    "pghome": "{pghome}", 
     "services": [
         "default"
     ]
