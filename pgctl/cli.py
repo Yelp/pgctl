@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import argparse
 import os
 import time
-from operator import attrgetter
 from subprocess import Popen
 
 from cached_property import cached_property
@@ -133,6 +132,14 @@ class PgctlApp(object):
         import json
         print(json.dumps(self._config, sort_keys=True, indent=4))
 
+    def service_by_name(self, service_name):
+        """Return an instantiated Service, by name."""
+        path = self.pgdir.join(service_name)
+        return Service(
+            path=path,
+            scratch_dir=self.pghome.join(path.relto(str('/'))),
+        )
+
     @cached_property
     def services(self):
         """Return a tuple of the services for a command
@@ -141,8 +148,8 @@ class PgctlApp(object):
         """
         return sum(
             tuple([
-                self.aliases.get(service, (Service(self.pgdir.join(service), self),))
-                for service in self._config['services']
+                self.aliases.get(service_name, (self.service_by_name(service_name),))
+                for service_name in self._config['services']
             ]),
             (),
         )
@@ -154,12 +161,9 @@ class PgctlApp(object):
         :return: tuple of Service objects
         """
         return tuple(sorted(
-            (
-                Service(service_path, self)
-                for service_path in self.pgdir.listdir()
-                if service_path.check(dir=True)
-            ),
-            key=attrgetter('name'),
+            self.service_by_name(service_path.basename)
+            for service_path in self.pgdir.listdir()
+            if service_path.check(dir=True)
         ))
 
     @cached_property

@@ -4,19 +4,19 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
+from collections import namedtuple
 from subprocess import check_call
 
 from cached_property import cached_property
 
 
-class Service(object):
-
-    def __init__(self, path, pgctl_app):
-        self.path = path
-        self._pgctl_app = pgctl_app
+class Service(namedtuple('Service', ['path', 'scratch_dir'])):
 
     def __repr__(self):
-        return "Service('{path}')".format(path=self.path.strpath)
+        return "Service(path='{path}', scratch_dir='{scratch_dir}')".format(
+            path=self.path.strpath,
+            scratch_dir=self.scratch_dir.strpath,
+        )
 
     def __str__(self):
         return self.name
@@ -56,12 +56,3 @@ class Service(object):
             os.environ,
             PGCTL_SCRATCH=str(self.scratch_dir.strpath),
         )
-
-    @cached_property
-    def scratch_dir(self):
-        """Return the scratch path for a service.
-
-        Scratch directories are located at
-           {pghome}/{absolute path of service}/
-        """
-        return self._pgctl_app.pghome.join(self.path.relto(str('/')))
