@@ -44,3 +44,18 @@ def homedir(tmpdir):
 def service_name():
     # this fixture will be overridden by some tests
     yield 'date'
+
+
+@fixture(autouse=True)
+def wait4():
+    """wait for all subprocesses to finish."""
+    yield
+    try:
+        while True:
+            os.wait3(0)
+    except OSError as error:
+        if error.errno == 10:  # no child processes
+            return
+        else:
+            raise
+    raise AssertionError('Should never get here.')

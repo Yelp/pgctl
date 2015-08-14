@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import argparse
 import os
 import time
+from subprocess import MAXFD
 from subprocess import Popen
 
 from cached_property import cached_property
@@ -41,7 +42,8 @@ def exec_(argv, env=None):  # pragma: no cover
     import atexit
     atexit._run_exitfuncs()  # pylint:disable=protected-access
 
-    from os import execvpe
+    from os import execvpe, closerange
+    closerange(3, MAXFD)
     execvpe(argv[0], argv, env)  # never returns
 
 
@@ -189,6 +191,7 @@ class PgctlApp(object):
                 stdout=service.path.join('stdout.log').open('w'),
                 stderr=service.path.join('stderr.log').open('w'),
                 env=service.supervise_env,
+                close_fds=True,
             )  # pragma: no branch
             # (see https://bitbucket.org/ned/coveragepy/issues/146)
 
