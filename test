@@ -1,5 +1,7 @@
 #!/bin/bash
 set -eu
+# the travis default umask is 002, but ubuntu's is 022
+umask 022
 
 fail() { echo '[31;1mFAIL[m'; }
 trap fail ERR
