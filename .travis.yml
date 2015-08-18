@@ -16,7 +16,7 @@ before_install:
 install:
     - sudo apt-get install daemontools
     - pip install --upgrade pip
-    - pip install -r requirements.d/travis.txt
+    - pip install -r requirements.d/CI.txt
 script: tox
 after_success: coveralls
  

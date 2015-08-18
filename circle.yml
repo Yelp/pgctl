@@ -5,4 +5,18 @@ machine:
 
 dependencies:
     pre:
-        - sudo apt-get update; sudo DEBIAN_FRONTEND=noninteractive apt-get install -y daemontools
+        - sudo apt-get update
+    override:
+        - sudo apt-get install daemontools
+        - pip install --upgrade pip
+        - pip install -r requirements.d/CI.txt
+    cache_directories:
+        - $HOME/.pip
+        - $HOME/.pre-commit
+        - $HOME/.cache
+
+deployment:
+    coverage:
+        branch: /.*/
+        commands:
+            - coveralls

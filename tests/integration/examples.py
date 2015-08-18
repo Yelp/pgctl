@@ -17,6 +17,25 @@ from pgctl.cli import SvStat
 from pgctl.cli import svstat
 
 
+def retry(assertion, repeat=3, sleep=.01):
+    # TODO(Yelp/pgctl#28): take this out once we can 'check'
+    import time
+    i = 0
+    while True:
+        try:
+            truth = assertion()
+            assert truth is None or truth, truth
+        except AssertionError:
+            if i < repeat:
+                i += 1
+                time.sleep(sleep)
+                continue
+            else:
+                raise
+        else:
+            break
+
+
 class DescribeDateExample(object):
 
     @fixture
@@ -27,7 +46,7 @@ class DescribeDateExample(object):
         assert not scratch_dir.join('now.date').isfile()
         check_call(('pgctl-2015', 'start', 'date'))
         try:
-            assert scratch_dir.join('now.date').isfile()
+            retry(lambda: scratch_dir.join('now.date').isfile())
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -46,7 +65,7 @@ class DescribeTailExample(object):
 
         check_call(('pgctl-2015', 'start', 'tail'))
         try:
-            assert os.path.isfile('output')
+            retry(lambda: os.path.isfile('output'))
             assert open('output').read() == test_string
         finally:
             check_call(('pgctl-2015', 'stop', 'tail'))
