@@ -15,7 +15,8 @@ before_install:
 install:
     - sudo apt-get install daemontools
     - pip install --upgrade pip
-    - pip install -r requirements.d/CI.txt
+    - pip install --upgrade -r requirements.d/CI.txt
+    - pre-commit install --install-hooks
 script: make test
 after_success: coveralls
  
