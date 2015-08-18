@@ -1,7 +1,6 @@
 machine:
     environment:
         TOP: $PWD
-        TOXENV: python
 
 dependencies:
     pre:
@@ -10,13 +9,19 @@ dependencies:
         - sudo apt-get install daemontools
         - pip install --upgrade pip
         - pip install -r requirements.d/CI.txt
+        - pre-commit install --install-hooks
     cache_directories:
-        - $HOME/.pip
-        - $HOME/.pre-commit
-        - $HOME/.cache
+        - "~/.pip"
+        - "~/.pre-commit"
+        - "~/.cache"
+
+test:
+    override:
+        - make test
 
 deployment:
     coverage:
         branch: /.*/
         commands:
+            - env
             - coveralls
