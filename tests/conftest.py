@@ -11,6 +11,8 @@ from pytest import yield_fixture as fixture
 
 TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+from pgctl.cli import PgctlApp
+
 
 @fixture
 def in_example_dir(tmpdir, homedir, service_name):
@@ -22,7 +24,10 @@ def in_example_dir(tmpdir, homedir, service_name):
     shutil.copytree(template_dir, tmpdir.strpath)
 
     with tmpdir.as_cwd():
-        yield tmpdir
+        try:
+            yield tmpdir
+        finally:
+            PgctlApp().unsupervise()
 
 
 @fixture
@@ -50,9 +55,12 @@ def service_name():
 def wait4():
     """wait for all subprocesses to finish."""
     yield
+    i = 0
     try:
-        while True:
-            os.wait3(0)
+        while i < 1000:
+            os.wait3(os.WNOHANG)
+            i += 1  # we actually don't expect to hit this. pragma: no cover
+        raise AssertionError("there's a subprocess that's still running")
     except OSError as error:
         if error.errno == 10:  # no child processes
             return

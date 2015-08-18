@@ -20,26 +20,33 @@ class Locked(IOError):
     pass
 
 
-@contextmanager
-def flock(file_or_dir):
+def acquire(file_or_dir):
+    """raises flock.Locked on failure"""
     try:
-        f = os.open(file_or_dir, os.O_CREAT)
+        fd = os.open(file_or_dir, os.O_CREAT)
     except OSError as error:
         if error.errno == 21:  # is a directory
-            f = os.open(file_or_dir, 0)
+            fd = os.open(file_or_dir, 0)
         else:
             raise
 
     try:
         # exclusive, nonblocking
-        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError as error:
         if error.errno == 11:
             six.reraise(Locked, Locked(11))
         else:
             raise
 
+    return fd
+
+
+@contextmanager
+def flock(file_or_dir):
+    """A context for flock.acquire()."""
+    fd = acquire(file_or_dir)
     try:
-        yield
+        yield fd
     finally:
-        os.close(f)
+        os.close(fd)

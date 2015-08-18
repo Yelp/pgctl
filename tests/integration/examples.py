@@ -12,9 +12,152 @@ from pytest import yield_fixture as fixture
 from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 from testing import run
+from testing.assertions import retry
 
 from pgctl.cli import SvStat
 from pgctl.cli import svstat
+
+
+class DescribePgctlLog(object):
+
+    @fixture
+    def service_name(self):
+        yield 'output'
+
+    def it_is_empty_before_anything_starts(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stderr == ''
+        assert stdout == '''\
+==> ohhi/stdout.log <==
+
+==> ohhi/stderr.log <==
+
+==> sweet/stdout.log <==
+
+==> sweet/stderr.log <==
+'''
+        assert p.returncode == 0
+
+    def it_shows_stdout_and_stderr(self, in_example_dir):
+        check_call(('pgctl-2015', 'start', 'sweet'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stderr == ''
+        assert stdout == '''\
+==> ohhi/stdout.log <==
+
+==> ohhi/stderr.log <==
+
+==> sweet/stdout.log <==
+sweet
+
+==> sweet/stderr.log <==
+sweet_error
+'''
+        assert p.returncode == 0
+
+        check_call(('pgctl-2015', 'restart', 'sweet'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stderr == ''
+        assert stdout == '''\
+==> ohhi/stdout.log <==
+
+==> ohhi/stderr.log <==
+
+==> sweet/stdout.log <==
+sweet
+sweet
+
+==> sweet/stderr.log <==
+sweet_error
+sweet_error
+'''
+        assert p.returncode == 0
+
+    def it_logs_continuously_when_run_interactively(self, in_example_dir):
+        check_call(('pgctl-2015', 'start'))
+
+        # this pty simulates running in a terminal
+        read, write = os.openpty()
+        pty_normalize_newlines(read)
+        p = Popen(('pgctl-2015', 'log'), stdout=write, stderr=write)
+        os.close(write)
+
+        import fcntl
+        fl = fcntl.fcntl(read, fcntl.F_GETFL)
+        fcntl.fcntl(read, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+
+        assert p.poll() is None  # it's still running
+
+        retries = 100
+        buf = ''
+        while True:
+            try:
+                block = os.read(read, 1024)
+                print('BLOCK:', block)
+            except OSError as error:
+                print('ERROR:', error)
+                if error.errno == 11:  # other end didn't write yet
+                    if retries > 0:
+                        retries -= 1
+                        import time
+                        time.sleep(.01)
+                        continue
+                    else:
+                        break
+                else:
+                    raise
+            buf += block
+
+        assert buf == S('''\
+==> ohhi/stdout\\.log <==
+o.*
+==> ohhi/stderr\\.log <==
+e.*
+==> sweet/stdout\\.log <==
+sweet
+
+==> sweet/stderr\\.log <==
+sweet_error$
+''')
+        assert p.poll() is None  # it's still running
+
+        p.terminate()
+
+        assert p.wait() == -15
+
+    def it_is_line_buffered(self):
+        """
+        Show that the interleaved output of ohhi becomes separated per-line.
+        """
+
+    def it_distinguishes_multiple_services(self):
+        """
+        There's some indication of which output came from which services.
+        A (colorized?) [servicename] prefix.
+        """
+
+    def it_distinguishes_stderr(self):
+        """
+        There's some indication of which output came from stderr.
+        Red, with [error] prefix.
+        """
+
+    def it_has_timestamps(self):
+        """By default each line of output is timestamped"""
+
+    def it_can_disable_timestamps(self):
+        """Users should be able to turn off the timestamp output. V3"""
+
+    def it_can_disable_coloring(self):
+        """Users should be able to turn off colored output. V3"""
+
+    def it_automatically_disables_color_for_nontty(self):
+        """When printing to a file, don't produce color, by default. V3"""
 
 
 class DescribeDateExample(object):
@@ -27,7 +170,7 @@ class DescribeDateExample(object):
         assert not scratch_dir.join('now.date').isfile()
         check_call(('pgctl-2015', 'start', 'date'))
         try:
-            assert scratch_dir.join('now.date').isfile()
+            retry(lambda: scratch_dir.join('now.date').isfile())
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -46,7 +189,7 @@ class DescribeTailExample(object):
 
         check_call(('pgctl-2015', 'start', 'tail'))
         try:
-            assert os.path.isfile('output')
+            retry(lambda: os.path.isfile('output'))
             assert open('output').read() == test_string
         finally:
             check_call(('pgctl-2015', 'stop', 'tail'))
@@ -285,19 +428,6 @@ $''')
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
-    def it_displays_status_when_supervise_is_down(self, in_example_dir):
-        try:
-            p = Popen(('pgctl-2015', 'status'), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = run(p)
-            assert stdout == '''\
-date: could not get status, supervisor is down
-tail: could not get status, supervisor is down
-'''
-            assert stderr == ''
-            assert p.returncode == 0
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
-
     def it_displays_status_for_unknown_services(self, in_example_dir):
         try:
             p = Popen(('pgctl-2015', 'status', 'garbage'), stdout=PIPE, stderr=PIPE)
@@ -309,3 +439,16 @@ garbage: no such service
             assert p.returncode == 0
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
+
+
+class DescribeReload(object):
+
+    def it_is_unimplemented(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'reload'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stdout == ''
+        assert stderr == (
+            'reload: date\n'
+            'reloading is not yet implemented.\n'
+        )
+        assert p.returncode == 1
