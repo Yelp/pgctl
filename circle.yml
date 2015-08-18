@@ -1,31 +1,16 @@
-machine:
-    environment:
-        TOP: $PWD
-
 dependencies:
     pre:
         - sudo apt-get update
-    override:
-        - sudo apt-get install daemontools
-        - pip install --upgrade pip
-        - pip install --upgrade -r requirements.d/CI.txt
-        - pre-commit install --install-hooks
+    override: ./CI install
     cache_directories:
         - "~/.pip"
         - "~/.pre-commit"
         - "~/.cache"
 
 test:
+    environment:
+        TOP: $PWD 
+        SCRATCH: $(mktemp -d)
+    pwd: $SCRATCH
     override:
-        - make test
-
-deployment:
-    coverage:
-        branch: /.*/
-        commands:
-            - pwd
-            - ls -la
-            - env | sort
-            - TOP=$PWD env | sort
-            - TOP=$PWD coveralls debug
-            - TOP=$PWD coveralls
+        - $TOP/test

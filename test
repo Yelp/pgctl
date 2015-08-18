@@ -36,5 +36,6 @@ unset COVERAGE_PROCESS_START
 combine
 coverage html --rcfile=$TOP/.coveragerc
 coverage report --rcfile=$TOP/.coveragerc
+coveralls
 
 pre-commit run --all-files
