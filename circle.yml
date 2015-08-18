@@ -23,5 +23,9 @@ deployment:
     coverage:
         branch: /.*/
         commands:
-            - env
-            - coveralls
+            - pwd
+            - ls -la
+            - env | sort
+            - TOP=$PWD env | sort
+            - TOP=$PWD coveralls debug
+            - TOP=$PWD coveralls
