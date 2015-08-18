@@ -122,8 +122,8 @@ e.*
 sweet
 
 ==> sweet/stderr\\.log <==
-sweet_error$
-''')
+sweet_error
+.*$''')
         assert p.poll() is None  # it's still running
 
         p.terminate()
