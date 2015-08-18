@@ -1,8 +1,16 @@
-machine:
-    environment:
-        TOP: $PWD
-        TOXENV: python
-
 dependencies:
     pre:
-        - sudo apt-get update; sudo DEBIAN_FRONTEND=noninteractive apt-get install -y daemontools
+        - sudo apt-get update
+    override: ./CI install
+    cache_directories:
+        - "~/.pip"
+        - "~/.pre-commit"
+        - "~/.cache"
+
+test:
+    environment:
+        TOP: $PWD 
+        SCRATCH: $(mktemp -d)
+    pwd: $SCRATCH
+    override:
+        - $TOP/test
