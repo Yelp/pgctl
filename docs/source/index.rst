@@ -8,9 +8,9 @@
 
 pgctl: the playground controller
 ================================
-`Issues <https://github.com/pypa/virtualenv/issues>`_ |
-`Github <https://github.com/pypa/virtualenv>`_
-.. TODO `PyPI <https://pypi.python.org/pypi/virtualenv/>`_ |
+`Issues <https://github.com/yelp/pgctl/issues>`_ |
+`Github <https://github.com/pypa/pgctl>`_ |
+`PyPI <https://pypi.python.org/pypi/pgctl/>`_
 
 Release v\ |version|. (:ref:`Installation <install>`)
 
