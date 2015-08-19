@@ -56,15 +56,13 @@ Feature Support
   -  User-friendly Command Line Interface
   -  Simple Configuration
   -  Python 2.6—3.4
-  -  pypy and pypy3
 
 
 User Guide
 ----------
 
-This part of the documentation, which is mostly prose, begins with some
-background information about Requests, then focuses on step-by-step
-instructions for getting the most out of Requests.
+This part of the documentation covers the step-by-step
+instructions and usage of ``pgctl`` for getting started quickly.
 
 .. toctree::
    :maxdepth: 2

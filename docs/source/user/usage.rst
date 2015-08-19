@@ -54,7 +54,7 @@ status
 ::
 
     $ pgctl status <service=default>
-    <service> pid(<PID>) -- up (0 seconds)
+    <service> (pid <PID>) -- up (0 seconds)
 
 Retrieves the state, PID, and time in that state of a specific service, group of services, or all services. 
 
