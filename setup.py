@@ -10,6 +10,7 @@ def main():
     setup(
         name=str('pgctl'),
         description='A tool to configure and manage developer playgrounds.',
+        url='http://pgctl.readthedocs.org/en/latest/',
         version='0.1.0',
         platforms='linux',
         classifiers=[
@@ -30,6 +31,9 @@ def main():
                 'pgctl-2015 = pgctl.cli:main',
             ],
         },
+
+        author='Buck Evan',
+        author_email='buck.2019@gmail.com',
     )
 
 
