@@ -72,6 +72,17 @@ instructions and usage of ``pgctl`` for getting started quickly.
    user/quickstart
    user/advanced
 
+Developer Guide
+---------------
+This part of the documentation gives an internal look at the design
+decisions for pgctl.
+
+.. toctree::
+   :maxdepth: 2
+
+   developer/design
+
+
 API Documentation
 -----------------
 
