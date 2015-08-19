@@ -21,6 +21,7 @@ def main():
             'argparse',
             'frozendict',
             'cached-property',
+            'py',
             'six',
         ],
         # FIXME: all tests still pass if you break this.
