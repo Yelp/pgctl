@@ -3,7 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 
-def retry(assertion, repeat=3, sleep=.01):
+def retry(assertion, repeat=10, sleep=.05):
     """Some flakey assertions need to be retried."""
     # TODO(Yelp/pgctl#28): take this out once we can 'check'
     import time
