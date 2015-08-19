@@ -6,5 +6,7 @@ mock
 pre-commit>=0.3.6
 pylint
 pytest
-pytest-xdist
+# pytest-xdist 1.13 broke -n 0
+# https://bitbucket.org/pytest-dev/pytest/issues/771/n0-broken
+pytest-xdist!=1.13
 testfixtures

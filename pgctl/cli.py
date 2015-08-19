@@ -7,10 +7,11 @@ import argparse
 import os
 import time
 from subprocess import MAXFD
-from subprocess import Popen
+from sys import stderr
 
 from cached_property import cached_property
 from frozendict import frozendict
+from py._error import error as py_error
 from py._path.local import LocalPath as Path
 
 from .config import Config
@@ -41,10 +42,7 @@ def exec_(argv, env=None):  # pragma: no cover
     #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
     import atexit
     atexit._run_exitfuncs()  # pylint:disable=protected-access
-
-    from os import execvpe, closerange
-    closerange(3, MAXFD)
-    execvpe(argv[0], argv, env)  # never returns
+    os.execvpe(argv[0], argv, env)  # never returns
 
 
 class PgctlApp(object):
@@ -52,7 +50,23 @@ class PgctlApp(object):
     def __init__(self, config=PGCTL_DEFAULTS):
         self._config = config
 
+    def idempotent_supervise(self):
+        """
+        ensure all services are supervised starting in a down state
+        by contract, running this method repeatedly should have no negative consequences
+        """
+        for service in self.all_services:
+            service.idempotent_supervise()
+
+    def app_invariants(self):
+        """The are the things we want to be able to say "always" about."""
+        # ensure no weird file descriptors are open.
+        os.closerange(3, MAXFD)
+        self.idempotent_supervise()
+
     def __call__(self):
+        """Run the app."""
+        self.app_invariants()
         # config guarantees this is set
         command = self._config['command']
         # argparse guarantees this is an attribute
@@ -61,9 +75,7 @@ class PgctlApp(object):
 
     def __change_state(self, opt, expected_state, xing, xed):
         """Changes the state of a supervised service using the svc command"""
-        import sys
-        print(xing, self.services_string, file=sys.stderr)
-        self.idempotent_supervise()
+        print(xing, self.services_string, file=stderr)
         with self.pgdir.as_cwd():
             try:
                 while True:  # a poor man's do/while
@@ -76,7 +88,7 @@ class PgctlApp(object):
                         break
                     else:
                         time.sleep(.01)
-                print(xed, self.services_string, file=sys.stderr)
+                print(xed, self.services_string, file=stderr)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.services
 
@@ -109,11 +121,30 @@ class PgctlApp(object):
 
     def reload(self):
         """Reloads the configuration for a service"""
-        print('reload:', self._config['services'])
+        print('reload:', self.services_string, file=stderr)
+        return 'reloading is not yet implemented.'
 
     def log(self):
         """Displays the stdout and stderr for a service or group of services"""
-        print('Log:', self._config['services'])
+        # TODO(p3): -n: send the value to tail -n
+        # TODO(p3): -f: force iteractive behavior
+        # TODO(p3): -F: force iteractive behavior off
+        cmd = ('tail', '--verbose')  # show file headers
+        import sys
+        if sys.stdout.isatty():
+            # we're interactive; give a continuous log
+            # TODO-TEST: pgctl log | pb should be non-interactive
+            cmd += ('--follow=name', '--retry')
+
+        logfiles = [
+            (
+                service.path.join('stdout.log').relto(self.pgdir),
+                service.path.join('stderr.log').relto(self.pgdir),
+            )
+            for service in self.services
+        ]
+        with self.pgdir.as_cwd():
+            exec_(sum(logfiles, cmd))  # pragma: no cover
 
     def debug(self):
         """Allow a service to run in the foreground"""
@@ -162,11 +193,17 @@ class PgctlApp(object):
 
         :return: tuple of Service objects
         """
-        return tuple(sorted(
+        try:
+            pgdir = self.pgdir.listdir(sort=True)
+        except py_error.ENOENT:
+            # there's no pgdir
+            pgdir = []
+
+        return tuple([
             self.service_by_name(service_path.basename)
-            for service_path in self.pgdir.listdir()
+            for service_path in pgdir
             if service_path.check(dir=True)
-        ))
+        ])
 
     @cached_property
     def aliases(self):
@@ -175,25 +212,6 @@ class PgctlApp(object):
         return frozendict({
             'default': self.all_services
         })
-
-    def idempotent_supervise(self):
-        """
-        ensure all services are supervised starting in a down state
-        by contract, running this method repeatedly should have no negative consequences
-        """
-        for service in self.all_services:
-            service.ensure_correct_directory_structure()
-
-            # supervise is already essentially idempotent
-            # it dies with code 111 and a single line printed to stderr
-            Popen(
-                ('supervise', service.path.strpath),
-                stdout=service.path.join('stdout.log').open('w'),
-                stderr=service.path.join('stderr.log').open('w'),
-                env=service.supervise_env,
-                close_fds=True,
-            )  # pragma: no branch
-            # (see https://bitbucket.org/ned/coveragepy/issues/146)
 
     @cached_property
     def services_string(self):

@@ -1,0 +1,15 @@
+#!/usr/bin/setsid bash
+set -eu
+# Users must follow this pattern if they can't exec a single subprocess.
+# TODO: simplify this use case by improving dumb-init:
+#       https://github.com/Yelp/dumb-init/issues/4
+term() {
+    trap - TERM
+    kill -- -$$
+}
+trap term TERM
+
+yes oh, hi! | pv -qL 10 &
+yes error | pv -qL 10 >&2 &
+
+wait
