@@ -93,7 +93,9 @@ sweet_error
 
         assert p.poll() is None  # it's still running
 
-        retries = 100
+        # needs to loop for at least two seconds because the default event loop
+        # in tail-f is one second.
+        retries = 20
         buf = ''
         while True:
             try:
@@ -105,7 +107,7 @@ sweet_error
                     if retries > 0:
                         retries -= 1
                         import time
-                        time.sleep(.01)
+                        time.sleep(.1)
                         continue
                     else:
                         break
@@ -113,7 +115,7 @@ sweet_error
                     raise
             buf += block
 
-        assert buf == S('''\
+        assert buf == S('''(?s)\
 ==> ohhi/stdout\\.log <==
 o.*
 ==> ohhi/stderr\\.log <==
