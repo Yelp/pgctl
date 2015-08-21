@@ -32,8 +32,12 @@ class DescribeCli(object):
         config1, _ = config1.communicate()
         assert config1 == '''\
 {{
+    "aliases": {{
+        "default": [
+            "(all services)"
+        ]
+    }}, 
     "command": "config", 
-    "pgconf": "conf.yaml", 
     "pgdir": "playground", 
     "pghome": "{pghome}", 
     "services": [

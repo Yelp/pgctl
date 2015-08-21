@@ -454,3 +454,37 @@ class DescribeReload(object):
             'reloading is not yet implemented.\n'
         )
         assert p.returncode == 1
+
+
+class DescribeAliases(object):
+
+    @fixture
+    def service_name(self):
+        yield 'output'
+
+    def it_can_expand_properly(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'start', 'a'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert stdout == ''
+        assert stderr == '''\
+Starting: ohhi, sweet
+Started: ohhi, sweet
+'''
+        assert p.returncode == 0
+
+    def it_can_detect_cycles(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'start', 'b'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 1
+        assert stdout == ''
+        assert "ValueError: Circular aliases! Visited twice during alias expansion: 'b'" in stderr
+
+    def it_can_start_when_default_is_not_defined_explicitly(self, in_example_dir):
+        p = Popen(('pgctl-2015', 'start'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 0
+        assert stdout == ''
+        assert stderr == '''\
+Starting: ohhi, sweet
+Started: ohhi, sweet
+'''
