@@ -135,13 +135,70 @@ class DescribeFromEnviron(object):
 
 class DescribeMerge(object):
 
+    def it_overrides_correctly(self):
+        assert C.merge((
+            {1: 1},
+            {1: 2},
+        )) == {1: 2}
+
     def it_handles_None_gracefully(self):
-        assert C.Config.merge((
+        assert C.merge((
             {1: 1, 2: 2},
             None,
-            {1: 'one', 3: 'three'},
+            {1: 'one', 3: 'three', 4: None},
             {'four': 'four'},
-        )) == {1: 'one', 2: 2, 3: 'three', 'four': 'four'}
+        )) == {1: 'one', 2: 2, 3: 'three', 4: None, 'four': 'four'}
+
+    def it_handles_nested_maps(self):
+        assert C.merge((
+            {
+                'map': {
+                    'a': 'b',
+                    'c': 'd',
+                },
+                2: {},
+                3: 3,
+            },
+            {
+                'map': {
+                    'a': 'e',
+                    'f': 'g',
+                },
+                2: 2,
+                3: {},
+            },
+        )) == {
+            'map': {
+                'a': 'e',
+                'c': 'd',
+                'f': 'g',
+            },
+            2: 2,
+            3: {},
+        }
+
+    def it_handles_frozen_maps(self):
+        from frozendict import frozendict
+        assert C.merge((
+            frozendict({
+                'map': frozendict({
+                    'a': 'b',
+                    'c': 'd',
+                }),
+            }),
+            frozendict({
+                'map': frozendict({
+                    'a': 'e',
+                    'f': 'g',
+                }),
+            }),
+        )) == {
+            'map': {
+                'a': 'e',
+                'c': 'd',
+                'f': 'g',
+            },
+        }
 
 
 class DescribeFromPathPrefix(object):

@@ -110,7 +110,7 @@ class Config(object):
 
     def from_app(self, path='.'):
         pattern = self.projectname + '.*'
-        return self.merge(
+        return merge(
             self.from_glob(join(parentdir, pattern))
             for parentdir in reversed(tuple(search_parent_directories(path)))
         )
@@ -119,17 +119,8 @@ class Config(object):
     def from_cli(args):
         return vars(args)
 
-    @staticmethod
-    def merge(configs):
-        result = {}
-        for config in configs:
-            if config is None:
-                continue
-            result.update(config)
-        return result
-
     def combined(self, defaults=(), args=Dummy()):
-        return self.merge((
+        return merge((
             defaults,
             self.from_system(),
             self.from_homedir(),
@@ -137,6 +128,32 @@ class Config(object):
             self.from_app(),
             self.from_cli(args),
         ))
+
+
+def merge(values):
+    from collections import deque
+    result = {}
+    q = deque()
+    for value in values:
+        q.append((result, value))
+    while q:
+        q.extend(_merge(*q.popleft()))
+    return result
+
+
+def _merge(old, new):
+    """assume both are mappings, and the old is our mutable result"""
+    from collections import Mapping
+    if new is None:
+        return
+    for key in new:
+        if isinstance(new[key], Mapping):
+            if isinstance(old.get(key), Mapping):
+                yield (old[key], new[key])
+            else:
+                old[key] = dict(new[key])
+        else:
+            old[key] = new[key]
 
 
 def main():
