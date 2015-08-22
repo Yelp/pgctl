@@ -39,6 +39,8 @@ clean:
 	find -name '__pycache__' -print0 | xargs -0r rm -r
 	rm -rf .tox
 	rm -rf docs/build
+	rm -f .coverage.*
+	rm -f .coverage
 
 
 
