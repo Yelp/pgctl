@@ -11,7 +11,7 @@ def main():
         name=str('pgctl'),
         description='A tool to configure and manage developer playgrounds.',
         url='http://pgctl.readthedocs.org/en/latest/',
-        version='0.1.0',
+        version='0.1.1',
         platforms='linux',
         classifiers=[
             'Programming Language :: Python :: 2.7',
