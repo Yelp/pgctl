@@ -11,10 +11,10 @@ from sys import stderr
 
 from cached_property import cached_property
 from frozendict import frozendict
-from py._error import error as py_error
 from py._path.local import LocalPath as Path
 
 from .config import Config
+from .configsearch import search_parent_directories
 from .daemontools import NoSuchService
 from .daemontools import svc
 from .daemontools import SvStat
@@ -35,6 +35,18 @@ PGCTL_DEFAULTS = frozendict({
         'default': (ALL_SERVICES,)
     }),
 })
+
+
+class PgctlUserError(Exception):
+    pass
+
+
+class CircularAliases(PgctlUserError):
+    pass
+
+
+class NoPlayground(PgctlUserError):
+    pass
 
 
 class PgctlApp(object):
@@ -63,7 +75,11 @@ class PgctlApp(object):
         command = self.pgconf['command']
         # argparse guarantees this is an attribute
         command = getattr(self, command)
-        return command()
+        try:
+            return command()
+        except PgctlUserError as error:
+            # we don't need or want a stack trace for user errors
+            return str(error)
 
     def __change_state(self, opt, expected_state, xing, xed):
         """Changes the state of a supervised service using the svc command"""
@@ -188,7 +204,7 @@ class PgctlApp(object):
             if name == ALL_SERVICES:
                 result.extend(self.all_service_names)
             elif name in visited:
-                raise ValueError("Circular aliases! Visited twice during alias expansion: '%s'" % name)
+                raise CircularAliases("Circular aliases! Visited twice during alias expansion: '%s'" % name)
             else:
                 visited.add(name)
                 if name in aliases:
@@ -206,7 +222,7 @@ class PgctlApp(object):
         """
         try:
             pgdir = self.pgdir.listdir(sort=True)
-        except py_error.ENOENT:
+        except NoPlayground:
             # there's no pgdir
             pgdir = []
 
@@ -227,7 +243,11 @@ class PgctlApp(object):
     @cached_property
     def pgdir(self):
         """Retrieve the set playground directory"""
-        return Path(self.pgconf['pgdir'])
+        for parent in search_parent_directories():
+            pgdir = Path(parent).join(self.pgconf['pgdir'])
+            if pgdir.check(dir=True):
+                return pgdir
+        raise NoPlayground("Could not find a pgdir for: '{0}' in {1}".format(self.pgconf['pgdir'], os.getcwd()))
 
     @cached_property
     def pghome(self):
