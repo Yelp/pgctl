@@ -24,7 +24,6 @@ class DescribeCli(object):
             xdg_runtime_dir,
             expected_pghome,
             tmpdir,
-            in_example_dir,
             homedir,
     ):
         env = dict(os.environ, XDG_RUNTIME_DIR=xdg_runtime_dir)

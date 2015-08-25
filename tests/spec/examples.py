@@ -216,6 +216,17 @@ class DescribeStart(object):
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
+    def it_should_work_in_a_subdirectory(self, in_example_dir):
+        os.chdir(in_example_dir.join('playground').strpath)
+        p = Popen(('pgctl-2015', 'start', 'date'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 0
+        assert stdout == ''
+        assert stderr == '''\
+Starting: date
+Started: date
+'''
+
 
 class DescribeStop(object):
 
@@ -477,7 +488,7 @@ Started: ohhi, sweet
         stdout, stderr = run(p)
         assert p.returncode == 1
         assert stdout == ''
-        assert "ValueError: Circular aliases! Visited twice during alias expansion: 'b'" in stderr
+        assert stderr == "Circular aliases! Visited twice during alias expansion: 'b'\n"
 
     def it_can_start_when_default_is_not_defined_explicitly(self, in_example_dir):
         p = Popen(('pgctl-2015', 'start'), stdout=PIPE, stderr=PIPE)
