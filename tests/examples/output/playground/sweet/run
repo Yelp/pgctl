@@ -2,4 +2,4 @@
 echo sweet
 echo sweet_error >&2
 
-sleep infinity
+exec sleep infinity

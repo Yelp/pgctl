@@ -70,10 +70,8 @@ sweet_error
 
 ==> sweet/stdout.log <==
 sweet
-sweet
 
 ==> sweet/stderr.log <==
-sweet_error
 sweet_error
 '''
         assert p.returncode == 0
@@ -234,7 +232,7 @@ class DescribeStop(object):
         check_call(('pgctl-2015', 'start', 'date'))
         check_call(('pgctl-2015', 'stop', 'date'))
 
-        assert svstat('playground/date') == [C(SvStat, state='could not get status, supervisor is down')]
+        assert svstat('playground/date') == [C(SvStat, state=SvStat.UNSUPERVISED)]
 
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl-2015', 'stop', 'date'))
@@ -370,8 +368,8 @@ class DescribeStartMultipleServices(object):
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
             assert svstat('playground/date', 'playground/tail') == [
-                C(SvStat, state='could not get status, supervisor is down'),
-                C(SvStat, state='could not get status, supervisor is down'),
+                C(SvStat, state=SvStat.UNSUPERVISED),
+                C(SvStat, state=SvStat.UNSUPERVISED),
             ]
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
