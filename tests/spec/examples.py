@@ -496,3 +496,37 @@ Started: ohhi, sweet
 Starting: ohhi, sweet
 Started: ohhi, sweet
 '''
+
+
+class DescribeEnvironment(object):
+
+    @fixture
+    def service_name(self):
+        yield 'environment'
+
+    def it_can_accept_different_environment_variables(self, in_example_dir):
+        check_call(('sh', '-c', 'MYVAR=ohhi pgctl-2015 start'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 0
+        assert stderr == ''
+        assert stdout == '''\
+==> environment/stdout.log <==
+ohhi
+
+==> environment/stderr.log <==
+'''
+        check_call(('pgctl-2015', 'stop'))
+        check_call(('sh', '-c', 'MYVAR=bye pgctl-2015 start'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 0
+        assert stderr == ''
+        assert stdout == '''\
+==> environment/stdout.log <==
+bye
+
+==> environment/stderr.log <==
+'''
