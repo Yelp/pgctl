@@ -19,6 +19,7 @@ from .daemontools import NoSuchService
 from .daemontools import svc
 from .daemontools import SvStat
 from .daemontools import svstat
+from .flock import Locked
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
@@ -81,6 +82,13 @@ class PgctlApp(object):
             # we don't need or want a stack trace for user errors
             return str(error)
 
+    def is_locked(self, service):
+        try:
+            self.service_by_name(service).check_lock()
+        except Locked:
+            time.sleep(.1)
+            return True
+
     def __change_state(self, opt, expected_state, xing, xed):
         """Changes the state of a supervised service using the svc command"""
         print(xing, self.service_names_string, file=stderr)
@@ -96,6 +104,14 @@ class PgctlApp(object):
                         break
                     else:
                         time.sleep(.01)
+                if opt == '-d':
+                    svc(('-dx',) + tuple(self.service_names))
+                    for service in self.service_names:
+                        while self.is_locked(service):
+                            print('.', end='')
+                            import sys
+                            sys.stdout.flush()
+                        print('')
                 print(xed, self.service_names_string, file=stderr)
             except NoSuchService:
                 return "No such playground service: '%s'" % self.service_names_string
@@ -116,15 +132,25 @@ class PgctlApp(object):
             'Stopped supervise:',
         )
 
+    def has_status(self):
+        """Wait until the process is supervised to show status."""
+        for status in svstat(*self.service_names):
+            if SvStat.UNSUPERVISED in status:
+                return False  # pragma: no cover expect to hit this minimally
+        return True
+
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
         with self.pgdir.as_cwd():
+            while not self.has_status():
+                pass  # pragma: no cover expect to hit this minimally
             for status in svstat(*self.service_names):
                 print(status)
 
     def restart(self):
         """Starts and stops a service"""
         self.stop()
+        self.app_invariants()
         self.start()
 
     def reload(self):

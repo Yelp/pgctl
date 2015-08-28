@@ -66,6 +66,10 @@ class Service(namedtuple('Service', ['path', 'scratch_dir'])):
             # that it's already supervised: success
             return
 
+    def check_lock(self):
+        with flock(self.path.strpath):
+            pass
+
     @cached_property
     def name(self):
         return self.path.basename

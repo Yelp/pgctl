@@ -70,10 +70,8 @@ sweet_error
 
 ==> sweet/stdout.log <==
 sweet
-sweet
 
 ==> sweet/stderr.log <==
-sweet_error
 sweet_error
 '''
         assert p.returncode == 0
@@ -234,7 +232,7 @@ class DescribeStop(object):
         check_call(('pgctl-2015', 'start', 'date'))
         check_call(('pgctl-2015', 'stop', 'date'))
 
-        assert svstat('playground/date') == [C(SvStat, state='down')]
+        assert svstat('playground/date') == [C(SvStat, state=SvStat.UNSUPERVISED)]
 
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl-2015', 'stop', 'date'))
@@ -319,14 +317,13 @@ class DescribeRestart(object):
 
     def it_is_just_stop_then_start(self, in_example_dir):
         p = Popen(('pgctl-2015', 'restart', 'date'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
+        _, stderr = run(p)
         assert stderr == '''\
 Stopping: date
 Stopped: date
 Starting: date
 Started: date
 '''
-        assert stdout == ''
         assert p.returncode == 0
         assert svstat('playground/date') == [C(SvStat, state='up')]
 
@@ -371,8 +368,8 @@ class DescribeStartMultipleServices(object):
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
             assert svstat('playground/date', 'playground/tail') == [
-                C(SvStat, state='down'),
-                C(SvStat, state='down'),
+                C(SvStat, state=SvStat.UNSUPERVISED),
+                C(SvStat, state=SvStat.UNSUPERVISED),
             ]
         finally:
             check_call(('pgctl-2015', 'stop', 'date', 'tail'))
@@ -498,4 +495,38 @@ Started: ohhi, sweet
         assert stderr == '''\
 Starting: ohhi, sweet
 Started: ohhi, sweet
+'''
+
+
+class DescribeEnvironment(object):
+
+    @fixture
+    def service_name(self):
+        yield 'environment'
+
+    def it_can_accept_different_environment_variables(self, in_example_dir):
+        check_call(('sh', '-c', 'MYVAR=ohhi pgctl-2015 start'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 0
+        assert stderr == ''
+        assert stdout == '''\
+==> environment/stdout.log <==
+ohhi
+
+==> environment/stderr.log <==
+'''
+        check_call(('pgctl-2015', 'stop'))
+        check_call(('sh', '-c', 'MYVAR=bye pgctl-2015 start'))
+
+        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
+        stdout, stderr = run(p)
+        assert p.returncode == 0
+        assert stderr == ''
+        assert stdout == '''\
+==> environment/stdout.log <==
+bye
+
+==> environment/stderr.log <==
 '''
