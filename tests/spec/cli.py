@@ -3,10 +3,9 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import os
-from subprocess import PIPE
-from subprocess import Popen
 
 import pytest
+from testing import assert_command
 
 
 class DescribeCli(object):
@@ -27,9 +26,7 @@ class DescribeCli(object):
             homedir,
     ):
         env = dict(os.environ, XDG_RUNTIME_DIR=xdg_runtime_dir)
-        config1 = Popen(('pgctl-2015', 'config'), stdout=PIPE, cwd=tmpdir.strpath, env=env)
-        config1, _ = config1.communicate()
-        assert config1 == '''\
+        expected_output = '''\
 {{
     "aliases": {{
         "default": [
@@ -45,12 +42,34 @@ class DescribeCli(object):
 }}
 '''.format(pghome=expected_pghome)  # noqa
 
+        assert_command(
+            ('pgctl-2015', 'config'),
+            expected_output,
+            '',
+            0,
+            cwd=tmpdir.strpath,
+            env=env,
+        )
+
         from sys import executable
-        config2 = Popen((executable, '-m', 'pgctl.cli', 'config'), stdout=PIPE, cwd=tmpdir.strpath, env=env)
-        config2, _ = config2.communicate()
-        assert config1 == config2
+        assert_command(
+            (executable, '-m', 'pgctl.cli', 'config'),
+            expected_output,
+            '',
+            0,
+            cwd=tmpdir.strpath,
+            env=env,
+        )
 
     def it_shows_help_with_no_arguments(self):
-        p = Popen(('pgctl-2015',))
-        assert p.wait() == 2  # too few arguments
-        # TODO assert the output
+        assert_command(
+            ('pgctl-2015',),
+            '',
+            '''\
+usage: pgctl-2015 [-h] [--pgdir PGDIR] [--pghome PGHOME]
+                  {start,stop,status,restart,reload,log,debug,config}
+                  [services [services ...]]
+pgctl-2015: error: too few arguments
+''',
+            2,  # too few arguments
+        )

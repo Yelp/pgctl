@@ -3,9 +3,9 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import uuid
-from subprocess import PIPE
-from subprocess import Popen
 from sys import executable
+
+from testing import assert_command
 
 
 class DescribeCombined(object):
@@ -23,12 +23,14 @@ class DescribeCombined(object):
         c.ensure(prefix + '.b').chmod(0o666)
 
         with c.as_cwd():
-            config = Popen((executable, '-m', 'pgctl.configsearch', prefix + '*'), stdout=PIPE)
-            config, _ = config.communicate()
-
-        assert config == '''\
+            assert_command(
+                (executable, '-m', 'pgctl.configsearch', prefix + '*'),
+                '''\
 {tmpdir}/a/b/c/{prefix}.a
 {tmpdir}/a/b/{prefix}.conf
 {tmpdir}/a/{prefix}.yaml
 {tmpdir}/{prefix}.ini
-'''.format(tmpdir=tmpdir.strpath, prefix=prefix)
+'''.format(tmpdir=tmpdir.strpath, prefix=prefix),
+                '',
+                0,
+            )

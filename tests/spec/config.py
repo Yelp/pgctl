@@ -6,6 +6,7 @@ import os
 from contextlib import contextmanager
 
 import mock
+from testing import assert_command
 
 from pgctl.config import Config
 
@@ -63,12 +64,7 @@ class DescribeCombined(object):
 
     def it_can_be_run_via_python_m(self, tmpdir):
         from sys import executable
-        from subprocess import Popen, PIPE
-        with setup(tmpdir):
-            config = Popen((executable, '-m', 'pgctl.config', 'my'), stdout=PIPE)
-            config, _ = config.communicate()
-
-        assert config == '''\
+        expected_output = '''\
 {
     "app": "app", 
     "app/a": "app/a", 
@@ -88,3 +84,10 @@ class DescribeCombined(object):
     "home": "home"
 }
 '''  # noqa
+        with setup(tmpdir):
+            assert_command(
+                (executable, '-m', 'pgctl.config', 'my'),
+                expected_output,
+                '',
+                0,
+            )

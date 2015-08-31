@@ -11,7 +11,7 @@ from subprocess import Popen
 from pytest import yield_fixture as fixture
 from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
-from testing import run
+from testing import assert_command
 from testing.assertions import retry
 
 from pgctl.cli import SvStat
@@ -25,10 +25,9 @@ class DescribePgctlLog(object):
         yield 'output'
 
     def it_is_empty_before_anything_starts(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stderr == ''
-        assert stdout == '''\
+        assert_command(
+            ('pgctl-2015', 'log'),
+            '''\
 ==> ohhi/stdout.log <==
 
 ==> ohhi/stderr.log <==
@@ -36,16 +35,17 @@ class DescribePgctlLog(object):
 ==> sweet/stdout.log <==
 
 ==> sweet/stderr.log <==
-'''
-        assert p.returncode == 0
+''',
+            '',
+            0,
+        )
 
     def it_shows_stdout_and_stderr(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'sweet'))
 
-        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stderr == ''
-        assert stdout == '''\
+        assert_command(
+            ('pgctl-2015', 'log'),
+            '''\
 ==> ohhi/stdout.log <==
 
 ==> ohhi/stderr.log <==
@@ -55,15 +55,16 @@ sweet
 
 ==> sweet/stderr.log <==
 sweet_error
-'''
-        assert p.returncode == 0
+''',
+            '',
+            0,
+        )
 
         check_call(('pgctl-2015', 'restart', 'sweet'))
 
-        p = Popen(('pgctl-2015', 'log'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stderr == ''
-        assert stdout == '''\
+        assert_command(
+            ('pgctl-2015', 'log'),
+            '''\
 ==> ohhi/stdout.log <==
 
 ==> ohhi/stderr.log <==
@@ -75,8 +76,10 @@ sweet
 ==> sweet/stderr.log <==
 sweet_error
 sweet_error
-'''
-        assert p.returncode == 0
+''',
+            '',
+            0,
+        )
 
     def it_logs_continuously_when_run_interactively(self, in_example_dir):
         check_call(('pgctl-2015', 'start'))
@@ -200,14 +203,15 @@ class DescribeTailExample(object):
 class DescribeStart(object):
 
     def it_fails_given_unknown(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'start', 'unknown'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stdout == ''
-        assert stderr == (
-            'Starting: unknown\n'
-            "No such playground service: 'unknown'\n"
+        assert_command(
+            ('pgctl-2015', 'start', 'unknown'),
+            '',
+            '''\
+Starting: unknown
+No such playground service: 'unknown'
+''',
+            1,
         )
-        assert p.returncode == 1
 
     def it_is_idempotent(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
@@ -218,14 +222,15 @@ class DescribeStart(object):
 
     def it_should_work_in_a_subdirectory(self, in_example_dir):
         os.chdir(in_example_dir.join('playground').strpath)
-        p = Popen(('pgctl-2015', 'start', 'date'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert p.returncode == 0
-        assert stdout == ''
-        assert stderr == '''\
+        assert_command(
+            ('pgctl-2015', 'start', 'date'),
+            '',
+            '''\
 Starting: date
 Started: date
-'''
+''',
+            0,
+        )
 
 
 class DescribeStop(object):
@@ -240,14 +245,15 @@ class DescribeStop(object):
         check_call(('pgctl-2015', 'stop', 'date'))
 
     def it_fails_given_unknown(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'stop', 'unknown'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stdout == ''
-        assert stderr == (
-            'Stopping: unknown\n'
-            "No such playground service: 'unknown'\n"
+        assert_command(
+            ('pgctl-2015', 'stop', 'unknown'),
+            '',
+            '''\
+Stopping: unknown
+No such playground service: 'unknown'
+''',
+            1,
         )
-        assert p.returncode == 1
 
 
 def pty_normalize_newlines(fd):
@@ -300,13 +306,12 @@ class DescribeDebug(object):
         self.assert_works_interactively()
 
     def it_fails_with_multiple_services(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'debug', 'abc', 'def'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stdout == ''
-        assert stderr == (
-            'Must debug exactly one service, not: abc, def\n'
+        assert_command(
+            ('pgctl-2015', 'debug', 'abc', 'def'),
+            '',
+            'Must debug exactly one service, not: abc, def\n',
+            1,
         )
-        assert p.returncode == 1
 
     def it_first_stops_the_background_service_if_running(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'greeter'))
@@ -318,16 +323,17 @@ class DescribeDebug(object):
 class DescribeRestart(object):
 
     def it_is_just_stop_then_start(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'restart', 'date'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stderr == '''\
+        assert_command(
+            ('pgctl-2015', 'restart', 'date'),
+            '',
+            '''\
 Stopping: date
 Stopped: date
 Starting: date
 Started: date
-'''
-        assert stdout == ''
-        assert p.returncode == 0
+''',
+            0,
+        )
         assert svstat('playground/date') == [C(SvStat, state='up')]
 
     def it_also_works_when_up(self, in_example_dir):
@@ -396,18 +402,22 @@ class DescribeStatus(object):
     def it_displays_correctly_when_the_service_is_down(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
         check_call(('pgctl-2015', 'stop', 'date'))
-        p = Popen(('pgctl-2015', 'status', 'date'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stdout == S('date: down \\d+ seconds\\n$')
-        assert stderr == ''
+        assert_command(
+            ('pgctl-2015', 'status', 'date'),
+            S('date: down \\d+ seconds\\n$'),
+            '',
+            0,
+        )
 
     def it_displays_correctly_when_the_service_is_up(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
         try:
-            p = Popen(('pgctl-2015', 'status', 'date'), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = run(p)
-            assert stdout == S('date: up \\(pid \\d+\\) \\d+ seconds\\n$')
-            assert stderr == ''
+            assert_command(
+                ('pgctl-2015', 'status', 'date'),
+                S('date: up \\(pid \\d+\\) \\d+ seconds\\n$'),
+                '',
+                0,
+            )
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -415,14 +425,15 @@ class DescribeStatus(object):
         """Expect multiple services with status and PID"""
         check_call(('pgctl-2015', 'start', 'date'))
         try:
-            p = Popen(('pgctl-2015', 'status', 'date', 'tail'), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = run(p)
-            assert stdout == S('''\
+            assert_command(
+                ('pgctl-2015', 'status', 'date', 'tail'),
+                S('''\
 date: up \\(pid \\d+\\) \\d+ seconds
 tail: down \\d+ seconds
-$''')
-            assert stderr == ''
-            assert p.returncode == 0
+$'''),
+                '',
+                0,
+            )
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -430,26 +441,28 @@ $''')
         """Expect all services to provide status when no service is specified"""
         check_call(('pgctl-2015', 'start', 'tail'))
         try:
-            p = Popen(('pgctl-2015', 'status'), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = run(p)
-            assert stdout == S('''\
+            assert_command(
+                ('pgctl-2015', 'status'),
+                S('''\
 date: down \\d+ seconds
 tail: up \\(pid \\d+\\) \\d+ seconds
-$''')
-            assert stderr == ''
-            assert p.returncode == 0
+$'''),
+                '',
+                0,
+            )
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
     def it_displays_status_for_unknown_services(self, in_example_dir):
         try:
-            p = Popen(('pgctl-2015', 'status', 'garbage'), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = run(p)
-            assert stdout == '''\
+            assert_command(
+                ('pgctl-2015', 'status', 'garbage'),
+                '''\
 garbage: no such service
-'''
-            assert stderr == ''
-            assert p.returncode == 0
+''',
+                '',
+                0,
+            )
         finally:
             check_call(('pgctl-2015', 'stop', 'date'))
 
@@ -457,14 +470,15 @@ garbage: no such service
 class DescribeReload(object):
 
     def it_is_unimplemented(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'reload'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stdout == ''
-        assert stderr == (
-            'reload: date\n'
-            'reloading is not yet implemented.\n'
+        assert_command(
+            ('pgctl-2015', 'reload'),
+            '',
+            '''\
+reload: date
+reloading is not yet implemented.
+''',
+            1,
         )
-        assert p.returncode == 1
 
 
 class DescribeAliases(object):
@@ -474,28 +488,31 @@ class DescribeAliases(object):
         yield 'output'
 
     def it_can_expand_properly(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'start', 'a'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert stdout == ''
-        assert stderr == '''\
+        assert_command(
+            ('pgctl-2015', 'start', 'a'),
+            '',
+            '''\
 Starting: ohhi, sweet
 Started: ohhi, sweet
-'''
-        assert p.returncode == 0
+''',
+            0,
+        )
 
     def it_can_detect_cycles(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'start', 'b'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert p.returncode == 1
-        assert stdout == ''
-        assert stderr == "Circular aliases! Visited twice during alias expansion: 'b'\n"
+        assert_command(
+            ('pgctl-2015', 'start', 'b'),
+            '',
+            "Circular aliases! Visited twice during alias expansion: 'b'\n",
+            1,
+        )
 
     def it_can_start_when_default_is_not_defined_explicitly(self, in_example_dir):
-        p = Popen(('pgctl-2015', 'start'), stdout=PIPE, stderr=PIPE)
-        stdout, stderr = run(p)
-        assert p.returncode == 0
-        assert stdout == ''
-        assert stderr == '''\
+        assert_command(
+            ('pgctl-2015', 'start'),
+            '',
+            '''\
 Starting: ohhi, sweet
 Started: ohhi, sweet
-'''
+''',
+            0,
+        )
