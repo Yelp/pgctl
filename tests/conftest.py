@@ -59,7 +59,7 @@ def wait4():
     try:
         while i < 1000:
             os.wait3(os.WNOHANG)
-            i += 1  # we actually don't expect to hit this. pragma: no cover
+            i += 1  # we only hit this when tests are broken. pragma: no cover
         raise AssertionError("there's a subprocess that's still running")
     except OSError as error:
         if error.errno == 10:  # no child processes

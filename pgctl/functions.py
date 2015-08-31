@@ -8,7 +8,7 @@ import os
 from frozendict import frozendict
 
 
-def exec_(argv, env=None):  # pragma: no cover
+def exec_(argv, env=None):  # never returns
     """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
     Like os.execv, this function never returns.
     """
@@ -19,7 +19,7 @@ def exec_(argv, env=None):  # pragma: no cover
     #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
     import atexit
     atexit._run_exitfuncs()  # pylint:disable=protected-access
-    os.execvpe(argv[0], argv, env)  # never returns
+    os.execvpe(argv[0], argv, env)
 
 
 def uniq(iterable):
