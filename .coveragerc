@@ -10,6 +10,7 @@ data_file = $TOP/.coverage
 exclude_lines =
     # Have to re-enable the standard pragma
     \#.*pragma:\s*no\s*cover
+    \#.*never returns
 
     # Don't complain if tests don't hit defensive assertion code:
     ^\s*raise AssertionError\b

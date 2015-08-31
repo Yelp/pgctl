@@ -152,7 +152,7 @@ class PgctlApp(object):
             for service in self.services
         ]
         with self.pgdir.as_cwd():
-            exec_(sum(logfiles, cmd))  # pragma: no cover
+            exec_(sum(logfiles, cmd))  # never returns
 
     def debug(self):
         """Allow a service to run in the foreground"""
@@ -166,7 +166,7 @@ class PgctlApp(object):
         # start supervise in the foreground with the service up
         service = self.services[0]
         service.path.join('down').remove()
-        exec_(('supervise', service.path.strpath), env=service.supervise_env)  # pragma: no cover
+        exec_(('supervise', service.path.strpath), env=service.supervise_env)  # never returns
 
     def config(self):
         """Print the configuration for a service"""
