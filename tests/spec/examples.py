@@ -174,10 +174,7 @@ class DescribeDateExample(object):
     def it_does_start(self, in_example_dir, scratch_dir):
         assert not scratch_dir.join('now.date').isfile()
         check_call(('pgctl-2015', 'start', 'date'))
-        try:
-            retry(lambda: scratch_dir.join('now.date').isfile())
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+        retry(lambda: scratch_dir.join('now.date').isfile())
 
 
 class DescribeTailExample(object):
@@ -193,11 +190,8 @@ class DescribeTailExample(object):
         assert not os.path.isfile('output')
 
         check_call(('pgctl-2015', 'start', 'tail'))
-        try:
-            retry(lambda: os.path.isfile('output'))
-            assert open('output').read() == test_string
-        finally:
-            check_call(('pgctl-2015', 'stop', 'tail'))
+        retry(lambda: os.path.isfile('output'))
+        assert open('output').read() == test_string
 
 
 class DescribeStart(object):
@@ -215,10 +209,7 @@ No such playground service: 'unknown'
 
     def it_is_idempotent(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
-        try:
-            check_call(('pgctl-2015', 'start', 'date'))
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+        check_call(('pgctl-2015', 'start', 'date'))
 
     def it_should_work_in_a_subdirectory(self, in_example_dir):
         os.chdir(in_example_dir.join('playground').strpath)
@@ -350,47 +341,35 @@ class DescribeStartMultipleServices(object):
         yield 'multiple'
 
     def it_only_starts_the_indicated_services(self, in_example_dir, request):
-        try:
-            check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl-2015', 'start', 'date'))
 
-            assert svstat('playground/date') == [C(SvStat, state='up')]
-            assert svstat('playground/tail') == [C(SvStat, state='down')]
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+        assert svstat('playground/date') == [C(SvStat, state='up')]
+        assert svstat('playground/tail') == [C(SvStat, state='down')]
 
     def it_starts_multiple_services(self, in_example_dir, request):
-        try:
-            check_call(('pgctl-2015', 'start', 'date', 'tail'))
+        check_call(('pgctl-2015', 'start', 'date', 'tail'))
 
-            assert svstat('playground/date') == [C(SvStat, state='up')]
-            assert svstat('playground/tail') == [C(SvStat, state='up')]
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date', 'tail'))
+        assert svstat('playground/date') == [C(SvStat, state='up')]
+        assert svstat('playground/tail') == [C(SvStat, state='up')]
 
     def it_stops_multiple_services(self, in_example_dir):
-        try:
-            check_call(('pgctl-2015', 'start', 'date', 'tail'))
+        check_call(('pgctl-2015', 'start', 'date', 'tail'))
 
-            assert svstat('playground/date') == [C(SvStat, state='up')]
-            assert svstat('playground/tail') == [C(SvStat, state='up')]
+        assert svstat('playground/date') == [C(SvStat, state='up')]
+        assert svstat('playground/tail') == [C(SvStat, state='up')]
 
-            check_call(('pgctl-2015', 'stop', 'date', 'tail'))
+        check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
-            assert svstat('playground/date', 'playground/tail') == [
-                C(SvStat, state='down'),
-                C(SvStat, state='down'),
-            ]
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date', 'tail'))
+        assert svstat('playground/date', 'playground/tail') == [
+            C(SvStat, state='down'),
+            C(SvStat, state='down'),
+        ]
 
     def it_starts_everything_with_no_arguments_no_config(self, in_example_dir, request):
-        try:
-            check_call(('pgctl-2015', 'start'))
+        check_call(('pgctl-2015', 'start'))
 
-            assert svstat('playground/date') == [C(SvStat, state='up')]
-            assert svstat('playground/tail') == [C(SvStat, state='up')]
-        finally:
-            check_call(('pgctl-2015', 'stop'))
+        assert svstat('playground/date') == [C(SvStat, state='up')]
+        assert svstat('playground/tail') == [C(SvStat, state='up')]
 
 
 class DescribeStatus(object):
@@ -411,60 +390,48 @@ class DescribeStatus(object):
 
     def it_displays_correctly_when_the_service_is_up(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'date'))
-        try:
-            assert_command(
-                ('pgctl-2015', 'status', 'date'),
-                S('date: up \\(pid \\d+\\) \\d+ seconds\\n$'),
-                '',
-                0,
-            )
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+        assert_command(
+            ('pgctl-2015', 'status', 'date'),
+            S('date: up \\(pid \\d+\\) \\d+ seconds\\n$'),
+            '',
+            0,
+        )
 
     def it_displays_the_status_of_multiple_services(self, in_example_dir):
         """Expect multiple services with status and PID"""
         check_call(('pgctl-2015', 'start', 'date'))
-        try:
-            assert_command(
-                ('pgctl-2015', 'status', 'date', 'tail'),
-                S('''\
+        assert_command(
+            ('pgctl-2015', 'status', 'date', 'tail'),
+            S('''\
 date: up \\(pid \\d+\\) \\d+ seconds
 tail: down \\d+ seconds
 $'''),
-                '',
-                0,
-            )
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+            '',
+            0,
+        )
 
     def it_displays_the_status_of_all_services(self, in_example_dir):
         """Expect all services to provide status when no service is specified"""
         check_call(('pgctl-2015', 'start', 'tail'))
-        try:
-            assert_command(
-                ('pgctl-2015', 'status'),
-                S('''\
+        assert_command(
+            ('pgctl-2015', 'status'),
+            S('''\
 date: down \\d+ seconds
 tail: up \\(pid \\d+\\) \\d+ seconds
 $'''),
-                '',
-                0,
-            )
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+            '',
+            0,
+        )
 
     def it_displays_status_for_unknown_services(self, in_example_dir):
-        try:
-            assert_command(
-                ('pgctl-2015', 'status', 'garbage'),
-                '''\
+        assert_command(
+            ('pgctl-2015', 'status', 'garbage'),
+            '''\
 garbage: no such service
 ''',
-                '',
-                0,
-            )
-        finally:
-            check_call(('pgctl-2015', 'stop', 'date'))
+            '',
+            0,
+        )
 
 
 class DescribeReload(object):
