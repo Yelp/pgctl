@@ -8,14 +8,17 @@ from subprocess import check_call
 from subprocess import PIPE
 from subprocess import Popen
 
+import pytest
 from pytest import yield_fixture as fixture
 from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 from testing import assert_command
 from testing.assertions import retry
 
-from pgctl.cli import SvStat
-from pgctl.cli import svstat
+from pgctl.daemontools import SvStat
+from pgctl.daemontools import svstat
+
+parametrize = pytest.mark.parametrize
 
 
 class DescribePgctlLog(object):
@@ -28,13 +31,13 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> ohhi/stdout.log <==
+==> playground/ohhi/stdout.log <==
 
-==> ohhi/stderr.log <==
+==> playground/ohhi/stderr.log <==
 
-==> sweet/stdout.log <==
+==> playground/sweet/stdout.log <==
 
-==> sweet/stderr.log <==
+==> playground/sweet/stderr.log <==
 ''',
             '',
             0,
@@ -46,14 +49,14 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> ohhi/stdout.log <==
+==> playground/ohhi/stdout.log <==
 
-==> ohhi/stderr.log <==
+==> playground/ohhi/stderr.log <==
 
-==> sweet/stdout.log <==
+==> playground/sweet/stdout.log <==
 sweet
 
-==> sweet/stderr.log <==
+==> playground/sweet/stderr.log <==
 sweet_error
 ''',
             '',
@@ -65,16 +68,14 @@ sweet_error
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> ohhi/stdout.log <==
+==> playground/ohhi/stdout.log <==
 
-==> ohhi/stderr.log <==
+==> playground/ohhi/stderr.log <==
 
-==> sweet/stdout.log <==
+==> playground/sweet/stdout.log <==
 sweet
-sweet
 
-==> sweet/stderr.log <==
-sweet_error
+==> playground/sweet/stderr.log <==
 sweet_error
 ''',
             '',
@@ -119,14 +120,14 @@ sweet_error
             buf += block
 
         assert buf == S('''(?s)\
-==> ohhi/stdout\\.log <==
+==> playground/ohhi/stdout\\.log <==
 o.*
-==> ohhi/stderr\\.log <==
+==> playground/ohhi/stderr\\.log <==
 e.*
-==> sweet/stdout\\.log <==
+==> playground/sweet/stdout\\.log <==
 sweet
 
-==> sweet/stderr\\.log <==
+==> playground/sweet/stderr\\.log <==
 sweet_error
 .*$''')
         assert p.poll() is None  # it's still running
@@ -201,8 +202,7 @@ class DescribeStart(object):
             ('pgctl-2015', 'start', 'unknown'),
             '',
             '''\
-Starting: unknown
-No such playground service: 'unknown'
+ERROR: No such playground service: 'unknown'
 ''',
             1,
         )
@@ -230,7 +230,7 @@ class DescribeStop(object):
         check_call(('pgctl-2015', 'start', 'date'))
         check_call(('pgctl-2015', 'stop', 'date'))
 
-        assert svstat('playground/date') == [C(SvStat, state='down')]
+        assert svstat('playground/date') == [C(SvStat, state=SvStat.UNSUPERVISED)]
 
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl-2015', 'stop', 'date'))
@@ -241,7 +241,7 @@ class DescribeStop(object):
             '',
             '''\
 Stopping: unknown
-No such playground service: 'unknown'
+ERROR: No such playground service: 'unknown'
 ''',
             1,
         )
@@ -300,7 +300,7 @@ class DescribeDebug(object):
         assert_command(
             ('pgctl-2015', 'debug', 'abc', 'def'),
             '',
-            'Must debug exactly one service, not: abc, def\n',
+            'ERROR: Must debug exactly one service, not: abc, def\n',
             1,
         )
 
@@ -344,7 +344,7 @@ class DescribeStartMultipleServices(object):
         check_call(('pgctl-2015', 'start', 'date'))
 
         assert svstat('playground/date') == [C(SvStat, state='up')]
-        assert svstat('playground/tail') == [C(SvStat, state='down')]
+        assert svstat('playground/tail') == [C(SvStat, state=SvStat.UNSUPERVISED)]
 
     def it_starts_multiple_services(self, in_example_dir, request):
         check_call(('pgctl-2015', 'start', 'date', 'tail'))
@@ -361,8 +361,8 @@ class DescribeStartMultipleServices(object):
         check_call(('pgctl-2015', 'stop', 'date', 'tail'))
 
         assert svstat('playground/date', 'playground/tail') == [
-            C(SvStat, state='down'),
-            C(SvStat, state='down'),
+            C(SvStat, state=SvStat.UNSUPERVISED),
+            C(SvStat, state=SvStat.UNSUPERVISED),
         ]
 
     def it_starts_everything_with_no_arguments_no_config(self, in_example_dir, request):
@@ -383,7 +383,7 @@ class DescribeStatus(object):
         check_call(('pgctl-2015', 'stop', 'date'))
         assert_command(
             ('pgctl-2015', 'status', 'date'),
-            S('date: down \\d+ seconds\\n$'),
+            'date: down\n',
             '',
             0,
         )
@@ -404,7 +404,7 @@ class DescribeStatus(object):
             ('pgctl-2015', 'status', 'date', 'tail'),
             S('''\
 date: up \\(pid \\d+\\) \\d+ seconds
-tail: down \\d+ seconds
+tail: down
 $'''),
             '',
             0,
@@ -416,7 +416,7 @@ $'''),
         assert_command(
             ('pgctl-2015', 'status'),
             S('''\
-date: down \\d+ seconds
+date: down
 tail: up \\(pid \\d+\\) \\d+ seconds
 $'''),
             '',
@@ -442,7 +442,7 @@ class DescribeReload(object):
             '',
             '''\
 reload: date
-reloading is not yet implemented.
+ERROR: reloading is not yet implemented.
 ''',
             1,
         )
@@ -469,7 +469,7 @@ Started: ohhi, sweet
         assert_command(
             ('pgctl-2015', 'start', 'b'),
             '',
-            "Circular aliases! Visited twice during alias expansion: 'b'\n",
+            "ERROR: Circular aliases! Visited twice during alias expansion: 'b'\n",
             1,
         )
 
@@ -482,4 +482,189 @@ Starting: ohhi, sweet
 Started: ohhi, sweet
 ''',
             0,
+        )
+
+
+class DescribeEnvironment(object):
+
+    @fixture
+    def service_name(self):
+        yield 'environment'
+
+    def it_can_accept_different_environment_variables(self, in_example_dir):
+        check_call(('sh', '-c', 'MYVAR=ohhi pgctl-2015 start'))
+
+        assert_command(
+            ('pgctl-2015', 'log'),
+            '''\
+==> playground/environment/stdout.log <==
+ohhi
+
+==> playground/environment/stderr.log <==
+''',
+            '',
+            0,
+        )
+
+        check_call(('sh', '-c', 'MYVAR=bye pgctl-2015 restart'))
+
+        assert_command(
+            ('pgctl-2015', 'log'),
+            '''\
+==> playground/environment/stdout.log <==
+bye
+
+==> playground/environment/stderr.log <==
+''',
+            '',
+            0,
+        )
+
+
+class DescribePgdirMissing(object):
+
+    @parametrize(
+        'command',
+        ('start', 'stop', 'status', 'restart', 'reload', 'log', 'debug'),
+    )
+    def it_shows_an_error(self, command, tmpdir):
+        with tmpdir.as_cwd():
+            assert_command(
+                ('pgctl-2015', command),
+                '',
+                "ERROR: could not find any directory named 'playground'\n",
+                1,
+            )
+
+    def it_can_still_show_config(self, tmpdir):
+        expected_output = '''\
+{
+    "aliases": {
+        "default": [
+            "(all services)"
+        ]
+    }, 
+    "command": "config", 
+    "pgdir": "playground", 
+    "pghome": "~/.run/pgctl", 
+    "services": [
+        "default"
+    ]
+}
+'''  # noqa
+
+        with tmpdir.as_cwd():
+            assert_command(
+                ('pgctl-2015', 'config'),
+                expected_output,
+                '',
+                0,
+            )
+
+    def it_can_still_show_help(self, tmpdir):
+        with tmpdir.as_cwd():
+            assert_command(
+                ('pgctl-2015', '--help'),
+                '''\
+usage: pgctl-2015 [-h] [--pgdir PGDIR] [--pghome PGHOME]
+                  {start,stop,status,restart,reload,log,debug,config}
+                  [services [services ...]]
+
+positional arguments:
+  {start,stop,status,restart,reload,log,debug,config}
+                        specify what action to take
+  services              specify which services to act upon
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --pgdir PGDIR         name the playground directory
+  --pghome PGHOME       directory to keep user-level playground state
+''',
+                '',
+                0,
+            )
+
+    def it_still_shows_help_without_args(self, tmpdir):
+        with tmpdir.as_cwd():
+            assert_command(
+                ('pgctl-2015'),
+                '',
+                '''\
+usage: pgctl-2015 [-h] [--pgdir PGDIR] [--pghome PGHOME]
+                  {start,stop,status,restart,reload,log,debug,config}
+                  [services [services ...]]
+pgctl-2015: error: too few arguments
+''',
+                2,
+            )
+
+
+class DescribeImproperShutdown(object):
+
+    @fixture
+    def service_name(self):
+        yield 'missing-exec'
+
+    @fixture
+    def cleanup(self, in_example_dir):
+        try:
+            yield in_example_dir
+        finally:
+            # we use SIGTERM; SIGKILL is cheating.
+            print('fuser killing.')
+            limit = 100
+            status = None
+            while status != 1 and limit > 0:
+                status = Popen(('fuser', '-kv', '-TERM', 'playground/sweet')).wait()
+                print('status:', status)
+                limit -= 1
+
+    def it_starts_up_fine(self, cleanup):
+        assert_command(
+            ('pgctl-2015', 'start'),
+            '',
+            '''\
+Starting: sweet
+Started: sweet
+''',
+            0,
+        )
+        assert_command(
+            ('pgctl-2015', 'log'),
+            '''\
+==> playground/sweet/stdout.log <==
+sweet
+
+==> playground/sweet/stderr.log <==
+sweet_error
+''',
+            '',
+            0,
+        )
+
+    def it_shows_error_on_stop(self, cleanup):
+        assert_command(
+            ('pgctl-2015', 'start'),
+            '',
+            '''\
+Starting: sweet
+Started: sweet
+''',
+            0,
+        )
+        assert_command(
+            ('pgctl-2015', 'restart'),
+            '',
+            # fuser *sometimes* gives abspaths for no known reason
+            S('''(?s)\
+Stopping: sweet
+Stopped: sweet
+ERROR: We sent SIGTERM, but these processes did not stop:
+                     USER +PID ACCESS COMMAND
+\\S*playground/sweet:\\s*\\S+ +\\d+ f\\.c\\.\\. sleep
+
+temporary fix: fuser -kv playground/sweet
+permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''),
+            1,
         )
