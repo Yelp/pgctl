@@ -46,3 +46,15 @@ class JSONEncoder(json.JSONEncoder):
         else:
             # Let the base class default method raise the TypeError
             return json.JSONEncoder.default(self, obj)
+
+
+def bestrelpath(path, relto=None):
+    if relto is None:
+        from os import getcwd
+        relto = getcwd()
+    from os.path import relpath
+    relpath = relpath(path, relto)
+    if len(relpath) < len(path):
+        return relpath
+    else:
+        return path

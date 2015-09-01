@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 from frozendict import frozendict
 from testfixtures import ShouldRaise
 
+from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
 from pgctl.functions import uniq
 
@@ -47,3 +48,11 @@ class DescribeJSONEncoder(object):
     def it_encodes_other(self):
         with ShouldRaise(TypeError("<type 'object'> is not JSON serializable")):
             JSONEncoder(sort_keys=True, indent=4).encode(object)
+
+
+class DescribeBestrelpath(object):
+
+    def it_prefers_shorter_strings(self):
+        assert bestrelpath('/a/b/c', '/a/b') == 'c'
+        assert bestrelpath('/a/b', '/a/b/c') == '..'
+        assert bestrelpath('/a/b', '/a/b/c/d') == '/a/b'

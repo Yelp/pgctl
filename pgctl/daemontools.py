@@ -8,9 +8,7 @@ from subprocess import CalledProcessError
 from subprocess import PIPE
 from subprocess import Popen
 
-
-class NoSuchService(Exception):
-    pass
+from .errors import NoSuchService
 
 
 def svc(args):

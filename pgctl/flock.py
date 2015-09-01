@@ -35,6 +35,7 @@ def acquire(file_or_dir):
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError as error:
         if error.errno == 11:
+            os.close(fd)
             six.reraise(Locked, Locked(11))
         else:
             raise

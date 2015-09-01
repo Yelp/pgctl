@@ -19,6 +19,9 @@ from .daemontools import NoSuchService
 from .daemontools import svc
 from .daemontools import SvStat
 from .daemontools import svstat
+from .errors import CircularAliases
+from .errors import NoPlayground
+from .errors import PgctlUserError
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
@@ -37,89 +40,68 @@ PGCTL_DEFAULTS = frozendict({
 })
 
 
-class PgctlUserError(Exception):
-    pass
-
-
-class CircularAliases(PgctlUserError):
-    pass
-
-
-class NoPlayground(PgctlUserError):
-    pass
-
-
 class PgctlApp(object):
 
     def __init__(self, config=PGCTL_DEFAULTS):
         self.pgconf = frozendict(config)
 
-    def idempotent_supervise(self):
-        """
-        ensure all services are supervised starting in a down state
-        by contract, running this method repeatedly should have no negative consequences
-        """
-        for service in self.all_service_names:
-            self.service_by_name(service).idempotent_supervise()
-
-    def app_invariants(self):
-        """The are the things we want to be able to say "always" about."""
-        # ensure no weird file descriptors are open.
-        os.closerange(3, MAXFD)
-        self.idempotent_supervise()
-
     def __call__(self):
         """Run the app."""
-        self.app_invariants()
+        # ensure no weird file descriptors are open.
+        os.closerange(3, MAXFD)
         # config guarantees this is set
         command = self.pgconf['command']
         # argparse guarantees this is an attribute
         command = getattr(self, command)
         try:
-            return command()
+            result = command()
         except PgctlUserError as error:
             # we don't need or want a stack trace for user errors
-            return str(error)
+            result = str(error)
+
+        if isinstance(result, basestring):
+            return 'ERROR: ' + result
+        else:
+            return result
 
     def __change_state(self, opt, expected_state, xing, xed):
         """Changes the state of a supervised service using the svc command"""
         print(xing, self.service_names_string, file=stderr)
         with self.pgdir.as_cwd():
-            try:
-                while True:  # a poor man's do/while
+            while True:  # a poor man's do/while
+                try:
                     svc((opt,) + tuple(self.service_names))
-                    status_list = svstat(*self.service_names)
-                    if all(
-                            status.process is None and status.state == expected_state
-                            for status in status_list
-                    ):
-                        break
-                    else:
-                        time.sleep(.01)
-                print(xed, self.service_names_string, file=stderr)
-            except NoSuchService:
-                return "No such playground service: '%s'" % self.service_names_string
+                except NoSuchService:
+                    raise NoSuchService("No such playground service: '%s'" % self.service_names_string)
+                status_list = svstat(*self.service_names)
+                if all(
+                        status.process is None and status.state == expected_state
+                        for status in status_list
+                ):
+                    break
+                else:
+                    time.sleep(.01)
+            print(xed, self.service_names_string, file=stderr)
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        return self.__change_state('-u', 'up', 'Starting:', 'Started:')
+        for service in self.services:
+            service.background()
+        self.__change_state('-u', 'up', 'Starting:', 'Started:')
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        return self.__change_state('-d', 'down', 'Stopping:', 'Stopped:')
-
-    def unsupervise(self):
-        return self.__change_state(
-            '-dx',
-            SvStat.UNSUPERVISED,
-            'Stopping supervise:',
-            'Stopped supervise:',
-        )
+        self.__change_state('-dx', SvStat.UNSUPERVISED, 'Stopping:', 'Stopped:')
+        for service in self.services:
+            service.check_stopped()
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
         with self.pgdir.as_cwd():
             for status in svstat(*self.service_names):
+                if status.state == SvStat.UNSUPERVISED:
+                    # this is the expected state for down services.
+                    status = status._replace(state='down')
                 print(status)
 
     def restart(self):
@@ -137,36 +119,33 @@ class PgctlApp(object):
         # TODO(p3): -n: send the value to tail -n
         # TODO(p3): -f: force iteractive behavior
         # TODO(p3): -F: force iteractive behavior off
-        cmd = ('tail', '--verbose')  # show file headers
+        tail = ('tail', '--verbose')  # show file headers
         import sys
         if sys.stdout.isatty():
             # we're interactive; give a continuous log
             # TODO-TEST: pgctl log | pb should be non-interactive
-            cmd += ('--follow=name', '--retry')
+            tail += ('--follow=name', '--retry')
 
-        logfiles = [
-            (
-                service.path.join('stdout.log').relto(self.pgdir),
-                service.path.join('stderr.log').relto(self.pgdir),
-            )
-            for service in self.services
-        ]
-        with self.pgdir.as_cwd():
-            exec_(sum(logfiles, cmd))  # never returns
+        pwd = Path()
+        logfiles = []
+        for service in self.services:
+            service.ensure_directory_structure()
+            logfiles.append(service.path.join('stdout.log').relto(pwd))
+            logfiles.append(service.path.join('stderr.log').relto(pwd))
+        exec_(tail + tuple(logfiles))  # never returns
 
     def debug(self):
         """Allow a service to run in the foreground"""
-        if len(self.services) != 1:
+        try:
+            # start supervise in the foreground with the service up
+            service, = self.services  # pylint:disable=unpacking-non-sequence
+        except ValueError:
             return 'Must debug exactly one service, not: {0}'.format(
                 self.service_names_string,
             )
 
-        self.unsupervise()
-
-        # start supervise in the foreground with the service up
-        service = self.services[0]
-        service.path.join('down').remove()
-        exec_(('supervise', service.path.strpath), env=service.supervise_env)  # never returns
+        self.stop()
+        service.foreground()  # never returns
 
     def config(self):
         """Print the configuration for a service"""
@@ -220,11 +199,7 @@ class PgctlApp(object):
 
         :return: tuple of strings -- the service names
         """
-        try:
-            pgdir = self.pgdir.listdir(sort=True)
-        except NoPlayground:
-            # there's no pgdir
-            pgdir = []
+        pgdir = self.pgdir.listdir(sort=True)
 
         return tuple([
             service_path.basename
@@ -247,7 +222,9 @@ class PgctlApp(object):
             pgdir = Path(parent).join(self.pgconf['pgdir'])
             if pgdir.check(dir=True):
                 return pgdir
-        raise NoPlayground("Could not find a pgdir for: '{0}' in {1}".format(self.pgconf['pgdir'], os.getcwd()))
+        raise NoPlayground(
+            "could not find any directory named '%s'" % self.pgconf['pgdir']
+        )
 
     @cached_property
     def pghome(self):

@@ -27,7 +27,7 @@ def in_example_dir(tmpdir, homedir, service_name):
         try:
             yield tmpdir
         finally:
-            PgctlApp().unsupervise()
+            PgctlApp().stop()
 
 
 @fixture
