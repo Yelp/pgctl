@@ -38,7 +38,8 @@ class DescribeCli(object):
     "pghome": "{pghome}", 
     "services": [
         "default"
-    ]
+    ], 
+    "wait_period": "2.0"
 }}
 '''.format(pghome=expected_pghome)  # noqa
 

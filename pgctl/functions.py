@@ -7,6 +7,8 @@ import os
 
 from frozendict import frozendict
 
+from .errors import LockHeld
+
 
 def exec_(argv, env=None):  # never returns
     """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
@@ -58,3 +60,25 @@ def bestrelpath(path, relto=None):
         return relpath
     else:
         return path
+
+
+def fuser(path):
+    from subprocess import STDOUT, Popen, PIPE
+    p = Popen(('fuser', '-v', path), stdout=PIPE, stderr=STDOUT)
+    stdout, _ = p.communicate()
+    return stdout
+
+
+def check_lock(path):
+    fusers = fuser(path)
+    if fusers:
+        raise LockHeld(
+            '''\
+We sent SIGTERM, but these processes did not stop:
+%s
+temporary fix: fuser -kv %s
+permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+''' % (fusers, bestrelpath(path))
+        )
+    else:
+        pass

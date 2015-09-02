@@ -549,7 +549,8 @@ class DescribePgdirMissing(object):
     "pghome": "~/.run/pgctl", 
     "services": [
         "default"
-    ]
+    ], 
+    "wait_period": "2.0"
 }
 '''  # noqa
 
@@ -599,11 +600,7 @@ pgctl-2015: error: too few arguments
             )
 
 
-class DescribeImproperShutdown(object):
-
-    @fixture
-    def service_name(self):
-        yield 'missing-exec'
+class DirtyTest(object):
 
     @fixture
     def cleanup(self, in_example_dir):
@@ -618,6 +615,13 @@ class DescribeImproperShutdown(object):
                 status = Popen(('fuser', '-kv', '-TERM', 'playground/sweet')).wait()
                 print('status:', status)
                 limit -= 1
+
+
+class DescribeOrphanSubprocess(DirtyTest):
+
+    @fixture
+    def service_name(self):
+        yield 'orphan-subprocess'
 
     def it_starts_up_fine(self, cleanup):
         assert_command(
@@ -668,3 +672,52 @@ permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writi
 '''),
             1,
         )
+
+
+class DescribeSlowShutdown(DirtyTest):
+    """This test case takes three seconds to shut down"""
+
+    @fixture
+    def service_name(self):
+        yield 'slow-shutdown'
+
+    @fixture(autouse=True)
+    def environment(self):
+        os.environ['PGCTL_WAIT_PERIOD'] = '.5'
+        yield
+        del os.environ['PGCTL_WAIT_PERIOD']
+
+    def it_fails_by_default(self, cleanup):
+        # the default wait is 2 seconds
+        check_call(('pgctl-2015', 'start'))
+        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_command(
+            ('pgctl-2015', 'stop'),
+            '',
+            # fuser *sometimes* gives abspaths for no known reason
+            S('''(?s)\
+Stopping: sweet
+Stopped: sweet
+ERROR: We sent SIGTERM, but these processes did not stop:
+                     USER +PID ACCESS COMMAND
+\\S*playground/sweet:\\s*\\S+ +\\d+ f\\.c\\.\\. sleep
+
+temporary fix: fuser -kv playground/sweet
+permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''),
+            1,
+        )
+
+    def it_can_shut_down_successfully(self, cleanup):
+        # if we configure it to wait a bit longer, it works fine
+        with open('playground/sweet/wait', 'w') as wait:
+            wait.write('1')
+
+        check_call(('pgctl-2015', 'start'))
+        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+
+        check_call(('pgctl-2015', 'restart'))
+        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+
+        check_call(('pgctl-2015', 'stop'))
+        assert svstat('playground/sweet') == [C(SvStat, state=SvStat.UNSUPERVISED)]

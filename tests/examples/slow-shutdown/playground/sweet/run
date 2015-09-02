@@ -1,0 +1,18 @@
+#!/bin/bash
+echo sweet
+echo sweet_error >&2
+
+# worst case behavior: really slow stop
+slowterm() {
+    trap - TERM INT
+    sleep 0.25 &
+    # during this test case, we've set the PGCTL_WAIT_PERIOD to 0.5 seconds
+    sleep 0.75 &
+    exit -15
+}
+trap slowterm TERM INT
+
+# infinite busy loop; bash only handles signals when it is foreground
+while true; do
+    true
+done
