@@ -1,5 +1,5 @@
-Usage
------
+Sub-Commands
+============
 
 ``pgctl`` has eight basic commands: ``start``, ``stop``, ``restart``, ``debug``, ``status``, ``log``, ``reload``, ``config``
 

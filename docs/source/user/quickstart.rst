@@ -35,6 +35,7 @@ Once this is in place, you can start your playground and see it run.
 
 
 .. _writing_services:
+
 Writing Playground Services
 -----------------------------
 ``pgctl`` works best with a single process. When writing a ``run`` script in
@@ -78,6 +79,7 @@ becomes a problem:
 
 
 .. _aliases:
+
 Aliases
 ------------------------
 

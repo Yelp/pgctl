@@ -68,8 +68,8 @@ instructions and usage of ``pgctl`` for getting started quickly.
    :maxdepth: 2
 
    user/install
-   user/usage
    user/quickstart
+   user/usage
    user/advanced
 
 Developer Guide
@@ -92,7 +92,7 @@ this part of the documentation is for you.
 .. toctree::
    :maxdepth: 2
 
-   api/pgctl
+   developer/api_doc
 
 
 Contributor Guide

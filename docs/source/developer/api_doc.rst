@@ -1,5 +1,9 @@
-pgctl package
-=============
+API Documentation
+=================
+
+This is automatically generated documentation from the source code.
+Generally this will only be useful for developers.
+
 
 Submodules
 ----------
