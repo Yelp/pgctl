@@ -31,9 +31,16 @@ from .service import Service
 XDG_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR') or '~/.run'
 ALL_SERVICES = '(all services)'
 PGCTL_DEFAULTS = frozendict({
+    # TODO-DOC: config
+    # where do our services live?
     'pgdir': 'playground',
+    # where does pgdir live?
     'pghome': os.path.join(XDG_RUNTIME_DIR, 'pgctl'),
+    # which services are we acting on?
     'services': ('default',),
+    # how long do we wait for them to come down/up?
+    'wait_period': '2.0',
+    # what are the named groups of services?
     'aliases': frozendict({
         'default': (ALL_SERVICES,)
     }),
@@ -155,8 +162,9 @@ class PgctlApp(object):
         """Return an instantiated Service, by name."""
         path = self.pgdir.join(service_name)
         return Service(
-            path=path,
-            scratch_dir=self.pghome.join(path.relto(str('/'))),
+            path,
+            self.pghome.join(path.relto(str('/'))),
+            self.pgconf['wait_period'],
         )
 
     @cached_property

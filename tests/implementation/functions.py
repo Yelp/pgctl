@@ -7,7 +7,9 @@ from __future__ import unicode_literals
 from frozendict import frozendict
 from testfixtures import ShouldRaise
 
+from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
+from pgctl.functions import check_lock
 from pgctl.functions import JSONEncoder
 from pgctl.functions import uniq
 
@@ -56,3 +58,14 @@ class DescribeBestrelpath(object):
         assert bestrelpath('/a/b/c', '/a/b') == 'c'
         assert bestrelpath('/a/b', '/a/b/c') == '..'
         assert bestrelpath('/a/b', '/a/b/c/d') == '/a/b'
+
+
+class DescribeCheckLock(object):
+
+    def it_fails_when_there_are_fusers(self, tmpdir):
+        with tmpdir.as_cwd():
+            with ShouldRaise(LockHeld):
+                check_lock(tmpdir.strpath)
+
+    def it_passes_when_there_are_no_fusers(self, tmpdir):
+        assert check_lock(tmpdir.strpath) is None

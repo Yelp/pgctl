@@ -1,5 +1,9 @@
+==========
 Developers
 ==========
+
+Design Rationale
+================
 
 
 Directory Structure
