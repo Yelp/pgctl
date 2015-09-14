@@ -67,7 +67,7 @@ class DescribeCli(object):
             ('pgctl-2015',),
             '',
             '''\
-usage: pgctl-2015 [-h] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
                   {start,stop,status,restart,reload,log,debug,config}
                   [services [services ...]]
 pgctl-2015: error: too few arguments

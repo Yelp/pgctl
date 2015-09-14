@@ -26,6 +26,7 @@ from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
 from .service import Service
+from pgctl import __version__
 
 
 XDG_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR') or '~/.run'
@@ -248,6 +249,7 @@ class PgctlApp(object):
 def parser():
     commands = [command.__name__ for command in PgctlApp.commands]
     parser = argparse.ArgumentParser()
+    parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
     parser.add_argument('--pghome', help='directory to keep user-level playground state', default=argparse.SUPPRESS)
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
