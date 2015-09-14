@@ -13,6 +13,7 @@ from pytest import yield_fixture as fixture
 from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 from testing import assert_command
+from testing import ctrl_c
 from testing.assertions import retry
 
 from pgctl.daemontools import SvStat
@@ -210,32 +211,36 @@ ERROR: No such playground service: 'unknown'
         )
 
     def it_is_idempotent(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'date'))
-        check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
 
     def it_should_work_in_a_subdirectory(self, in_example_dir):
         os.chdir(in_example_dir.join('playground').strpath)
         assert_command(
-            ('pgctl-2015', 'start', 'date'),
+            ('pgctl-2015', 'start', 'sleep'),
             '',
             '''\
-Starting: date
-Started: date
+Starting: sleep
+Started: sleep
 ''',
             0,
         )
 
 
+def assert_svstat(service, **attrs):
+    assert svstat(service) == C(SvStat, attrs, strict=False)
+
+
 class DescribeStop(object):
 
     def it_does_stop(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'date'))
-        check_call(('pgctl-2015', 'stop', 'date'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl-2015', 'stop', 'sleep'))
 
-        assert svstat('playground/date') == [C(SvStat, state=SvStat.UNSUPERVISED)]
+        assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED)
 
     def it_is_successful_before_start(self, in_example_dir):
-        check_call(('pgctl-2015', 'stop', 'date'))
+        check_call(('pgctl-2015', 'stop', 'sleep'))
 
     def it_fails_given_unknown(self, in_example_dir):
         assert_command(
@@ -281,21 +286,18 @@ class DescribeDebug(object):
     def assert_works_interactively(self):
         read, write = os.openpty()
         pty_normalize_newlines(read)
-        proc = Popen(('pgctl-2015', 'debug', 'greeter'), stdin=PIPE, stdout=write)
+        proc = Popen(('setsid', 'pgctl-2015', 'debug', 'greeter'), stdin=PIPE, stdout=write)
         os.close(write)
 
         try:
             assert read_line(read) == 'What is your name?\n'
             proc.stdin.write('Buck\n')
             assert read_line(read) == 'Hello, Buck.\n'
-
-            # the service should re-start
-            assert read_line(read) == 'What is your name?\n'
         finally:
-            proc.kill()
+            ctrl_c(proc)
 
     def it_works_with_nothing_running(self, in_example_dir):
-        assert svstat('playground/greeter') == [C(SvStat, state=SvStat.UNSUPERVISED)]
+        assert_svstat('playground/greeter', state=SvStat.UNSUPERVISED)
         self.assert_works_interactively()
 
     def it_fails_with_multiple_services(self, in_example_dir):
@@ -308,7 +310,7 @@ class DescribeDebug(object):
 
     def it_first_stops_the_background_service_if_running(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'greeter'))
-        assert svstat('playground/greeter') == [C(SvStat, state='up')]
+        assert_svstat('playground/greeter', state='up')
 
         self.assert_works_interactively()
 
@@ -317,21 +319,21 @@ class DescribeRestart(object):
 
     def it_is_just_stop_then_start(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'restart', 'date'),
+            ('pgctl-2015', 'restart', 'sleep'),
             '',
             '''\
-Stopping: date
-Stopped: date
-Starting: date
-Started: date
+Stopping: sleep
+Stopped: sleep
+Starting: sleep
+Started: sleep
 ''',
             0,
         )
-        assert svstat('playground/date') == [C(SvStat, state='up')]
+        assert_svstat('playground/sleep', state='up')
 
     def it_also_works_when_up(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'date'))
-        assert svstat('playground/date') == [C(SvStat, state='up')]
+        check_call(('pgctl-2015', 'start', 'sleep'))
+        assert_svstat('playground/sleep', state='up')
 
         self.it_is_just_stop_then_start(in_example_dir)
 
@@ -343,35 +345,33 @@ class DescribeStartMultipleServices(object):
         yield 'multiple'
 
     def it_only_starts_the_indicated_services(self, in_example_dir, request):
-        check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
 
-        assert svstat('playground/date') == [C(SvStat, state='up')]
-        assert svstat('playground/tail') == [C(SvStat, state=SvStat.UNSUPERVISED)]
+        assert_svstat('playground/sleep', state='up')
+        assert_svstat('playground/tail', state=SvStat.UNSUPERVISED)
 
     def it_starts_multiple_services(self, in_example_dir, request):
-        check_call(('pgctl-2015', 'start', 'date', 'tail'))
+        check_call(('pgctl-2015', 'start', 'sleep', 'tail'))
 
-        assert svstat('playground/date') == [C(SvStat, state='up')]
-        assert svstat('playground/tail') == [C(SvStat, state='up')]
+        assert_svstat('playground/sleep', state='up')
+        assert_svstat('playground/tail', state='up')
 
     def it_stops_multiple_services(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'date', 'tail'))
+        check_call(('pgctl-2015', 'start', 'sleep', 'tail'))
 
-        assert svstat('playground/date') == [C(SvStat, state='up')]
-        assert svstat('playground/tail') == [C(SvStat, state='up')]
+        assert_svstat('playground/sleep', state='up')
+        assert_svstat('playground/tail', state='up')
 
-        check_call(('pgctl-2015', 'stop', 'date', 'tail'))
+        check_call(('pgctl-2015', 'stop', 'sleep', 'tail'))
 
-        assert svstat('playground/date', 'playground/tail') == [
-            C(SvStat, state=SvStat.UNSUPERVISED),
-            C(SvStat, state=SvStat.UNSUPERVISED),
-        ]
+        assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED)
+        assert_svstat('playground/tail', state=SvStat.UNSUPERVISED)
 
     def it_starts_everything_with_no_arguments_no_config(self, in_example_dir, request):
         check_call(('pgctl-2015', 'start'))
 
-        assert svstat('playground/date') == [C(SvStat, state='up')]
-        assert svstat('playground/tail') == [C(SvStat, state='up')]
+        assert_svstat('playground/sleep', state='up')
+        assert_svstat('playground/tail', state='up')
 
 
 class DescribeStatus(object):
@@ -381,31 +381,31 @@ class DescribeStatus(object):
         yield 'multiple'
 
     def it_displays_correctly_when_the_service_is_down(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'date'))
-        check_call(('pgctl-2015', 'stop', 'date'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl-2015', 'stop', 'sleep'))
         assert_command(
-            ('pgctl-2015', 'status', 'date'),
-            'date: down\n',
+            ('pgctl-2015', 'status', 'sleep'),
+            'sleep: down\n',
             '',
             0,
         )
 
     def it_displays_correctly_when_the_service_is_up(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
         assert_command(
-            ('pgctl-2015', 'status', 'date'),
-            S('date: up \\(pid \\d+\\) \\d+ seconds\\n$'),
+            ('pgctl-2015', 'status', 'sleep'),
+            S('sleep: up \\(pid \\d+\\) \\d+ seconds\\n$'),
             '',
             0,
         )
 
     def it_displays_the_status_of_multiple_services(self, in_example_dir):
         """Expect multiple services with status and PID"""
-        check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl-2015', 'start', 'sleep'))
         assert_command(
-            ('pgctl-2015', 'status', 'date', 'tail'),
+            ('pgctl-2015', 'status', 'sleep', 'tail'),
             S('''\
-date: up \\(pid \\d+\\) \\d+ seconds
+sleep: up \\(pid \\d+\\) \\d+ seconds
 tail: down
 $'''),
             '',
@@ -418,7 +418,7 @@ $'''),
         assert_command(
             ('pgctl-2015', 'status'),
             S('''\
-date: down
+sleep: down
 tail: up \\(pid \\d+\\) \\d+ seconds
 $'''),
             '',
@@ -428,11 +428,11 @@ $'''),
     def it_displays_status_for_unknown_services(self, in_example_dir):
         assert_command(
             ('pgctl-2015', 'status', 'garbage'),
-            '''\
-garbage: no such service
-''',
             '',
-            0,
+            '''\
+ERROR: No such playground service: 'garbage'
+''',
+            1,
         )
 
 
@@ -443,7 +443,7 @@ class DescribeReload(object):
             ('pgctl-2015', 'reload'),
             '',
             '''\
-reload: date
+reload: sleep
 ERROR: reloading is not yet implemented.
 ''',
             1,
@@ -624,7 +624,7 @@ permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writi
             # we use SIGTERM; SIGKILL is cheating.
             print('killing.')
             limit = 100
-            while limit > 0:  # noqa
+            while limit > 0:  # pragma: no cover: we don't expect to ever hit the limit
                 try:
                     check_lock('playground/sweet')
                     break
@@ -696,7 +696,7 @@ class DescribeSlowShutdown(DirtyTest):
 
     def it_fails_by_default(self, cleanup):
         check_call(('pgctl-2015', 'start'))
-        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_svstat('playground/sweet', state='up')
         assert_command(
             ('pgctl-2015', 'stop'),
             '',
@@ -710,10 +710,10 @@ class DescribeSlowShutdown(DirtyTest):
             wait.write('3')
 
         check_call(('pgctl-2015', 'start'))
-        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_svstat('playground/sweet', state='up')
 
         check_call(('pgctl-2015', 'restart'))
-        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_svstat('playground/sweet', state='up')
 
         check_call(('pgctl-2015', 'stop'))
-        assert svstat('playground/sweet') == [C(SvStat, state=SvStat.UNSUPERVISED)]
+        assert_svstat('playground/sweet', state=SvStat.UNSUPERVISED)

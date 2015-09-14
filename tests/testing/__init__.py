@@ -24,3 +24,9 @@ def assert_command(cmd, stdout, stderr, returncode, **popen_args):
     assert stderr == actual_err
     assert stdout == actual_out
     assert returncode == p.returncode
+
+
+def ctrl_c(process):
+    from signal import SIGINT
+    import os
+    os.killpg(os.getpgid(process.pid), SIGINT)
