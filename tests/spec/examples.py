@@ -17,6 +17,8 @@ from testing.assertions import retry
 
 from pgctl.daemontools import SvStat
 from pgctl.daemontools import svstat
+from pgctl.errors import LockHeld
+from pgctl.functions import check_lock
 
 parametrize = pytest.mark.parametrize
 
@@ -619,18 +621,15 @@ permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writi
             yield in_example_dir
         finally:
             # we use SIGTERM; SIGKILL is cheating.
-            print('lsof killing.')
+            print('killing.')
             limit = 100
-            status = None
-            while status != 1 and limit > 0:
-                cmd = 'lsof -tau $(whoami) playground/sweet'
-                clean = Popen(('sh', '-c', cmd)).wait()
-                if clean:
-                    status = 1
-                else:
+            while limit > 0:  # noqa
+                try:
+                    check_lock('playground/sweet')
+                    break
+                except LockHeld:
                     cmd = 'lsof -tau $(whoami) playground/sweet | xargs --replace kill -TERM {}'
-                    status = Popen(('sh', '-c', cmd)).wait()
-                    print('status:', status)
+                    Popen(('sh', '-c', cmd)).wait()
                     limit -= 1
 
 
