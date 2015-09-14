@@ -569,7 +569,7 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl-2015', '--help'),
                 '''\
-usage: pgctl-2015 [-h] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
                   {start,stop,status,restart,reload,log,debug,config}
                   [services [services ...]]
 
@@ -580,6 +580,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  --version             show program's version number and exit
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
 ''',
@@ -593,7 +594,7 @@ optional arguments:
                 ('pgctl-2015'),
                 '',
                 '''\
-usage: pgctl-2015 [-h] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
                   {start,stop,status,restart,reload,log,debug,config}
                   [services [services ...]]
 pgctl-2015: error: too few arguments
