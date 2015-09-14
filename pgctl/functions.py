@@ -62,23 +62,28 @@ def bestrelpath(path, relto=None):
         return path
 
 
-def fuser(path):
+def lsof(path):
     from subprocess import STDOUT, Popen, PIPE
-    p = Popen(('fuser', '-v', path), stdout=PIPE, stderr=STDOUT)
+    cmd = 'lsof -tau $(whoami) {} | xargs -r ps -f'.format(path)
+    p = Popen(('sh', '-c', cmd), stdout=PIPE, stderr=STDOUT)
     stdout, _ = p.communicate()
-    return stdout
+    if stdout.count('\n') > 1:
+        return stdout
+    else:
+        # race condition: we only got the ps -f header
+        return ''
 
 
 def check_lock(path):
-    fusers = fuser(path)
-    if fusers:
+    locks = lsof(path)
+    if locks:
         raise LockHeld(
             '''\
 We sent SIGTERM, but these processes did not stop:
 %s
-temporary fix: fuser -kv %s
+temporary fix: lsof -t %s | xargs kill -9
 permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-''' % (fusers, bestrelpath(path))
+''' % (locks, bestrelpath(path))
         )
     else:
         pass

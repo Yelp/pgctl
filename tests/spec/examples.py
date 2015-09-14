@@ -17,6 +17,8 @@ from testing.assertions import retry
 
 from pgctl.daemontools import SvStat
 from pgctl.daemontools import svstat
+from pgctl.errors import LockHeld
+from pgctl.functions import check_lock
 
 parametrize = pytest.mark.parametrize
 
@@ -602,19 +604,33 @@ pgctl-2015: error: too few arguments
 
 class DirtyTest(object):
 
+    LOCKERROR = '''\
+Stopping: sweet
+Stopped: sweet
+ERROR: We sent SIGTERM, but these processes did not stop:
+UID +PID +PPID +C +STIME +TTY +STAT +TIME +CMD
+\\S+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
+
+temporary fix: lsof -t playground/sweet | xargs kill -9
+permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''
+
     @fixture
     def cleanup(self, in_example_dir):
         try:
             yield in_example_dir
         finally:
             # we use SIGTERM; SIGKILL is cheating.
-            print('fuser killing.')
+            print('killing.')
             limit = 100
-            status = None
-            while status != 1 and limit > 0:
-                status = Popen(('fuser', '-kv', '-TERM', 'playground/sweet')).wait()
-                print('status:', status)
-                limit -= 1
+            while limit > 0:  # noqa
+                try:
+                    check_lock('playground/sweet')
+                    break
+                except LockHeld:
+                    cmd = 'lsof -tau $(whoami) playground/sweet | xargs --replace kill -TERM {}'
+                    Popen(('sh', '-c', cmd)).wait()
+                    limit -= 1
 
 
 class DescribeOrphanSubprocess(DirtyTest):
@@ -659,17 +675,7 @@ Started: sweet
         assert_command(
             ('pgctl-2015', 'restart'),
             '',
-            # fuser *sometimes* gives abspaths for no known reason
-            S('''(?s)\
-Stopping: sweet
-Stopped: sweet
-ERROR: We sent SIGTERM, but these processes did not stop:
-                     USER +PID ACCESS COMMAND
-\\S*playground/sweet:\\s*\\S+ +\\d+ f\\.c\\.\\. sleep
-
-temporary fix: fuser -kv playground/sweet
-permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-'''),
+            S(self.LOCKERROR.format(cmd='sleep infinity')),
             1,
         )
 
@@ -694,17 +700,7 @@ class DescribeSlowShutdown(DirtyTest):
         assert_command(
             ('pgctl-2015', 'stop'),
             '',
-            # fuser *sometimes* gives abspaths for no known reason
-            S('''(?s)\
-Stopping: sweet
-Stopped: sweet
-ERROR: We sent SIGTERM, but these processes did not stop:
-                     USER +PID ACCESS COMMAND
-\\S*playground/sweet:\\s*\\S+ +\\d+ f\\.c\\.\\. sleep
-
-temporary fix: fuser -kv playground/sweet
-permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-'''),
+            S(self.LOCKERROR.format(cmd='sleep 0\\.75')),
             1,
         )
 
