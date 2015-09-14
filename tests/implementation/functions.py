@@ -62,10 +62,10 @@ class DescribeBestrelpath(object):
 
 class DescribeCheckLock(object):
 
-    def it_fails_when_there_are_fusers(self, tmpdir):
+    def it_fails_when_there_are_locks(self, tmpdir):
         with tmpdir.as_cwd():
             with ShouldRaise(LockHeld):
                 check_lock(tmpdir.strpath)
 
-    def it_passes_when_there_are_no_fusers(self, tmpdir):
+    def it_passes_when_there_are_no_locks(self, tmpdir):
         assert check_lock(tmpdir.strpath) is None
