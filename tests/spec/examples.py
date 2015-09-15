@@ -690,25 +690,24 @@ class DescribeSlowShutdown(DirtyTest):
 
     @fixture(autouse=True)
     def environment(self):
-        os.environ['PGCTL_WAIT_PERIOD'] = '.5'
+        os.environ['PGCTL_WAIT_PERIOD'] = '1.5'
         yield
         del os.environ['PGCTL_WAIT_PERIOD']
 
     def it_fails_by_default(self, cleanup):
-        # the default wait is 2 seconds
         check_call(('pgctl-2015', 'start'))
         assert svstat('playground/sweet') == [C(SvStat, state='up')]
         assert_command(
             ('pgctl-2015', 'stop'),
             '',
-            S(self.LOCKERROR.format(cmd='sleep 0\\.75')),
+            S(self.LOCKERROR.format(cmd='sleep 2\\.25')),
             1,
         )
 
     def it_can_shut_down_successfully(self, cleanup):
         # if we configure it to wait a bit longer, it works fine
         with open('playground/sweet/wait', 'w') as wait:
-            wait.write('1')
+            wait.write('3')
 
         check_call(('pgctl-2015', 'start'))
         assert svstat('playground/sweet') == [C(SvStat, state='up')]

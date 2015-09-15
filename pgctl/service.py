@@ -11,6 +11,7 @@ from time import time as now
 
 from cached_property import cached_property
 
+from .errors import LockHeld
 from .errors import NoSuchService
 from .flock import flock
 from .flock import Locked
@@ -33,13 +34,20 @@ def idempotent_supervise(wrapped):
                 # if it's already supervised, we're good to go:
                 if Popen(('svok', self.path.strpath)).wait() == 0:
                     return
-                elif now() - start < self.wait:
-                    pass  # try again
-                elif limit > 0:
-                    limit -= 1
+
+                try:
                     check_lock(self.path.strpath)
-                else:
-                    raise
+                except LockHeld:
+                    if now() - start < self.wait:
+                        pass  # try again
+                    else:
+                        raise
+                else:  # race condition: processes dropped lock before we could list them
+                    if limit > 0:
+                        limit -= 1
+                    else:
+                        raise
+
     return wrapper
 
 
