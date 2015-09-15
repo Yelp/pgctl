@@ -10,7 +10,6 @@ from subprocess import Popen
 from subprocess import STDOUT
 
 from .debug import debug
-from .errors import NoSuchService
 
 
 def svc(args):
@@ -19,9 +18,7 @@ def svc(args):
     cmd = ('s6-svc',) + tuple(args)
     process = Popen(cmd, stderr=PIPE)
     _, error = process.communicate()
-    if 'unable to chdir' in error:
-        raise NoSuchService(error)
-    if error.endswith(': supervisor not listening\n'):
+    if error.startswith('s6-svc: fatal: unable to control '):
         return
     if process.returncode:  # pragma: no cover: there's no known way to hit this.
         import sys
@@ -142,11 +139,6 @@ def __get_state(status):
         return first, rest
     elif status.startswith('unable to chdir:'):
         return SvStat.INVALID, rest
-    elif status.startswith((
-            'unable to open supervise/ok:',
-            'supervise not running',
-    )):
-        return SvStat.UNSUPERVISED, rest
     elif (
             status.startswith('s6-svstat: fatal: unable to read status for ') and status.endswith((
                 ': No such file or directory',

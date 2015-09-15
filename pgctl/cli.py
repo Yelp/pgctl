@@ -15,7 +15,6 @@ from py._path.local import LocalPath as Path
 
 from .config import Config
 from .configsearch import search_parent_directories
-from .daemontools import NoSuchService
 from .daemontools import svc
 from .daemontools import SvStat
 from .debug import debug
@@ -83,10 +82,8 @@ class PgctlApp(object):
                 if all(test(status) for status in status_list):
                     break
 
-                try:
-                    svc((opt,) + tuple(self.service_names))
-                except NoSuchService:
-                    raise NoSuchService("No such playground service: '%s'" % self.service_names_string)
+                for service in self.service_names:
+                    svc((opt, service))
                 time.sleep(.01)
             print(xed, self.service_names_string, file=stderr)
 
@@ -121,11 +118,8 @@ class PgctlApp(object):
 
     def restart(self):
         """Starts and stops a service"""
-        debug('restart 1')
         self.stop()
-        debug('restart 2')
         self.start()
-        debug('restart 3')
 
     def reload(self):
         """Reloads the configuration for a service"""

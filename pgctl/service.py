@@ -12,6 +12,7 @@ from time import time as now
 from cached_property import cached_property
 
 from .daemontools import svstat
+from .debug import debug
 from .errors import LockHeld
 from .errors import NoSuchService
 from .flock import flock
@@ -80,6 +81,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
         self.assert_exists()
         self.path.ensure('stdout.log')
         self.path.ensure('stderr.log')
+        self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
         supervise_in_scratch = self.scratch_dir.join('supervise')
         supervise_in_scratch.ensure_dir()
 
@@ -93,7 +95,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
 
     @idempotent_supervise
     def background(self):
-        """Run supervise(1), while ensuring it starts down and is properly symlinked."""
+        """Run supervise(1), while ensuring it is properly symlinked."""
         return Popen(
             ('s6-supervise', self.path.strpath),
             stdin=open(os.devnull, 'w'),
@@ -118,8 +120,10 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
     def wait(self):
         wait = self.path.join('wait')
         if wait.check():
+            debug('wait exists')
             return float(wait.read().strip())
         else:
+            debug('wait doesn\'t exist')
             return float(self.default_wait)
 
     @cached_property

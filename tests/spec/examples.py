@@ -13,6 +13,7 @@ from pytest import yield_fixture as fixture
 from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 from testing import assert_command
+from testing import ctrl_c
 from testing.assertions import retry
 
 from pgctl.daemontools import SvStat
@@ -134,9 +135,7 @@ sweet_error
 .*$''')
         assert p.poll() is None  # it's still running
 
-        # simulate CTRL-C; send "interrupt" to the process group
-        from signal import SIGINT
-        os.kill(-p.pid, SIGINT)
+        p.terminate()
 
         assert p.wait() == -15
 
@@ -287,7 +286,8 @@ class DescribeDebug(object):
     def assert_works_interactively(self):
         read, write = os.openpty()
         pty_normalize_newlines(read)
-        proc = Popen(('pgctl-2015', 'debug', 'greeter'), stdin=PIPE, stdout=write)
+        # setsid: this simulates the shell's job-control behavior
+        proc = Popen(('setsid', 'pgctl-2015', 'debug', 'greeter'), stdin=PIPE, stdout=write)
         os.close(write)
 
         try:
@@ -295,7 +295,7 @@ class DescribeDebug(object):
             proc.stdin.write('Buck\n')
             assert read_line(read) == 'Hello, Buck.\n'
         finally:
-            proc.kill()
+            ctrl_c(proc)
 
     def it_works_with_nothing_running(self, in_example_dir):
         assert_svstat('playground/greeter', state=SvStat.UNSUPERVISED)
@@ -334,12 +334,9 @@ Started: sleep
 
     def it_also_works_when_up(self, in_example_dir):
         check_call(('pgctl-2015', 'start', 'sleep'))
-        print(1)
-        assert_svstat('playground/sleep', state='down', process='starting')
-        print(1)
+        assert_svstat('playground/sleep', state='up')
 
         self.it_is_just_stop_then_start(in_example_dir)
-        print(1)
 
 
 class DescribeStartMultipleServices(object):
@@ -628,7 +625,7 @@ permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writi
             # we use SIGTERM; SIGKILL is cheating.
             print('killing.')
             limit = 100
-            while limit > 0:  # noqa
+            while limit > 0:  # pragma: no cover: we don't expect to ever hit the limit
                 try:
                     check_lock('playground/sweet')
                     break
@@ -700,7 +697,7 @@ class DescribeSlowShutdown(DirtyTest):
 
     def it_fails_by_default(self, cleanup):
         check_call(('pgctl-2015', 'start'))
-        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_svstat('playground/sweet', state='up')
         assert_command(
             ('pgctl-2015', 'stop'),
             '',
@@ -714,10 +711,10 @@ class DescribeSlowShutdown(DirtyTest):
             wait.write('3')
 
         check_call(('pgctl-2015', 'start'))
-        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_svstat('playground/sweet', state='up')
 
         check_call(('pgctl-2015', 'restart'))
-        assert svstat('playground/sweet') == [C(SvStat, state='up')]
+        assert_svstat('playground/sweet', state='up')
 
         check_call(('pgctl-2015', 'stop'))
-        assert svstat('playground/sweet') == [C(SvStat, state=SvStat.UNSUPERVISED)]
+        assert_svstat('playground/sweet', state=SvStat.UNSUPERVISED)
