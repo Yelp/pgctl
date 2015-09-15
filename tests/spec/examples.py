@@ -16,10 +16,10 @@ from testing import assert_command
 from testing import ctrl_c
 from testing.assertions import retry
 
-from pgctl.daemontools import SvStat
-from pgctl.daemontools import svstat
 from pgctl.errors import LockHeld
 from pgctl.functions import check_lock
+from pgctl.s6 import SvStat
+from pgctl.s6 import svstat
 
 parametrize = pytest.mark.parametrize
 

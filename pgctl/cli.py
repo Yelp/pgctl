@@ -15,8 +15,6 @@ from py._path.local import LocalPath as Path
 
 from .config import Config
 from .configsearch import search_parent_directories
-from .daemontools import svc
-from .daemontools import SvStat
 from .debug import debug
 from .errors import CircularAliases
 from .errors import NoPlayground
@@ -24,6 +22,8 @@ from .errors import PgctlUserError
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
+from .s6 import svc
+from .s6 import SvStat
 from .service import Service
 from pgctl import __version__
 
@@ -119,11 +119,8 @@ class PgctlApp(object):
 
     def restart(self):
         """Starts and stops a service"""
-        debug('restart 1')
         self.stop()
-        debug('restart 2')
         self.start()
-        debug('restart 3')
 
     def reload(self):
         """Reloads the configuration for a service"""

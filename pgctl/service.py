@@ -12,12 +12,12 @@ from time import time as now
 from cached_property import cached_property
 
 from .errors import LockHeld
-from .daemontools import svstat
 from .errors import NoSuchService
 from .flock import flock
 from .flock import Locked
 from .functions import check_lock
 from .functions import exec_
+from .s6 import svstat
 
 
 def idempotent_supervise(wrapped):

@@ -13,7 +13,7 @@ from .debug import debug
 
 
 def svc(args):
-    """Wrapper for daemontools svc cmd, need to check to make sure the dir exists"""
+    """Wrapper for s6 svc cmd"""
     # svc never writes to stdout.
     cmd = ('s6-svc',) + tuple(args)
     process = Popen(cmd, stderr=PIPE)
