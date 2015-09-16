@@ -19,6 +19,7 @@ from .debug import debug
 from .errors import CircularAliases
 from .errors import NoPlayground
 from .errors import PgctlUserError
+from .errors import Unsupervised
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
@@ -83,7 +84,10 @@ class PgctlApp(object):
                     break
 
                 for service in self.service_names:
-                    svc((opt, service))
+                    try:
+                        svc((opt, service))
+                    except Unsupervised:
+                        pass  # we handle this state above, with svstat
 
                 time.sleep(.01)
             print(xed, self.service_names_string, file=stderr)
