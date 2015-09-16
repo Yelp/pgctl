@@ -15,16 +15,16 @@ from py._path.local import LocalPath as Path
 
 from .config import Config
 from .configsearch import search_parent_directories
-from .daemontools import NoSuchService
-from .daemontools import svc
-from .daemontools import SvStat
-from .daemontools import svstat
+from .debug import debug
 from .errors import CircularAliases
 from .errors import NoPlayground
 from .errors import PgctlUserError
+from .errors import Unsupervised
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
+from .s6 import svc
+from .s6 import SvStat
 from .service import Service
 from pgctl import __version__
 
@@ -72,45 +72,54 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, opt, expected_state, xing, xed):
+    def __change_state(self, opt, test, xing, xed):
         """Changes the state of a supervised service using the svc command"""
         print(xing, self.service_names_string, file=stderr)
         with self.pgdir.as_cwd():
             while True:  # a poor man's do/while
-                try:
-                    svc((opt,) + tuple(self.service_names))
-                except NoSuchService:
-                    raise NoSuchService("No such playground service: '%s'" % self.service_names_string)
-                status_list = svstat(*self.service_names)
-                if all(
-                        status.process is None and status.state == expected_state
-                        for status in status_list
-                ):
+                status_list = [service.svstat() for service in self.services]
+                debug(status_list)
+
+                if all(test(status) for status in status_list):
                     break
-                else:
-                    time.sleep(.01)
+
+                for service in self.service_names:
+                    try:
+                        svc((opt, service))
+                    except Unsupervised:
+                        pass  # we handle this state above, with svstat
+
+                time.sleep(.01)
             print(xed, self.service_names_string, file=stderr)
 
     def start(self):
         """Idempotent start of a service or group of services"""
         for service in self.services:
             service.background()
-        self.__change_state('-u', 'up', 'Starting:', 'Started:')
+
+        def test(status):
+            return (
+                (status.process is None and status.state == 'up') or
+                (status.process == 'starting' and status.exitcode == 0 and status.seconds == 0)
+            )
+        self.__change_state('-u', test, 'Starting:', 'Started:')
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        self.__change_state('-dx', SvStat.UNSUPERVISED, 'Stopping:', 'Stopped:')
+        def test(status):
+            return status.state == SvStat.UNSUPERVISED
+        self.__change_state('-dx', test, 'Stopping:', 'Stopped:')
         for service in self.services:
             service.check_stopped()
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
-        with self.pgdir.as_cwd():
-            for status in svstat(*self.service_names):
-                if status.state == SvStat.UNSUPERVISED:
-                    # this is the expected state for down services.
-                    status = status._replace(state='down')
-                print(status)
+        for service in self.services:
+            status = service.svstat()
+            if status.state == SvStat.UNSUPERVISED:
+                # this is the expected state for down services.
+                status = status._replace(state='down')
+            print('%s: %s' % (service.name, status))
 
     def restart(self):
         """Starts and stops a service"""

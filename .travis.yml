@@ -10,15 +10,8 @@ matrix:
     fast_finish: true
 
 before_install:
-    # the travis default umask is 002, but ubuntu's is 022
-    - umask 022
-    - chmod -R g-w .
     - export TOP=$PWD
-install:
-    - sudo apt-get install daemontools
-    - sudo apt-get install pv
-    - pip install --upgrade pip
-    - pip install -r requirements.d/travis.txt
+install: ./CI/install
 script: tox
 after_success: coveralls
  

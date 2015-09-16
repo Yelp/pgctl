@@ -1,0 +1,5 @@
+#!/bin/sh
+echo this is stdout >&1
+echo this is stderr >&2
+
+exec sleep 999999

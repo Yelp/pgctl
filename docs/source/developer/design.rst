@@ -49,7 +49,7 @@ All services are located under the playground directory.
 
 state
 +++++
-We are using daemontools for process management and call the daemontools ``supervise`` command directly.
+We are using s6 for process management and call the s6 ``supervise`` command directly.
 It was a design decision to not use ``svscan`` to automatically supervise all services.  This was due
 to inflexability with logging (by default stdout is only logged).  To ensure that every service 
 is in a consistent state, a down file is added to each service directory (man supervise) if it does not
