@@ -10,6 +10,7 @@ from subprocess import Popen
 from subprocess import STDOUT
 
 from .debug import debug
+from .errors import Unsupervised
 
 
 def svc(args):
@@ -19,7 +20,7 @@ def svc(args):
     process = Popen(cmd, stderr=PIPE)
     _, error = process.communicate()
     if error.startswith('s6-svc: fatal: unable to control '):
-        return
+        raise Unsupervised(cmd, error)
     if process.returncode:  # pragma: no cover: there's no known way to hit this.
         import sys
         sys.stderr.write(error)
@@ -47,17 +48,17 @@ class SvStat(
         return format.format(self)
 
 
-def svstat_string(service):
+def svstat_string(service_path):
     """Wrapper for daemontools svstat cmd"""
     # svstat *always* exits with code zero...
-    cmd = ('s6-svok', service)
+    cmd = ('s6-svok', service_path)
     process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     status, _ = process.communicate()
     assert status == ''
     if process.returncode != 0:
         return SvStat.UNSUPERVISED
 
-    cmd = ('s6-svstat', service)
+    cmd = ('s6-svstat', service_path)
     process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     status, _ = process.communicate()
 

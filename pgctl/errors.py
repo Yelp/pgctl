@@ -23,3 +23,7 @@ class NoSuchService(PgctlUserError):
 
 class LockHeld(PgctlUserError):
     pass
+
+
+class Unsupervised(Exception):
+    pass
