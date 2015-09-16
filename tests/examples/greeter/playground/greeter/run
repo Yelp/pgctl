@@ -1,4 +1,6 @@
 #!/bin/bash -eu
 echo "What is your name?"
-read name
+read name || name=nobody
 echo "Hello, ${name}."
+
+exec sleep 999999

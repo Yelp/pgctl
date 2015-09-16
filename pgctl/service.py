@@ -11,6 +11,7 @@ from time import time as now
 
 from cached_property import cached_property
 
+from .daemontools import svstat
 from .errors import LockHeld
 from .errors import NoSuchService
 from .flock import flock
@@ -32,7 +33,7 @@ def idempotent_supervise(wrapped):
                     return wrapped(self)
             except Locked:
                 # if it's already supervised, we're good to go:
-                if Popen(('svok', self.path.strpath)).wait() == 0:
+                if Popen(('s6-svok', self.path.strpath)).wait() == 0:
                     return
 
                 try:
@@ -53,9 +54,19 @@ def idempotent_supervise(wrapped):
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
     __slots__ = ()
+    __defaults__ = (None,)
 
     def __str__(self):
         return self.name
+
+    def svstat(self):
+        self.assert_exists()
+        with self.path.dirpath().as_cwd():
+            return svstat(self.name)
+
+    def assert_exists(self):
+        if not self.path.check(dir=True):
+            raise NoSuchService("No such playground service: '%s'" % self.name)
 
     def ensure_directory_structure(self):
         """Ensure that the scratch directory exists and symlinks supervise.
@@ -66,8 +77,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
 
         Instead, we stick them in a scratch directory outside of the repo.
         """
-        if not self.path.check(dir=True):
-            raise NoSuchService("No such playground service: '%s'" % self.name)
+        self.assert_exists()
         self.path.ensure('stdout.log')
         self.path.ensure('stderr.log')
         supervise_in_scratch = self.scratch_dir.join('supervise')
@@ -85,7 +95,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
     def background(self):
         """Run supervise(1), while ensuring it starts down and is properly symlinked."""
         return Popen(
-            ('supervise', self.path.strpath),
+            ('s6-supervise', self.path.strpath),
+            stdin=open(os.devnull, 'w'),
             stdout=self.path.join('stdout.log').open('w'),
             stderr=self.path.join('stderr.log').open('w'),
             env=self.supervise_env,
@@ -95,7 +106,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
     @idempotent_supervise
     def foreground(self):
         exec_(
-            ('supervise', self.path.strpath),
+            ('s6-supervise', self.path.strpath),
             env=self.supervise_env
         )
 

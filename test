@@ -15,8 +15,12 @@ fi
 
 export TOP=$(dirname $(readlink -f $0))
 export PROJECT=pgctl
-NCPU=$(getconf _NPROCESSORS_CONF)
-n=$((NCPU < 5 ? NCPU * 2 : 10))
+if [ -z "${PGCTL_DEBUG:-}" ]; then
+    NCPU=$(getconf _NPROCESSORS_CONF)
+    n=$((NCPU < 5 ? NCPU * 2 : 10))
+else
+    n="0 -s"
+fi
 
 # See: http://nedbatchelder.com/code/coverage/subprocess.html
 $TOP/tests/testing/install_coverage_pth.py

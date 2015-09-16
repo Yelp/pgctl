@@ -27,7 +27,9 @@ def in_example_dir(tmpdir, homedir, service_name):
         try:
             yield tmpdir
         finally:
-            PgctlApp().stop()
+            #  pytest does a chdir before calling cleanup handlers
+            with tmpdir.as_cwd():
+                PgctlApp().stop()
 
 
 @fixture
@@ -48,7 +50,7 @@ def homedir(tmpdir):
 @fixture
 def service_name():
     # this fixture will be overridden by some tests
-    yield 'date'
+    yield 'sleep'
 
 
 @fixture(autouse=True)
