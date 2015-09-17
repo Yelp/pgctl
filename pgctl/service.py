@@ -25,9 +25,9 @@ def idempotent_supervise(wrapped):
     """Run supervise(1), but be successful if it's run too many times."""
 
     def wrapper(self):
-        limit = 10
+        race_limit = 10
         self.ensure_directory_structure()
-        start = now()
+        limit_time = now() + self.wait
         while True:
             try:
                 with flock(self.path.strpath):
@@ -37,16 +37,20 @@ def idempotent_supervise(wrapped):
                 if Popen(('s6-svok', self.path.strpath)).wait() == 0:
                     return
 
+                check_time = now()
                 try:
                     check_lock(self.path.strpath)
                 except LockHeld:
-                    if now() - start < self.wait:
-                        pass  # try again
+                    # lsof can take a long time. we timeout as close to the limit_time as we can.
+                    curr_time = now()
+                    next_time = curr_time + (curr_time - check_time)
+                    if abs(curr_time - limit_time) < abs(next_time - limit_time):
+                        raise  # timeout
                     else:
-                        raise
+                        pass  # try again TODO: unit test: we dont hit this when lsof is super slow  pragma:no cover
                 else:  # race condition: processes dropped lock before we could list them
-                    if limit > 0:
-                        limit -= 1
+                    if race_limit > 0:
+                        race_limit -= 1
                     else:
                         raise
 
