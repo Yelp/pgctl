@@ -718,3 +718,17 @@ class DescribeSlowShutdown(DirtyTest):
 
         check_call(('pgctl-2015', 'stop'))
         assert_svstat('playground/sweet', state=SvStat.UNSUPERVISED)
+
+
+class DescribeSlowStartup(object):
+
+    @fixture
+    def service_name(self):
+        yield 'slow-startup'
+
+    def it_reports_ready(self):
+        check_call(('pgctl-2015', 'start'))
+        assert_svstat('playground/slow-startup', state='ready')
+
+    def it_waits_to_report_ready(self):
+        assert False

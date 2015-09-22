@@ -68,7 +68,9 @@ def svstat_string(service_path):
 
 def svstat_parse(svstat_string):
     r'''
-    up (pid 2557675) 172858 seconds, ready 172856 seconds\n
+    >>> svstat_parse('up (pid 1202562) 100 seconds, ready 10 seconds\n')
+    ready (pid 1202562) 10 seconds
+
     >>> svstat_parse('up (pid 1202562) 100 seconds\n')
     up (pid 1202562) 100 seconds
 

@@ -18,7 +18,6 @@ def main():
         classifiers=[
             'Programming Language :: Python :: 2.7',
         ],
-
         packages=find_packages(exclude=('tests*',)),
         install_requires=[
             'argparse',
