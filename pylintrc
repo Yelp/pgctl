@@ -32,7 +32,11 @@ variable-rgx=[a-z_][a-z0-9_]{0,30}$
 class-rgx=%(const-rgx)s
 
 [FORMAT]
+# in 1970 DEC released the 80-column printer. in 1974 they innovated with a 132-column printer.
 max-line-length=131
+
+# TODO: aim for 250
+# max-module-lines=500
 
 [TYPECHECK]
 ignored-classes=pytest,LocalPath

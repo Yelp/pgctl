@@ -41,7 +41,7 @@ class DescribeCli(object):
     "services": [
         "default"
     ], 
-    "wait_period": "2.0"
+    "timeout": "2.0"
 }}
 '''.format(pghome=expected_pghome)  # noqa
 

@@ -17,6 +17,7 @@ def svc(args):
     """Wrapper for daemontools svc cmd"""
     # svc never writes to stdout.
     cmd = ('s6-svc',) + tuple(args)
+    debug('CMD: %s', cmd)
     process = Popen(cmd, stderr=PIPE)
     _, error = process.communicate()
     if error.startswith('s6-svc: fatal: unable to control '):
@@ -68,6 +69,8 @@ def svstat_string(service_path):
 
 def svstat_parse(svstat_string):
     r'''
+    up (pid 2557675) 172858 seconds, ready 172856 seconds\n
+
     >>> svstat_parse('up (pid 1202562) 100 seconds, ready 10 seconds\n')
     ready (pid 1202562) 10 seconds
 
@@ -105,7 +108,7 @@ def svstat_parse(svstat_string):
     totally unpredictable error message
     '''
     status = svstat_string.strip()
-    debug(status)
+    debug('RAW   : %s', status)
     state, status = __get_state(status)
 
     if status.startswith('(pid '):
@@ -131,6 +134,13 @@ def svstat_parse(svstat_string):
     elif ', want down' in status:
         process = 'stopping'
     else:
+        process = None
+
+    if status.startswith(', ready '):
+        state = 'ready'
+        status = status[8:]
+        seconds, status = status.split(' seconds', 1)
+        seconds = int(seconds)
         process = None
 
     return SvStat(state, pid, exitcode, seconds, process)

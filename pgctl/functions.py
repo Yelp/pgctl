@@ -64,7 +64,7 @@ def bestrelpath(path, relto=None):
 
 def lsof(path):
     from subprocess import STDOUT, Popen, PIPE
-    cmd = 'lsof -tau $(whoami) {} | xargs -r ps -f'.format(path)
+    cmd = 'lsof -tau $(whoami) {} | xargs -r ps -fj'.format(path)
     p = Popen(('sh', '-c', cmd), stdout=PIPE, stderr=STDOUT)
     stdout, _ = p.communicate()
     if stdout.count('\n') > 1:

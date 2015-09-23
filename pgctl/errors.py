@@ -25,5 +25,9 @@ class LockHeld(PgctlUserError):
     pass
 
 
+class NotReady(PgctlUserError):
+    pass
+
+
 class Unsupervised(Exception):
     pass

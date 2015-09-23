@@ -1,3 +1,3 @@
 #!/bin/bash
-sleep 10
-touch test
+set -eu
+exec s6-poll-ready sh -c 'sleep 2; touch test; exec sleep infinity'

@@ -8,13 +8,13 @@ You may (or may not) want these notes after using pgctl for a while.
 Services that stop slowly
 -------------------------
 
-When you have a service that takes a while to stop, pgctl may incorrectly error out saying that the service left processes behind. By default, pgctl only waits up to two seconds. To tell pgctl to wait a bit longer write a number of seconds into a ``wait`` file.
+When you have a service that takes a while to stop, pgctl may incorrectly error out saying that the service left processes behind. By default, pgctl only waits up to two seconds. To tell pgctl to wait a bit longer write a number of seconds into a ``timeout`` file.
 
 
 .. code:: bash
 
-    echo 10 > playground/uwsgi/wait
-    git add playground/uwsgi/wait
+    echo 10 > playground/uwsgi/timeout
+    git add playground/uwsgi/timeout
 
 
 Handling subprocesses in a bash service

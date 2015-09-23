@@ -7,14 +7,15 @@ import os
 from collections import namedtuple
 from subprocess import check_call
 from subprocess import Popen
-from time import time as now
 
 from cached_property import cached_property
 
+from .daemontools import svc
+from .daemontools import SvStat
 from .daemontools import svstat
 from .debug import debug
-from .errors import LockHeld
 from .errors import NoSuchService
+from .errors import NotReady
 from .flock import flock
 from .flock import Locked
 from .functions import check_lock
@@ -25,40 +26,22 @@ def idempotent_supervise(wrapped):
     """Run supervise(1), but be successful if it's run too many times."""
 
     def wrapper(self):
-        race_limit = 10
         self.ensure_directory_structure()
-        limit_time = now() + self.wait
-        while True:
-            try:
-                with flock(self.path.strpath):
-                    return wrapped(self)
-            except Locked:
-                # if it's already supervised, we're good to go:
-                if Popen(('s6-svok', self.path.strpath)).wait() == 0:
-                    return
-
-                check_time = now()
-                try:
-                    check_lock(self.path.strpath)
-                except LockHeld:
-                    # lsof can take a long time. we timeout as close to the limit_time as we can.
-                    curr_time = now()
-                    next_time = curr_time + (curr_time - check_time)
-                    if abs(curr_time - limit_time) < abs(next_time - limit_time):
-                        raise  # timeout
-                    else:
-                        pass  # try again TODO: unit test: we dont hit this when lsof is super slow  pragma:no cover
-                else:  # race condition: processes dropped lock before we could list them
-                    if race_limit > 0:
-                        race_limit -= 1
-                    else:
-                        raise
+        try:
+            with flock(self.path.strpath):
+                return wrapped(self)
+        except Locked:
+            # if it's already supervised, we're good to go:
+            if Popen(('s6-svok', self.path.strpath)).wait() == 0:
+                return
+            else:
+                raise
 
     return wrapper
 
 
-class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
-    __slots__ = ()
+class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
+    # TODO-TEST: regression: these cached-properties are actually cached
     __defaults__ = (None,)
 
     def __str__(self):
@@ -67,7 +50,58 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
     def svstat(self):
         self.assert_exists()
         with self.path.dirpath().as_cwd():
-            return svstat(self.name)
+            result = svstat(self.name)
+        if not self.has_notification:
+            # services without notification need to be considered ready sometimes
+            if (
+                    # an 'up' service is always ready
+                    (result.state == 'up' and result.process is None) or
+                    # restarting continuously and successfully can/should be considered 'ready'
+                    (result.process == 'starting' and result.exitcode == 0 and result.seconds == 0)
+            ):
+                result = result._replace(state='ready')
+        debug('PARSED: %s', result)
+        return result
+
+    @cached_property
+    def has_notification(self):
+        return self.path.join('notification-fd').exists()
+
+    def start(self):
+        """Idempotent start of a service or group of services"""
+        self.background()
+        svc(('-u', self.path.strpath))
+
+    def stop(self):
+        """Idempotent stop of a service or group of services"""
+        self.assert_exists()
+        svc(('-dx', self.path.strpath))
+
+    def __get_timeout(self, name, default):
+        timeout = self.path.join(name)
+        if timeout.check():
+            debug('%s exists', name)
+            return float(timeout.read().strip())
+        else:
+            debug('%s doesn\'t exist', name)
+            return float(default)
+
+    @cached_property
+    def timeout_stop(self):
+        return self.__get_timeout('timeout-stop', self.default_timeout)
+
+    @cached_property
+    def timeout_ready(self):
+        return self.__get_timeout('timeout-ready', self.default_timeout)
+
+    def assert_stopped(self):
+        check_lock(self.path.strpath)
+        if self.svstat().state != SvStat.UNSUPERVISED:
+            raise AssertionError('still supervised?!')
+
+    def assert_ready(self):
+        if self.svstat().state != 'ready':
+            raise NotReady('not ready')
 
     def assert_exists(self):
         if not self.path.check(dir=True):
@@ -115,20 +149,6 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_wait'])):
             ('s6-supervise', self.path.strpath),
             env=self.supervise_env
         )
-
-    @idempotent_supervise
-    def check_stopped(self):
-        pass
-
-    @cached_property
-    def wait(self):
-        wait = self.path.join('wait')
-        if wait.check():
-            debug('wait exists')
-            return float(wait.read().strip())
-        else:
-            debug('wait doesn\'t exist')
-            return float(self.default_wait)
 
     @cached_property
     def name(self):

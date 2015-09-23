@@ -30,6 +30,7 @@ def main():
         entry_points={
             'console_scripts': [
                 'pgctl-2015 = pgctl.cli:main',
+                's6-poll-ready = pgctl.s6_poll_ready:main',
             ],
         },
 
