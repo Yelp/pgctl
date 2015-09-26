@@ -38,6 +38,7 @@ class DescribeCli(object):
     "command": "config", 
     "pgdir": "playground", 
     "pghome": "{pghome}", 
+    "poll": ".01", 
     "services": [
         "default"
     ], 

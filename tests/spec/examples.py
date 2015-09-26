@@ -546,6 +546,7 @@ class DescribePgdirMissing(object):
     "command": "config", 
     "pgdir": "playground", 
     "pghome": "~/.run/pgctl", 
+    "poll": ".01", 
     "services": [
         "default"
     ], 
@@ -604,7 +605,7 @@ class DirtyTest(object):
 
     LOCKERROR = '''\
 Stopping: sweet
-ERROR: service sweet timed out at {time} seconds: We sent SIGTERM, but these processes did not stop:
+ERROR: service sweet timed out at {time} seconds: The supervisor has stopped, but these processes did not:
 UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
 \\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
 

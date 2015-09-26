@@ -22,6 +22,7 @@ from .errors import CircularAliases
 from .errors import NoPlayground
 from .errors import PgctlUserError
 from .errors import Unsupervised
+from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
@@ -41,6 +42,7 @@ PGCTL_DEFAULTS = frozendict({
     'services': ('default',),
     # how long do we wait for them to come down/up?
     'timeout': '2.0',
+    'poll': '.01',
     # what are the named groups of services?
     'aliases': frozendict({
         'default': (ALL_SERVICES,)
@@ -74,11 +76,11 @@ class PgctlApp(object):
 
     def __change_state(self, change_state, assert_state, timeout, changing, changed):
         """Changes the state of a supervised service using the svc command"""
-        print(changing, self.service_names_string, file=stderr)
+        print(changing, commafy(self.service_names), file=stderr)
         services = list(self.services)
+        failed = []
         start = now()
-        result = None
-        while True:
+        while services:
             for service in self.services:
                 try:
                     change_state(service)
@@ -100,40 +102,48 @@ class PgctlApp(object):
                                 timeout(service),
                                 error,
                             ),
-                            file=stderr
+                            file=stderr,
                         )
-                        result = 'Some services timed out.'
                         services.remove(service)
+                        failed.append(service.name)
                     else:
                         debug('service %s is ready.', service.name)
                 else:
                     services.remove(service)
 
             if services:
-                time.sleep(.01)
+                time.sleep(self.poll)
             else:
-                print(changed, self.service_names_string, file=stderr)
-                return result
+                print(changed, commafy(self.service_names), file=stderr)
+                return failed
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        return self.__change_state(
+        failed = self.__change_state(
             lambda service: service.start(),
             lambda service: service.assert_ready(),
             lambda service: service.timeout_ready,
             'Starting:',
             'Started:',
         )
+        if failed:
+            # we don't want services that failed to start to be 'up'
+            newconf = dict(self.pgconf)
+            newconf['services'] = failed
+            PgctlApp(self.pgconf).stop()
+            return 'Some services failed to start: ' + commafy(failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        return self.__change_state(
+        failed = self.__change_state(
             lambda service: service.stop(),
             lambda service: service.assert_stopped(),
             lambda service: service.timeout_stop,
             'Stopping:',
             'Stopped:',
         )
+        if failed:
+            return 'Some services failed to stop: ' + commafy(failed)
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
@@ -153,7 +163,7 @@ class PgctlApp(object):
 
     def reload(self):
         """Reloads the configuration for a service"""
-        print('reload:', self.service_names_string, file=stderr)
+        print('reload:', commafy(self.service_names), file=stderr)
         return 'reloading is not yet implemented.'
 
     def log(self):
@@ -182,9 +192,7 @@ class PgctlApp(object):
             # start supervise in the foreground with the service up
             service, = self.services  # pylint:disable=unpacking-non-sequence
         except ValueError:
-            return 'Must debug exactly one service, not: {0}'.format(
-                self.service_names_string,
-            )
+            return 'Must debug exactly one service, not: ' + commafy(self.service_names)
 
         self.stop()
         service.foreground()  # never returns
@@ -237,6 +245,10 @@ class PgctlApp(object):
         return result
 
     @cached_property
+    def poll(self):
+        return float(self.pgconf['poll'])
+
+    @cached_property
     def all_service_names(self):
         """Return a tuple of all of the Services.
 
@@ -249,10 +261,6 @@ class PgctlApp(object):
             for service_path in pgdir
             if service_path.check(dir=True)
         ])
-
-    @cached_property
-    def service_names_string(self):
-        return ', '.join(self.service_names)
 
     @cached_property
     def service_names(self):
