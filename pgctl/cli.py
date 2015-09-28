@@ -111,11 +111,10 @@ class PgctlApp(object):
                 else:
                     services.remove(service)
 
-            if services:
-                time.sleep(self.poll)
-            else:
-                print(changed, commafy(self.service_names), file=stderr)
-                return failed
+            time.sleep(self.poll)
+
+        print(changed, commafy(self.service_names), file=stderr)
+        return failed
 
     def start(self):
         """Idempotent start of a service or group of services"""

@@ -14,7 +14,7 @@ from testfixtures import StringComparison as S
 from testing import assert_command
 from testing import ctrl_c
 from testing.assertions import assert_svstat
-from testing.assertions import retry
+from testing.assertions import wait_for
 
 from pgctl.daemontools import SvStat
 from pgctl.errors import LockHeld
@@ -177,7 +177,7 @@ class DescribeDateExample(object):
     def it_does_start(self, in_example_dir, scratch_dir):
         assert not scratch_dir.join('now.date').isfile()
         check_call(('pgctl-2015', 'start', 'date'))
-        retry(lambda: scratch_dir.join('now.date').isfile())
+        wait_for(lambda: scratch_dir.join('now.date').isfile())
 
 
 class DescribeTailExample(object):
@@ -193,7 +193,7 @@ class DescribeTailExample(object):
         assert not os.path.isfile('output')
 
         check_call(('pgctl-2015', 'start', 'tail'))
-        retry(lambda: os.path.isfile('output'))
+        wait_for(lambda: os.path.isfile('output'))
         assert open('output').read() == test_string
 
 

@@ -5,15 +5,20 @@ spawn a background process that writes to a file descriptor indicated
 by ./notification-fd when a ./ready script runs successfully.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
 import os.path
 
+from .functions import exec_
+
 
 def floatfile(filename):
     with open(filename) as f:
-        return float(f.read())
+        content = f.read()
+        print('CONTENT:', repr(content))
+        return float(content)
 
 
 def getval(filename, envname, default):
@@ -52,7 +57,7 @@ def s6_poll_ready(notification_fd, timeout, poll_ready, poll_down, check_ready=c
             from time import sleep
             sleep(poll_down)
         else:
-            service = os.path.basename(os.getcwd())
+            service = os.path.basename(os.getcwd())  # No coverage
             # TODO: Add support for directories
             print('Service:', service, ' failed, we stopped it for you.')
             exec_(('pgctl-2015', 'stop', service))  # doesn't return
@@ -66,7 +71,7 @@ def main():
     if os.fork():  # parent
         # run the wrapped command in the main process
         from sys import argv
-        os.execvp(argv[1], argv[1:])
+        exec_(argv[1:])  # never returns
     else:  # child
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
@@ -75,4 +80,4 @@ def main():
 
 
 if __name__ == '__main__':
-    exit(main())
+    exit(main())  # never returns

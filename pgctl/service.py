@@ -35,7 +35,7 @@ def idempotent_supervise(wrapped):
             if Popen(('s6-svok', self.path.strpath)).wait() == 0:
                 return
             else:
-                check_lock(self.path.strpath)
+                check_lock(self.path.strpath)  # pragma: no cover, we don't expect to hit this case
                 raise AssertionError('locked, but supervise is down, but no processes found, ten times?!')
 
     return wrapper

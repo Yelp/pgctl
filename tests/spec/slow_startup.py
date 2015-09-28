@@ -7,6 +7,7 @@ import os
 import pytest
 from testing import assert_command
 from testing.assertions import assert_svstat
+from testing.assertions import wait_for
 
 from pgctl.daemontools import SvStat
 
@@ -46,3 +47,14 @@ def it_can_succeed():
             0
         )
     assert_svstat('playground/slow-startup', state='ready')
+
+
+def it_stops_on_unready():
+    it_can_succeed()
+
+    os.remove('playground/slow-startup/readyfile')
+
+    def it_goes_down():
+        assert_svstat('playground/slow-startup', state=SvStat.UNSUPERVISED)
+
+    wait_for(it_goes_down)

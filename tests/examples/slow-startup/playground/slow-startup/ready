@@ -1,2 +1,2 @@
 #!/bin/bash
-test -e test
+exec test -e readyfile

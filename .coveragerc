@@ -11,6 +11,7 @@ exclude_lines =
     # Have to re-enable the standard pragma
     \#.*pragma:\s*no\s*cover
     \#.*never returns
+    \#.*doesn't return
 
     # Don't complain if tests don't hit defensive assertion code:
     ^\s*raise AssertionError\b

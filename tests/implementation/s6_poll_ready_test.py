@@ -9,7 +9,11 @@ import pytest
 
 from pgctl import s6_poll_ready
 
-pytestmark = pytest.mark.usefixtures('tmpdir')
+
+@pytest.yield_fixture(autouse=True)
+def in_tmpdir(tmpdir):
+    with tmpdir.as_cwd():
+        yield
 
 
 class DescribeFloatFile(object):
@@ -27,21 +31,21 @@ class DescribeGetVal(object):
 
     def it_loads_environment_var(self):
         with mock.patch.dict(os.environ, [('SVWAIT', '5')]):
-            result = s6_poll_ready.getval('', 'SVWAIT', '2')
+            result = s6_poll_ready.getval('does not exist', 'SVWAIT', '2')
             assert isinstance(result, float)
             assert result == 5.0
 
     def it_loads_file_var(self):
-        with mock.patch.dict(os.environ, [('SVWAIT', '5')]):
-            filename = 'notification-fd'
+        with mock.patch.dict(os.environ, [('SVWAIT', '6')]):
+            filename = 'wait-ready'
             with open(filename, 'w') as f:
                 f.write('5')
-            result = s6_poll_ready.getval('notification-fd', 'SVWAIT', 2)
+            result = s6_poll_ready.getval(filename, 'SVWAIT', '2')
             assert isinstance(result, float)
             assert result == 5.0
 
     def it_loads_default_var(self):
-        result = s6_poll_ready.getval('', 'SVWAIT', '2')
+        result = s6_poll_ready.getval('does not exist', 'SVWAIT', '2')
         assert isinstance(result, float)
         assert result == 2.0
 

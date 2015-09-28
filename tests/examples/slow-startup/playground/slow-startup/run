@@ -1,3 +1,4 @@
 #!/bin/bash
 set -eu
-exec s6-poll-ready sh -c 'sleep 2; touch test; exec sleep infinity'
+# this service takes two seconds to become ready
+exec s6-poll-ready sh -c 'sleep 2; touch readyfile; exec sleep infinity'
