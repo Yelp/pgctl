@@ -7,7 +7,7 @@ import os
 import mock
 import pytest
 
-from pgctl import s6_poll_ready
+from pgctl import poll_ready
 
 
 @pytest.yield_fixture(autouse=True)
@@ -22,7 +22,7 @@ class DescribeFloatFile(object):
         filename = 'notification-fd'
         with open(filename, 'w') as f:
             f.write('5')
-        result = s6_poll_ready.floatfile(filename)
+        result = poll_ready.floatfile(filename)
         assert isinstance(result, float)
         assert result == 5.0
 
@@ -31,7 +31,7 @@ class DescribeGetVal(object):
 
     def it_loads_environment_var(self):
         with mock.patch.dict(os.environ, [('SVWAIT', '5')]):
-            result = s6_poll_ready.getval('does not exist', 'SVWAIT', '2')
+            result = poll_ready.getval('does not exist', 'SVWAIT', '2')
             assert isinstance(result, float)
             assert result == 5.0
 
@@ -40,22 +40,22 @@ class DescribeGetVal(object):
             filename = 'wait-ready'
             with open(filename, 'w') as f:
                 f.write('5')
-            result = s6_poll_ready.getval(filename, 'SVWAIT', '2')
+            result = poll_ready.getval(filename, 'SVWAIT', '2')
             assert isinstance(result, float)
             assert result == 5.0
 
     def it_loads_default_var(self):
-        result = s6_poll_ready.getval('does not exist', 'SVWAIT', '2')
+        result = poll_ready.getval('does not exist', 'SVWAIT', '2')
         assert isinstance(result, float)
         assert result == 2.0
 
 
-class DescribeS6PollReady(object):
+class DescribePgctlPollReady(object):
 
     def it_times_out(self):
         with open('notification-file', 'w') as notification_file:
             fd = notification_file.fileno()
         with open('notification-fd', 'w') as notification_fd:
             notification_fd.write(str(fd))
-        result = s6_poll_ready.s6_poll_ready(fd, 2, .1, lambda: 1)
+        result = poll_ready.pgctl_poll_ready(fd, 2, .15, 10.0, lambda: 1)
         assert result == 'timed out.'
