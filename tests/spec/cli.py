@@ -38,10 +38,11 @@ class DescribeCli(object):
     "command": "config", 
     "pgdir": "playground", 
     "pghome": "{pghome}", 
+    "poll": ".01", 
     "services": [
         "default"
     ], 
-    "wait_period": "2.0"
+    "timeout": "2.0"
 }}
 '''.format(pghome=expected_pghome)  # noqa
 

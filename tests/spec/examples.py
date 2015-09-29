@@ -10,14 +10,13 @@ from subprocess import Popen
 
 import pytest
 from pytest import yield_fixture as fixture
-from testfixtures import Comparison as C
 from testfixtures import StringComparison as S
 from testing import assert_command
 from testing import ctrl_c
-from testing.assertions import retry
+from testing.assertions import assert_svstat
+from testing.assertions import wait_for
 
 from pgctl.daemontools import SvStat
-from pgctl.daemontools import svstat
 from pgctl.errors import LockHeld
 from pgctl.functions import check_lock
 
@@ -178,7 +177,7 @@ class DescribeDateExample(object):
     def it_does_start(self, in_example_dir, scratch_dir):
         assert not scratch_dir.join('now.date').isfile()
         check_call(('pgctl-2015', 'start', 'date'))
-        retry(lambda: scratch_dir.join('now.date').isfile())
+        wait_for(lambda: scratch_dir.join('now.date').isfile())
 
 
 class DescribeTailExample(object):
@@ -194,7 +193,7 @@ class DescribeTailExample(object):
         assert not os.path.isfile('output')
 
         check_call(('pgctl-2015', 'start', 'tail'))
-        retry(lambda: os.path.isfile('output'))
+        wait_for(lambda: os.path.isfile('output'))
         assert open('output').read() == test_string
 
 
@@ -205,6 +204,7 @@ class DescribeStart(object):
             ('pgctl-2015', 'start', 'unknown'),
             '',
             '''\
+Starting: unknown
 ERROR: No such playground service: 'unknown'
 ''',
             1,
@@ -225,10 +225,6 @@ Started: sleep
 ''',
             0,
         )
-
-
-def assert_svstat(service, **attrs):
-    assert svstat(service) == C(SvStat, attrs, strict=False)
 
 
 class DescribeStop(object):
@@ -395,7 +391,7 @@ class DescribeStatus(object):
         check_call(('pgctl-2015', 'start', 'sleep'))
         assert_command(
             ('pgctl-2015', 'status', 'sleep'),
-            S('sleep: up \\(pid \\d+\\) \\d+ seconds\\n$'),
+            S('sleep: ready \\(pid \\d+\\) \\d+ seconds\\n$'),
             '',
             0,
         )
@@ -406,7 +402,7 @@ class DescribeStatus(object):
         assert_command(
             ('pgctl-2015', 'status', 'sleep', 'tail'),
             S('''\
-sleep: up \\(pid \\d+\\) \\d+ seconds
+sleep: ready \\(pid \\d+\\) \\d+ seconds
 tail: down
 $'''),
             '',
@@ -420,7 +416,7 @@ $'''),
             ('pgctl-2015', 'status'),
             S('''\
 sleep: down
-tail: up \\(pid \\d+\\) \\d+ seconds
+tail: ready \\(pid \\d+\\) \\d+ seconds
 $'''),
             '',
             0,
@@ -550,10 +546,11 @@ class DescribePgdirMissing(object):
     "command": "config", 
     "pgdir": "playground", 
     "pghome": "~/.run/pgctl", 
+    "poll": ".01", 
     "services": [
         "default"
     ], 
-    "wait_period": "2.0"
+    "timeout": "2.0"
 }
 '''  # noqa
 
@@ -608,16 +605,18 @@ class DirtyTest(object):
 
     LOCKERROR = '''\
 Stopping: sweet
-Stopped: sweet
-ERROR: We sent SIGTERM, but these processes did not stop:
-UID +PID +PPID +C +STIME +TTY +STAT +TIME +CMD
-\\S+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
+ERROR: service sweet timed out at {time} seconds: The supervisor has stopped, but these processes did not:
+UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
+\\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
 
 temporary fix: lsof -t playground/sweet | xargs kill -9
 permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-'''
 
-    @fixture
+Stopped: sweet
+ERROR: Some services timed out.
+$'''
+
+    @fixture(autouse=True)
     def cleanup(self, in_example_dir):
         try:
             yield in_example_dir
@@ -641,7 +640,7 @@ class DescribeOrphanSubprocess(DirtyTest):
     def service_name(self):
         yield 'orphan-subprocess'
 
-    def it_starts_up_fine(self, cleanup):
+    def it_starts_up_fine(self):
         assert_command(
             ('pgctl-2015', 'start'),
             '',
@@ -664,7 +663,7 @@ sweet_error
             0,
         )
 
-    def it_shows_error_on_stop(self, cleanup):
+    def it_shows_error_on_stop(self):
         assert_command(
             ('pgctl-2015', 'start'),
             '',
@@ -677,7 +676,7 @@ Started: sweet
         assert_command(
             ('pgctl-2015', 'restart'),
             '',
-            S(self.LOCKERROR.format(cmd='sleep infinity')),
+            S(self.LOCKERROR.format(time='2', cmd='sleep infinity')),
             1,
         )
 
@@ -691,24 +690,24 @@ class DescribeSlowShutdown(DirtyTest):
 
     @fixture(autouse=True)
     def environment(self):
-        os.environ['PGCTL_WAIT_PERIOD'] = '1.5'
+        os.environ['PGCTL_TIMEOUT'] = '1.5'
         yield
-        del os.environ['PGCTL_WAIT_PERIOD']
+        del os.environ['PGCTL_TIMEOUT']
 
-    def it_fails_by_default(self, cleanup):
+    def it_fails_by_default(self):
         check_call(('pgctl-2015', 'start'))
         assert_svstat('playground/sweet', state='up')
         assert_command(
             ('pgctl-2015', 'stop'),
             '',
-            S(self.LOCKERROR.format(cmd='sleep 2\\.25')),
+            S(self.LOCKERROR.format(time='1\\.5', cmd='sleep 2\\.25')),
             1,
         )
 
-    def it_can_shut_down_successfully(self, cleanup):
+    def it_can_shut_down_successfully(self):
         # if we configure it to wait a bit longer, it works fine
-        with open('playground/sweet/wait', 'w') as wait:
-            wait.write('3')
+        with open('playground/sweet/timeout-stop', 'w') as timeout:
+            timeout.write('3')
 
         check_call(('pgctl-2015', 'start'))
         assert_svstat('playground/sweet', state='up')

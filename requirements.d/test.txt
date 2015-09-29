@@ -5,7 +5,8 @@ flake8
 mock
 pre-commit>=0.3.6
 pylint
-pytest
+# FIXME: fails with `assert (<DoctestModule 'tests/spec/cli.py'> is None or <DoctestModule 'tests/spec/cli.py'> in [<Session 'pgctl'> ...`
+pytest!=2.8.0
 # pytest-xdist 1.13 broke -n 0
 # https://bitbucket.org/pytest-dev/pytest/issues/771/n0-broken
 pytest-xdist!=1.13

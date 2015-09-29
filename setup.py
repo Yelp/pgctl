@@ -18,7 +18,6 @@ def main():
         classifiers=[
             'Programming Language :: Python :: 2.7',
         ],
-
         packages=find_packages(exclude=('tests*',)),
         install_requires=[
             'argparse',
@@ -31,6 +30,7 @@ def main():
         entry_points={
             'console_scripts': [
                 'pgctl-2015 = pgctl.cli:main',
+                'pgctl-poll-ready = pgctl.poll_ready:main',
             ],
         },
 

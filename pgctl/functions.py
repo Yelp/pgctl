@@ -64,7 +64,7 @@ def bestrelpath(path, relto=None):
 
 def lsof(path):
     from subprocess import STDOUT, Popen, PIPE
-    cmd = 'lsof -tau $(whoami) {} | xargs -r ps -f'.format(path)
+    cmd = 'lsof -tau $(whoami) {} | xargs -r ps -fj'.format(path)
     p = Popen(('sh', '-c', cmd), stdout=PIPE, stderr=STDOUT)
     stdout, _ = p.communicate()
     if stdout.count('\n') > 1:
@@ -79,7 +79,7 @@ def check_lock(path):
     if locks:
         raise LockHeld(
             '''\
-We sent SIGTERM, but these processes did not stop:
+The supervisor has stopped, but these processes did not:
 %s
 temporary fix: lsof -t %s | xargs kill -9
 permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
@@ -87,3 +87,7 @@ permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writi
         )
     else:
         pass
+
+
+def commafy(items):
+    return ', '.join(str(x) for x in items)

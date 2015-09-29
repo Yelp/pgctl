@@ -8,6 +8,7 @@ import os
 import time
 from subprocess import MAXFD
 from sys import stderr
+from time import time as now
 
 from cached_property import cached_property
 from frozendict import frozendict
@@ -15,13 +16,13 @@ from py._path.local import LocalPath as Path
 
 from .config import Config
 from .configsearch import search_parent_directories
-from .daemontools import svc
 from .daemontools import SvStat
 from .debug import debug
 from .errors import CircularAliases
 from .errors import NoPlayground
 from .errors import PgctlUserError
 from .errors import Unsupervised
+from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
 from .functions import uniq
@@ -40,7 +41,8 @@ PGCTL_DEFAULTS = frozendict({
     # which services are we acting on?
     'services': ('default',),
     # how long do we wait for them to come down/up?
-    'wait_period': '2.0',
+    'timeout': '2.0',
+    'poll': '.01',
     # what are the named groups of services?
     'aliases': frozendict({
         'default': (ALL_SERVICES,)
@@ -72,45 +74,75 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, opt, test, xing, xed):
+    def __change_state(self, change_state, assert_state, timeout, changing, changed):
         """Changes the state of a supervised service using the svc command"""
-        print(xing, self.service_names_string, file=stderr)
-        with self.pgdir.as_cwd():
-            while True:  # a poor man's do/while
-                status_list = [service.svstat() for service in self.services]
-                debug(status_list)
+        print(changing, commafy(self.service_names), file=stderr)
+        services = list(self.services)
+        failed = []
+        start = now()
+        while services:
+            for service in self.services:
+                try:
+                    change_state(service)
+                except Unsupervised:
+                    pass  # handled in state assertion, below
+            for service in tuple(services):
+                check_time = now()
+                try:
+                    assert_state(service)
+                except PgctlUserError as error:
+                    # assertion can take a long time. we timeout as close to the limit_time as we can.
+                    curr_time = now()
+                    next_time = curr_time + (curr_time - check_time)
+                    limit_time = start + timeout(service)
+                    if abs(curr_time - limit_time) < abs(next_time - limit_time):
+                        print(
+                            'ERROR: service %s timed out at %g seconds: %s' % (
+                                service.name,
+                                timeout(service),
+                                error,
+                            ),
+                            file=stderr,
+                        )
+                        services.remove(service)
+                        failed.append(service.name)
+                    else:
+                        debug('service %s is ready.', service.name)
+                else:
+                    services.remove(service)
 
-                if all(test(status) for status in status_list):
-                    break
+            time.sleep(self.poll)
 
-                for service in self.service_names:
-                    try:
-                        svc((opt, service))
-                    except Unsupervised:
-                        pass  # we handle this state above, with svstat
-
-                time.sleep(.01)
-            print(xed, self.service_names_string, file=stderr)
+        print(changed, commafy(self.service_names), file=stderr)
+        return failed
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        for service in self.services:
-            service.background()
-
-        def test(status):
-            return (
-                (status.process is None and status.state == 'up') or
-                (status.process == 'starting' and status.exitcode == 0 and status.seconds == 0)
-            )
-        self.__change_state('-u', test, 'Starting:', 'Started:')
+        failed = self.__change_state(
+            lambda service: service.start(),
+            lambda service: service.assert_ready(),
+            lambda service: service.timeout_ready,
+            'Starting:',
+            'Started:',
+        )
+        if failed:
+            # we don't want services that failed to start to be 'up'
+            newconf = dict(self.pgconf)
+            newconf['services'] = failed
+            PgctlApp(self.pgconf).stop()
+            return 'Some services failed to start: ' + commafy(failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        def test(status):
-            return status.state == SvStat.UNSUPERVISED
-        self.__change_state('-dx', test, 'Stopping:', 'Stopped:')
-        for service in self.services:
-            service.check_stopped()
+        failed = self.__change_state(
+            lambda service: service.stop(),
+            lambda service: service.assert_stopped(),
+            lambda service: service.timeout_stop,
+            'Stopping:',
+            'Stopped:',
+        )
+        if failed:
+            return 'Some services failed to stop: ' + commafy(failed)
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
@@ -123,12 +155,14 @@ class PgctlApp(object):
 
     def restart(self):
         """Starts and stops a service"""
-        self.stop()
-        self.start()
+        result = self.stop()
+        if result:
+            return result
+        return self.start()
 
     def reload(self):
         """Reloads the configuration for a service"""
-        print('reload:', self.service_names_string, file=stderr)
+        print('reload:', commafy(self.service_names), file=stderr)
         return 'reloading is not yet implemented.'
 
     def log(self):
@@ -157,9 +191,7 @@ class PgctlApp(object):
             # start supervise in the foreground with the service up
             service, = self.services  # pylint:disable=unpacking-non-sequence
         except ValueError:
-            return 'Must debug exactly one service, not: {0}'.format(
-                self.service_names_string,
-            )
+            return 'Must debug exactly one service, not: ' + commafy(self.service_names)
 
         self.stop()
         service.foreground()  # never returns
@@ -174,7 +206,7 @@ class PgctlApp(object):
         return Service(
             path,
             self.pghome.join(path.relto(str('/'))),
-            self.pgconf['wait_period'],
+            self.pgconf['timeout'],
         )
 
     @cached_property
@@ -212,6 +244,10 @@ class PgctlApp(object):
         return result
 
     @cached_property
+    def poll(self):
+        return float(self.pgconf['poll'])
+
+    @cached_property
     def all_service_names(self):
         """Return a tuple of all of the Services.
 
@@ -224,10 +260,6 @@ class PgctlApp(object):
             for service_path in pgdir
             if service_path.check(dir=True)
         ])
-
-    @cached_property
-    def service_names_string(self):
-        return ', '.join(self.service_names)
 
     @cached_property
     def service_names(self):
