@@ -52,7 +52,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.assert_exists()
         with self.path.dirpath().as_cwd():
             result = svstat(self.name)
-        if not self.has_notification:
+        if not self.notification_fd.exists():
             # services without notification need to be considered ready sometimes
             if (
                     # an 'up' service is always ready
@@ -65,8 +65,12 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         return result
 
     @cached_property
-    def has_notification(self):
-        return self.path.join('notification-fd').exists()
+    def ready_script(self):
+        return self.path.join('ready')
+
+    @cached_property
+    def notification_fd(self):
+        return self.path.join('notification-fd')
 
     def start(self):
         """Idempotent start of a service or group of services"""
@@ -121,6 +125,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.path.ensure('stdout.log')
         self.path.ensure('stderr.log')
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
+        if self.ready_script.exists() and not self.notification_fd.exists():
+            f = self.notification_fd.open('w')
+            f.write(str(f.fileno()) + '\n')
         supervise_in_scratch = self.scratch_dir.join('supervise')
         supervise_in_scratch.ensure_dir()
 

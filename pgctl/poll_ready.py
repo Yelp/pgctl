@@ -38,7 +38,7 @@ def check_ready():
     return call('./ready')
 
 
-def s6_poll_ready(notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+def pgctl_poll_ready(notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
     while True:
         if check_ready() == 0:
             os.write(notification_fd, 'ready\n')
@@ -59,8 +59,8 @@ def s6_poll_ready(notification_fd, timeout, poll_ready, poll_down, check_ready=c
         else:
             service = os.path.basename(os.getcwd())  # No coverage
             # TODO: Add support for directories
-            print('Service:', service, ' failed, we stopped it for you.')
-            exec_(('pgctl-2015', 'stop', service))  # doesn't return
+            print('Service\'s ready check failed. We are restarting it for you.')
+            exec_(('pgctl-2015', 'restart', service))  # doesn't return
 
 
 def main():
@@ -76,7 +76,7 @@ def main():
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
-        return s6_poll_ready(notification_fd, timeout, poll_ready, poll_down)
+        return pgctl_poll_ready(notification_fd, timeout, poll_ready, poll_down)
 
 
 if __name__ == '__main__':

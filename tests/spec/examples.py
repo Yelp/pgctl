@@ -706,7 +706,7 @@ class DescribeSlowShutdown(DirtyTest):
 
     def it_can_shut_down_successfully(self):
         # if we configure it to wait a bit longer, it works fine
-        with open('playground/sweet/timeout', 'w') as timeout:
+        with open('playground/sweet/timeout-stop', 'w') as timeout:
             timeout.write('3')
 
         check_call(('pgctl-2015', 'start'))
