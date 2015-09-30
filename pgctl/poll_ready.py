@@ -36,14 +36,15 @@ def check_ready():
     return call('./ready')
 
 
-def pgctl_poll_ready(notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
     while True:
         if check_ready() == 0:
+            print('pgctl-poll-ready: service\'s ready check succeeded')
             os.write(notification_fd, 'ready\n')
             break
 
         if timeout <= 0:
-            return 'timed out.'
+            return 'pgctl-poll-ready: timeout while waiting for ready'
         else:
             from time import sleep
             sleep(poll_ready)
@@ -51,13 +52,17 @@ def pgctl_poll_ready(notification_fd, timeout, poll_ready, poll_down, check_read
 
     # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
     while True:
-        if check_ready() == 0:
+        if down.poll() is not None:
+            print('pgctl-poll-ready: service is stopping -- quitting the poll')
+            break
+        elif check_ready() == 0:
             from time import sleep
             sleep(poll_down)
         else:
-            service = os.path.basename(os.getcwd())  # No coverage
+            down.terminate()
+            service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
-            print('Service\'s ready check failed. We are restarting it for you.')
+            print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you')
             exec_(('pgctl-2015', 'restart', service))  # doesn't return
 
 
@@ -74,7 +79,10 @@ def main():
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
-        return pgctl_poll_ready(notification_fd, timeout, poll_ready, poll_down)
+        # this subprocess listens for the s6 down event: http://skarnet.org/software/s6/s6-supervise.html
+        from subprocess import Popen
+        down = Popen(('s6-ftrig-wait', 'event', 'd'))
+        return pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down)
 
 
 if __name__ == '__main__':
