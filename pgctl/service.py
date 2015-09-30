@@ -26,9 +26,9 @@ def idempotent_supervise(wrapped):
     """Run supervise(1), but be successful if it's run too many times."""
 
     def wrapper(self):
-        self.ensure_directory_structure()
         try:
             with flock(self.path.strpath):
+                self.ensure_directory_structure()
                 return wrapped(self)
         except Locked:
             # if it's already supervised, we're good to go:
@@ -125,9 +125,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.path.ensure('stdout.log')
         self.path.ensure('stderr.log')
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
-        if self.ready_script.exists() and not self.notification_fd.exists():
-            f = self.notification_fd.open('w')
-            f.write(str(f.fileno()) + '\n')
+        if self.ready_script.exists():
+            with self.notification_fd.open('w') as f:
+                f.write(str(f.fileno()) + '\n')
         supervise_in_scratch = self.scratch_dir.join('supervise')
         supervise_in_scratch.ensure_dir()
 
