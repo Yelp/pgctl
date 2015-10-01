@@ -48,14 +48,3 @@ class DescribeGetVal(object):
         result = poll_ready.getval('does not exist', 'SVWAIT', '2')
         assert isinstance(result, float)
         assert result == 2.0
-
-
-class DescribePgctlPollReady(object):
-
-    def it_times_out(self):
-        with open('notification-file', 'w') as notification_file:
-            fd = notification_file.fileno()
-        with open('notification-fd', 'w') as notification_fd:
-            notification_fd.write(str(fd))
-        result = poll_ready.pgctl_poll_ready(fd, 2, .15, 10.0, lambda: 1)
-        assert result == 'timed out.'
