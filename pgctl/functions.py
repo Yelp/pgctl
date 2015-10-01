@@ -75,14 +75,16 @@ def lsof(path):
 
 
 def check_lock(path):
+    # TODO: message seems to indicate we should svok here
     locks = lsof(path)
     if locks:
         raise LockHeld(
             '''\
 The supervisor has stopped, but these processes did not:
 %s
-temporary fix: lsof -t %s | xargs kill -9
-permanent fix: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+There are two ways you can fix this:
+  * temporarily: lsof -t %s | xargs kill -9
+  * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 ''' % (locks, bestrelpath(path))
         )
     else:

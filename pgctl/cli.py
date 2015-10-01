@@ -7,7 +7,6 @@ import argparse
 import os
 import time
 from subprocess import MAXFD
-from sys import stderr
 from time import time as now
 
 from cached_property import cached_property
@@ -48,6 +47,13 @@ PGCTL_DEFAULTS = frozendict({
         'default': (ALL_SERVICES,)
     }),
 })
+CHANNEL = '[pgctl]'
+
+
+def pgctl_print(*print_args, **print_kwargs):
+    from sys import stderr
+    print_kwargs.setdefault('file', stderr)
+    print(CHANNEL, *print_args, **print_kwargs)
 
 
 class PgctlApp(object):
@@ -70,13 +76,13 @@ class PgctlApp(object):
             result = str(error)
 
         if isinstance(result, basestring):
-            return 'ERROR: ' + result
+            return CHANNEL + ' ERROR: ' + result
         else:
             return result
 
     def __change_state(self, change_state, assert_state, timeout, changing, changed):
         """Changes the state of a supervised service using the svc command"""
-        print(changing, commafy(self.service_names), file=stderr)
+        pgctl_print(changing, commafy(self.service_names))
         services = list(self.services)
         failed = []
         start = now()
@@ -96,20 +102,19 @@ class PgctlApp(object):
                     next_time = curr_time + (curr_time - check_time)
                     limit_time = start + timeout(service)
                     if abs(curr_time - limit_time) < abs(next_time - limit_time):
-                        print(
+                        pgctl_print(
                             "ERROR: '%s' timed out at %g seconds: %s" % (
                                 service.name,
                                 timeout(service),
                                 error,
                             ),
-                            file=stderr,
                         )
                         services.remove(service)
                         failed.append(service.name)
                     else:
                         debug('service %s is ready.', service.name)
                 else:
-                    print(changed, service.name, file=stderr)
+                    pgctl_print(changed, service.name)
                     services.remove(service)
 
             time.sleep(self.poll)
@@ -177,7 +182,7 @@ class PgctlApp(object):
 
     def reload(self):
         """Reloads the configuration for a service"""
-        print('reload:', commafy(self.service_names), file=stderr)
+        pgctl_print('reload:', commafy(self.service_names))
         return 'reloading is not yet implemented.'
 
     def log(self, interactive=None):

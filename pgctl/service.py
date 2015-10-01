@@ -125,9 +125,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.path.ensure('stdout.log')
         self.path.ensure('stderr.log')
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
-        if self.ready_script.exists() and not self.notification_fd.exists():
+        if self.ready_script.exists():
             with self.notification_fd.open('w') as f:
-                f.write(str(f.fileno()) + '\n')
+                f.write('%i\n' % f.fileno())
         supervise_in_scratch = self.scratch_dir.join('supervise')
         supervise_in_scratch.ensure_dir()
 

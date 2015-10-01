@@ -10,6 +10,7 @@ from __future__ import unicode_literals
 
 import os
 import os.path
+import sys
 
 from .functions import exec_
 
@@ -39,7 +40,7 @@ def check_ready():
 def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
     while True:
         if check_ready() == 0:
-            print('pgctl-poll-ready: service\'s ready check succeeded')
+            print('pgctl-poll-ready: service\'s ready check succeeded', file=sys.stderr)
             os.write(notification_fd, 'ready\n')
             break
 
@@ -53,7 +54,7 @@ def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, chec
     # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
     while True:
         if down.poll() is not None:
-            print('pgctl-poll-ready: service is stopping -- quitting the poll')
+            print('pgctl-poll-ready: service is stopping -- quitting the poll', file=sys.stderr)
             break
         elif check_ready() == 0:
             from time import sleep
@@ -62,8 +63,8 @@ def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, chec
             down.terminate()
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
-            print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you')
-            exec_(('pgctl-2015', 'restart', service))  # doesn't return
+            print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you', file=sys.stderr)
+            print('pgctl-poll-ready: NOT exec\'ing', ('pgctl-2015', 'restart', service))  # doesn't return
 
 
 def main():
@@ -71,11 +72,14 @@ def main():
     # TODO-TEST: echo 4 > notification-fd
     notification_fd = int(floatfile('notification-fd'))
 
+    print('pgctl-poll-ready: prefork', file=sys.stderr)
     if os.fork():  # parent
+        print('pgctl-poll-ready: fork parent', file=sys.stderr)
         # run the wrapped command in the main process
         from sys import argv
         exec_(argv[1:])  # never returns
     else:  # child
+        print('pgctl-poll-ready: fork child', file=sys.stderr)
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')

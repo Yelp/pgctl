@@ -11,4 +11,4 @@ DEBUG = environ.get('PGCTL_DEBUG', '')
 
 def debug(msg, *args):
     if DEBUG:
-        print('DEBUG:', msg % args, file=stderr)  # pragma: no cover
+        print('[pgctl] DEBUG:', msg % args, file=stderr)  # pragma: no cover
