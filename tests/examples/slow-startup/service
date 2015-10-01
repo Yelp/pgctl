@@ -1,5 +1,4 @@
 #!/bin/bash
-cd ../../
 sleep 2
 touch readyfile
 sleep 1000 &

@@ -17,6 +17,20 @@ from pgctl.errors import LockHeld
 from pgctl.functions import check_lock
 
 
+def clean_service(service_path):
+    # we use SIGTERM; SIGKILL is cheating.
+    print('killing.')
+    limit = 100
+    while limit > 0:  # pragma: no cover: we don't expect to ever hit the limit
+        try:
+            check_lock(service_path)
+            break
+        except LockHeld:
+            cmd = 'lsof -tau $(whoami) %s | xargs --replace kill -TERM {}' % service_path
+            Popen(('sh', '-c', cmd)).wait()
+            limit -= 1
+
+
 class DirtyTest(object):
 
     LOCKERROR = '''\
@@ -34,21 +48,11 @@ $'''
 
     @pytest.yield_fixture(autouse=True)
     def cleanup(self, in_example_dir):
-        #TODO startup-service!!!
         try:
             yield in_example_dir
         finally:
-            # we use SIGTERM; SIGKILL is cheating.
-            print('killing.')
-            limit = 100
-            while limit > 0:  # pragma: no cover: we don't expect to ever hit the limit
-                try:
-                    check_lock('playground/sweet')
-                    break
-                except LockHeld:
-                    cmd = 'lsof -tau $(whoami) playground/sweet | xargs --replace kill -TERM {}'
-                    Popen(('sh', '-c', cmd)).wait()
-                    limit -= 1
+            clean_service('playground/sweet')
+            clean_service('playground/slow-startup')
 
 
 class DescribeOrphanSubprocess(DirtyTest):
@@ -120,7 +124,7 @@ Started: slow-startup
         assert_command(
             ('pgctl-2015', 'restart', 'slow-startup'),
             '',
-            S(self.LOCKERROR.format(service='slow-startup', time='5', cmd='sleep infinity')),
+            S(self.LOCKERROR.format(service='slow-startup', time='5', cmd='sleep 1000')),
             1,
         )
 
