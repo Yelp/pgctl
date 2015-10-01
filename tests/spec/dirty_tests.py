@@ -53,6 +53,12 @@ $'''
 
 class DescribeOrphanSubprocess(DirtyTest):
 
+    @pytest.yield_fixture(autouse=True)
+    def environment(self):
+        os.environ['PGCTL_TIMEOUT'] = '5'
+        yield
+        del os.environ['PGCTL_TIMEOUT']
+
     @pytest.yield_fixture
     def service_name(self):
         yield 'orphan-subprocess'
@@ -97,7 +103,7 @@ Started: sweet
         assert_command(
             ('pgctl-2015', 'restart', 'sweet'),
             '',
-            S(self.LOCKERROR.format(service='sweet', time='2', cmd='sleep infinity')),
+            S(self.LOCKERROR.format(service='sweet', time='5', cmd='sleep infinity')),
             1,
         )
 
@@ -114,7 +120,7 @@ Started: slow-startup
         assert_command(
             ('pgctl-2015', 'restart', 'slow-startup'),
             '',
-            S(self.LOCKERROR.format(service='slow-startup', time='2', cmd='sleep infinity')),
+            S(self.LOCKERROR.format(service='slow-startup', time='5', cmd='sleep infinity')),
             1,
         )
 
