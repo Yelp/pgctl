@@ -27,7 +27,8 @@ def idempotent_supervise(wrapped):
 
     def wrapper(self):
         try:
-            with flock(self.path.strpath):
+            with flock(self.path.strpath) as lock:
+                debug('LOCK:', lock)
                 self.ensure_directory_structure()
                 return wrapped(self)
         except Locked:

@@ -124,7 +124,7 @@ Started: slow-startup
         assert_command(
             ('pgctl-2015', 'restart', 'slow-startup'),
             '',
-            S(self.LOCKERROR.format(service='slow-startup', time='5', cmd='sleep 1000')),
+            S(self.LOCKERROR.format(service='slow-startup', time='5', cmd='sleep 987654')),
             1,
         )
 

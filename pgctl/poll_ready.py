@@ -16,8 +16,7 @@ from .functions import exec_
 
 def floatfile(filename):
     with open(filename) as f:
-        content = f.read()
-        return float(content)
+        return float(f.read())
 
 
 def getval(filename, envname, default):
