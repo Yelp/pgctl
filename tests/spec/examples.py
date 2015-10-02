@@ -202,8 +202,8 @@ class DescribeStart(object):
             ('pgctl-2015', 'start', 'unknown'),
             '',
             '''\
-Starting: unknown
-ERROR: No such playground service: 'unknown'
+[pgctl] Starting: unknown
+[pgctl] ERROR: No such playground service: 'unknown'
 ''',
             1,
         )
@@ -218,8 +218,8 @@ ERROR: No such playground service: 'unknown'
             ('pgctl-2015', 'start', 'sleep'),
             '',
             '''\
-Starting: sleep
-Started: sleep
+[pgctl] Starting: sleep
+[pgctl] Started: sleep
 ''',
             0,
         )
@@ -241,8 +241,8 @@ class DescribeStop(object):
             ('pgctl-2015', 'stop', 'unknown'),
             '',
             '''\
-Stopping: unknown
-ERROR: No such playground service: 'unknown'
+[pgctl] Stopping: unknown
+[pgctl] ERROR: No such playground service: 'unknown'
 ''',
             1,
         )
@@ -299,7 +299,7 @@ class DescribeDebug(object):
         assert_command(
             ('pgctl-2015', 'debug', 'abc', 'def'),
             '',
-            'ERROR: Must debug exactly one service, not: abc, def\n',
+            '[pgctl] ERROR: Must debug exactly one service, not: abc, def\n',
             1,
         )
 
@@ -317,10 +317,10 @@ class DescribeRestart(object):
             ('pgctl-2015', 'restart', 'sleep'),
             '',
             '''\
-Stopping: sleep
-Stopped: sleep
-Starting: sleep
-Started: sleep
+[pgctl] Stopping: sleep
+[pgctl] Stopped: sleep
+[pgctl] Starting: sleep
+[pgctl] Started: sleep
 ''',
             0,
         )
@@ -425,7 +425,7 @@ $'''),
             ('pgctl-2015', 'status', 'garbage'),
             '',
             '''\
-ERROR: No such playground service: 'garbage'
+[pgctl] ERROR: No such playground service: 'garbage'
 ''',
             1,
         )
@@ -438,8 +438,8 @@ class DescribeReload(object):
             ('pgctl-2015', 'reload'),
             '',
             '''\
-reload: sleep
-ERROR: reloading is not yet implemented.
+[pgctl] reload: sleep
+[pgctl] ERROR: reloading is not yet implemented.
 ''',
             1,
         )
@@ -456,8 +456,9 @@ class DescribeAliases(object):
             ('pgctl-2015', 'start', 'a'),
             '',
             '''\
-Starting: ohhi, sweet
-Started: ohhi, sweet
+[pgctl] Starting: ohhi, sweet
+[pgctl] Started: ohhi
+[pgctl] Started: sweet
 ''',
             0,
         )
@@ -466,7 +467,7 @@ Started: ohhi, sweet
         assert_command(
             ('pgctl-2015', 'start', 'b'),
             '',
-            "ERROR: Circular aliases! Visited twice during alias expansion: 'b'\n",
+            "[pgctl] ERROR: Circular aliases! Visited twice during alias expansion: 'b'\n",
             1,
         )
 
@@ -475,8 +476,9 @@ Started: ohhi, sweet
             ('pgctl-2015', 'start'),
             '',
             '''\
-Starting: ohhi, sweet
-Started: ohhi, sweet
+[pgctl] Starting: ohhi, sweet
+[pgctl] Started: ohhi
+[pgctl] Started: sweet
 ''',
             0,
         )
@@ -529,7 +531,7 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl-2015', command),
                 '',
-                "ERROR: could not find any directory named 'playground'\n",
+                "[pgctl] ERROR: could not find any directory named 'playground'\n",
                 1,
             )
 

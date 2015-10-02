@@ -64,7 +64,9 @@ def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, chec
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
             print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you', file=sys.stderr)
-            print('pgctl-poll-ready: NOT exec\'ing', ('pgctl-2015', 'restart', service))  # doesn't return
+            # we chdir to avoid holding the service-is-up lock.
+            os.chdir(os.path.join(os.environ.get('PGCTL_SERVICE', '.'), '..'))
+            exec_(('pgctl-2015', 'restart', service))  # doesn't return
 
 
 def main():
@@ -72,20 +74,20 @@ def main():
     # TODO-TEST: echo 4 > notification-fd
     notification_fd = int(floatfile('notification-fd'))
 
-    print('pgctl-poll-ready: prefork', file=sys.stderr)
     if os.fork():  # parent
-        print('pgctl-poll-ready: fork parent', file=sys.stderr)
         # run the wrapped command in the main process
         from sys import argv
         exec_(argv[1:])  # never returns
     else:  # child
-        print('pgctl-poll-ready: fork child', file=sys.stderr)
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
         # this subprocess listens for the s6 down event: http://skarnet.org/software/s6/s6-supervise.html
         from subprocess import Popen
-        down = Popen(('s6-ftrig-wait', 'event', 'd'))
+        down = Popen(
+            ('s6-ftrig-wait', 'event', 'd'),
+            stdout=open(os.devnull, 'w'),  # this prints 'd' otherwise
+        )
         return pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down)
 
 

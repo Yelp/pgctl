@@ -1,5 +1,7 @@
+# pylint:disable=invalid-name
 """miscellany pgctl functions"""
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import json
@@ -63,10 +65,28 @@ def bestrelpath(path, relto=None):
 
 
 def lsof(path):
-    from subprocess import STDOUT, Popen, PIPE
-    cmd = 'lsof -tau $(whoami) {} | xargs -r ps -fj'.format(path)
-    p = Popen(('sh', '-c', cmd), stdout=PIPE, stderr=STDOUT)
-    stdout, _ = p.communicate()
+    """return a list of pids which have `path` open"""
+    from subprocess import Popen, PIPE, CalledProcessError
+    cmd = ('sh', '-c', 'lsof -tau $(whoami) {}'.format(path))
+    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
+    stdout, stderr = proc.communicate()
+    if stdout == stderr == '':
+        return []
+    elif proc.returncode != 0:
+        raise CalledProcessError(proc.returncode, cmd, (stdout, stderr))
+    else:
+        return [int(line) for line in stdout.split()]
+
+
+def ps(pids):
+    """Give a (somewhat) human-readable printout of a list of processes"""
+    if not pids:
+        return ''
+
+    from subprocess import PIPE, Popen
+    cmd = ('ps', '-fj',) + tuple([str(pid) for pid in pids])
+    process = Popen(cmd, stdout=PIPE, stderr=PIPE)
+    stdout, _ = process.communicate()
     if stdout.count('\n') > 1:
         return stdout
     else:
@@ -76,8 +96,8 @@ def lsof(path):
 
 def check_lock(path):
     # TODO: message seems to indicate we should svok here
-    locks = lsof(path)
-    if locks:
+    processes = ps(lsof(path))
+    if processes:
         raise LockHeld(
             '''\
 The supervisor has stopped, but these processes did not:
@@ -85,7 +105,7 @@ The supervisor has stopped, but these processes did not:
 There are two ways you can fix this:
   * temporarily: lsof -t %s | xargs kill -9
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-''' % (locks, bestrelpath(path))
+''' % (processes, bestrelpath(path))
         )
     else:
         pass

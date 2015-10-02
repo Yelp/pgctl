@@ -23,14 +23,17 @@ def service_name():
 def it_times_out():
     assert_command(
         ('pgctl-2015', 'start'),
-        '',
         '''\
-Starting: slow-startup
-ERROR: service slow-startup timed out at 2 seconds: not ready
-Started: slow-startup
-Stopping: slow-startup
-Stopped: slow-startup
-ERROR: Some services failed to start: slow-startup
+==> playground/slow-startup/stdout.log <==
+
+==> playground/slow-startup/stderr.log <==
+''',
+        '''\
+[pgctl] Starting: slow-startup
+[pgctl] ERROR: 'slow-startup' timed out at 2 seconds: not ready
+[pgctl] Stopping: slow-startup
+[pgctl] Stopped: slow-startup
+[pgctl] ERROR: Some services failed to start: slow-startup
 ''',
         1
     )
@@ -43,18 +46,21 @@ def it_can_succeed():
         assert_command(
             ('pgctl-2015', 'start'),
             '',
-            'Starting: slow-startup\nStarted: slow-startup\n',
+            '[pgctl] Starting: slow-startup\n[pgctl] Started: slow-startup\n',
             0
         )
     assert_svstat('playground/slow-startup', state='ready')
 
 
-def it_stops_on_unready():
-    it_can_succeed()
+def it_restarts_on_unready():
 
-    os.remove('playground/slow-startup/readyfile')
+    def it_is_ready():
+        assert_svstat('playground/slow-startup', state='ready')
 
-    def it_goes_down():
+    def it_stopped():
         assert_svstat('playground/slow-startup', state=SvStat.UNSUPERVISED)
 
-    wait_for(it_goes_down)
+    it_can_succeed()
+    os.remove('playground/slow-startup/readyfile')
+    wait_for(it_stopped)
+    wait_for(it_is_ready, limit=5)

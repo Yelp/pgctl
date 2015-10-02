@@ -112,7 +112,7 @@ class PgctlApp(object):
                         services.remove(service)
                         failed.append(service.name)
                     else:
-                        debug('service %s is ready.', service.name)
+                        debug('service %s still waiting: %.1f seconds.', service.name, limit_time - curr_time)
                 else:
                     pgctl_print(changed, service.name)
                     services.remove(service)

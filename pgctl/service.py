@@ -23,12 +23,12 @@ from .functions import exec_
 
 
 def idempotent_supervise(wrapped):
-    """Run supervise(1), but be successful if it's run too many times."""
+    """Run supervise(2), but be successful if it's run too many times."""
 
     def wrapper(self):
         try:
             with flock(self.path.strpath) as lock:
-                debug('LOCK:', lock)
+                debug('LOCK: %i', lock)
                 self.ensure_directory_structure()
                 return wrapped(self)
         except Locked:
@@ -166,4 +166,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     @cached_property
     def supervise_env(self):
         """Returns an environment dict to use for running supervise."""
-        return dict(os.environ, PGCTL_SCRATCH=str(self.scratch_dir.strpath))
+        return dict(
+            os.environ,
+            PGCTL_SCRATCH=str(self.scratch_dir),
+            # TODO-TEST: assert this env var is available and correct
+            PGCTL_SERVICE=str(self.path),
+        )
