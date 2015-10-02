@@ -1,0 +1,9 @@
+#!/bin/bash
+set -eu
+(
+    # an orphan subprocess that holds no reference to $PWD
+    cd /
+    exec sleep 987654
+) &
+touch readyfile
+wait
