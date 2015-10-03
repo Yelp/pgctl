@@ -26,7 +26,7 @@ def clean_service(service_path):
             check_lock(service_path)
             break
         except LockHeld:
-            cmd = 'lsof -tau $(whoami) %s | xargs --replace kill -TERM {}' % service_path
+            cmd = 'lsof -tau %s %s | xargs --replace kill -TERM {}' % (os.getuid(), service_path)
             Popen(('sh', '-c', cmd)).wait()
             limit -= 1
 
