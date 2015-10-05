@@ -62,5 +62,5 @@ def it_restarts_on_unready():
 
     it_can_succeed()
     os.remove('playground/slow-startup/readyfile')
-    wait_for(it_stopped)
+    wait_for(it_stopped, limit=5)  # TODO see why it takes so long, we found python taking .5 seconds to start
     wait_for(it_is_ready, limit=5)

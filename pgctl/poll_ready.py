@@ -37,7 +37,8 @@ def check_ready():
     return call('./ready')
 
 
-def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+def pgctl_poll_ready(downevent, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+    from time import sleep
     while True:
         if check_ready() == 0:
             print('pgctl-poll-ready: service\'s ready check succeeded', file=sys.stderr)
@@ -47,20 +48,18 @@ def pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down, chec
         if timeout <= 0:
             return 'pgctl-poll-ready: timeout while waiting for ready'
         else:
-            from time import sleep
             sleep(poll_ready)
             timeout -= poll_ready
 
     # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
     while True:
-        if down.poll() is not None:
+        if downevent.poll() is not None:
             print('pgctl-poll-ready: service is stopping -- quitting the poll', file=sys.stderr)
             break
         elif check_ready() == 0:
-            from time import sleep
             sleep(poll_down)
         else:
-            down.terminate()
+            downevent.terminate()
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
             print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you', file=sys.stderr)
@@ -84,11 +83,11 @@ def main():
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
         # this subprocess listens for the s6 down event: http://skarnet.org/software/s6/s6-supervise.html
         from subprocess import Popen
-        down = Popen(
+        downevent = Popen(
             ('s6-ftrig-wait', 'event', 'd'),
             stdout=open(os.devnull, 'w'),  # this prints 'd' otherwise
         )
-        return pgctl_poll_ready(down, notification_fd, timeout, poll_ready, poll_down)
+        return pgctl_poll_ready(downevent, notification_fd, timeout, poll_ready, poll_down)
 
 
 if __name__ == '__main__':

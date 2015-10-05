@@ -203,7 +203,7 @@ class PgctlApp(object):
         pwd = Path()
         logfiles = []
         for service in self.services:
-            service.ensure_directory_structure()
+            service.ensure_logs()
             logfiles.append(service.path.join('stdout.log').relto(pwd))
             logfiles.append(service.path.join('stderr.log').relto(pwd))
         exec_(tail + tuple(logfiles))  # never returns

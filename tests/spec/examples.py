@@ -74,8 +74,10 @@ sweet_error
 
 ==> playground/sweet/stdout.log <==
 sweet
+sweet
 
 ==> playground/sweet/stderr.log <==
+sweet_error
 sweet_error
 ''',
             '',
@@ -511,6 +513,7 @@ ohhi
             ('pgctl-2015', 'log'),
             '''\
 ==> playground/environment/stdout.log <==
+ohhi
 bye
 
 ==> playground/environment/stderr.log <==

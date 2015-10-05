@@ -113,6 +113,10 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if not self.path.check(dir=True):
             raise NoSuchService("No such playground service: '%s'" % self.name)
 
+    def ensure_logs(self):
+        self.path.ensure('stdout.log')
+        self.path.ensure('stderr.log')
+
     def ensure_directory_structure(self):
         """Ensure that the scratch directory exists and symlinks supervise.
 
@@ -122,9 +126,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
         Instead, we stick them in a scratch directory outside of the repo.
         """
+        # TODO: enforce that we have the supervise lock when this is called, somehow
         self.assert_exists()
-        self.path.ensure('stdout.log')
-        self.path.ensure('stderr.log')
+        self.ensure_logs()
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
         if self.ready_script.exists():
             with self.notification_fd.open('w') as f:
@@ -146,8 +150,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         return Popen(
             ('s6-supervise', self.path.strpath),
             stdin=open(os.devnull, 'w'),
-            stdout=self.path.join('stdout.log').open('w'),
-            stderr=self.path.join('stderr.log').open('w'),
+            stdout=self.path.join('stdout.log').open('a'),
+            stderr=self.path.join('stderr.log').open('a'),
             env=self.supervise_env,
             close_fds=False,  # we must keep the flock file descriptor opened.
         )
