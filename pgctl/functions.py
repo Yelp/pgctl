@@ -91,7 +91,7 @@ def ps(pids):
         return stdout
     else:
         # race condition: we only got the ps -f header
-        return ''
+        return ''  # pragma: no cover, we don't expect to hit this
 
 
 def check_lock(path):
