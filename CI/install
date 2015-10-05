@@ -8,7 +8,7 @@ chmod -R g-w .
 sudo apt-get update
 sudo apt-get install pv
 pip install --upgrade pip
-pip install -r requirements.d/travis.txt
+pip install -r CI/requirements.txt
 
 # install s6 from github/bukzor/s6-packaging
 DISTRO="$(lsb_release -si | tr '[:upper:]' '[:lower:]')"

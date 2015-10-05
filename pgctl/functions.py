@@ -67,7 +67,7 @@ def bestrelpath(path, relto=None):
 def lsof(path):
     """return a list of pids which have `path` open"""
     from subprocess import Popen, PIPE, CalledProcessError
-    cmd = ('sh', '-c', 'lsof -tau $(whoami) {}'.format(path))
+    cmd = ('lsof', '-tau', str(os.getuid()), path)
     proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
     stdout, stderr = proc.communicate()
     if stdout == stderr == '':

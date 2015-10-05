@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eu
+TOP=$(dirname $(dirname $(readlink -f $0)))
+TAG=localhost/ci-pgctl:$USER
+
+if tty -s; then
+    OPTS='-ti'
+else
+    OPTS='-i'
+fi
+
+set -x
+cd $TOP
+docker build -t $TAG CI
+exec docker run -u "$(id -u):$(id -g)" "$OPTS" -e TOP=$PWD -v $PWD:/code $TAG "$@"
