@@ -13,7 +13,6 @@ if [ -n "$VIRTUAL_ENV" -a -d $VIRTUAL_ENV/local ]; then
     find $VIRTUAL_ENV -name '__pycache__' -print0 | xargs -0r rmdir
 fi
 
-export PYTHONUSERBASE=/
 export TOP=$(dirname $(readlink -f $0))
 export PROJECT=pgctl
 if [ -z "${PGCTL_DEBUG:-}" ]; then
