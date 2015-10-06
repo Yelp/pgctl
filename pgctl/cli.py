@@ -7,7 +7,6 @@ import argparse
 import os
 import time
 from subprocess import MAXFD
-from sys import stderr
 from time import time as now
 
 from cached_property import cached_property
@@ -48,6 +47,13 @@ PGCTL_DEFAULTS = frozendict({
         'default': (ALL_SERVICES,)
     }),
 })
+CHANNEL = '[pgctl]'
+
+
+def pgctl_print(*print_args, **print_kwargs):
+    from sys import stderr
+    print_kwargs.setdefault('file', stderr)
+    print(CHANNEL, *print_args, **print_kwargs)
 
 
 class PgctlApp(object):
@@ -70,13 +76,13 @@ class PgctlApp(object):
             result = str(error)
 
         if isinstance(result, basestring):
-            return 'ERROR: ' + result
+            return CHANNEL + ' ERROR: ' + result
         else:
             return result
 
     def __change_state(self, change_state, assert_state, timeout, changing, changed):
         """Changes the state of a supervised service using the svc command"""
-        print(changing, commafy(self.service_names), file=stderr)
+        pgctl_print(changing, commafy(self.service_names))
         services = list(self.services)
         failed = []
         start = now()
@@ -96,25 +102,45 @@ class PgctlApp(object):
                     next_time = curr_time + (curr_time - check_time)
                     limit_time = start + timeout(service)
                     if abs(curr_time - limit_time) < abs(next_time - limit_time):
-                        print(
-                            'ERROR: service %s timed out at %g seconds: %s' % (
+                        pgctl_print(
+                            "ERROR: '%s' timed out at %g seconds: %s" % (
                                 service.name,
                                 timeout(service),
                                 error,
                             ),
-                            file=stderr,
                         )
                         services.remove(service)
                         failed.append(service.name)
                     else:
-                        debug('service %s is ready.', service.name)
+                        debug('service %s still waiting: %.1f seconds.', service.name, limit_time - curr_time)
                 else:
+                    pgctl_print(changed, service.name)
                     services.remove(service)
 
             time.sleep(self.poll)
 
-        print(changed, commafy(self.service_names), file=stderr)
         return failed
+
+    def with_services(self, services):
+        """return a similar PgctlApp, but with a different set of services"""
+        newconf = dict(self.pgconf)
+        newconf['services'] = services
+        return PgctlApp(newconf)
+
+    def __show_failure(self, state, failed):
+        if not failed:
+            return
+
+        failapp = self.with_services(failed)
+        childpid = os.fork()
+        if childpid:
+            os.waitpid(childpid, 0)
+        else:
+            failapp.log(interactive=False)  # doesn't return
+        if state == 'start':
+            # we don't want services that failed to start to be 'up'
+            failapp.stop()
+        return 'Some services failed to %s: %s' % (state, commafy(failed))
 
     def start(self):
         """Idempotent start of a service or group of services"""
@@ -125,12 +151,7 @@ class PgctlApp(object):
             'Starting:',
             'Started:',
         )
-        if failed:
-            # we don't want services that failed to start to be 'up'
-            newconf = dict(self.pgconf)
-            newconf['services'] = failed
-            PgctlApp(self.pgconf).stop()
-            return 'Some services failed to start: ' + commafy(failed)
+        return self.__show_failure('start', failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
@@ -141,8 +162,7 @@ class PgctlApp(object):
             'Stopping:',
             'Stopped:',
         )
-        if failed:
-            return 'Some services failed to stop: ' + commafy(failed)
+        return self.__show_failure('stop', failed)
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
@@ -162,17 +182,20 @@ class PgctlApp(object):
 
     def reload(self):
         """Reloads the configuration for a service"""
-        print('reload:', commafy(self.service_names), file=stderr)
+        pgctl_print('reload:', commafy(self.service_names))
         return 'reloading is not yet implemented.'
 
-    def log(self):
+    def log(self, interactive=None):
         """Displays the stdout and stderr for a service or group of services"""
         # TODO(p3): -n: send the value to tail -n
         # TODO(p3): -f: force iteractive behavior
         # TODO(p3): -F: force iteractive behavior off
         tail = ('tail', '--verbose')  # show file headers
-        import sys
-        if sys.stdout.isatty():
+
+        if interactive is None:
+            import sys
+            interactive = sys.stdout.isatty()
+        if interactive:
             # we're interactive; give a continuous log
             # TODO-TEST: pgctl log | pb should be non-interactive
             tail += ('--follow=name', '--retry')
@@ -180,7 +203,7 @@ class PgctlApp(object):
         pwd = Path()
         logfiles = []
         for service in self.services:
-            service.ensure_directory_structure()
+            service.ensure_logs()
             logfiles.append(service.path.join('stdout.log').relto(pwd))
             logfiles.append(service.path.join('stderr.log').relto(pwd))
         exec_(tail + tuple(logfiles))  # never returns

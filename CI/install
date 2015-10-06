@@ -5,6 +5,8 @@ set -eux
 umask 022
 chmod -R g-w .
 
+# TODO: pre-install the pre-commit hooks
+
 sudo apt-get update
 sudo apt-get install pv
 pip install --upgrade pip
