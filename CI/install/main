@@ -1,0 +1,13 @@
+#!/bin/bash
+set -eux
+# set umask to be ubuntu default
+umask 022
+chmod -R g-w .
+
+sudo apt-get update
+sudo apt-get install pv
+pip install --upgrade pip
+pip install -r CI/install/requirements.txt
+
+# TODO: pre-install the pre-commit hooks
+CI/install/s6

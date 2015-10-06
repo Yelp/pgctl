@@ -1,18 +1,7 @@
 #!/bin/bash
-set -eux
-
-# set umask to be ubuntu default
-umask 022
-chmod -R g-w .
-
-# TODO: pre-install the pre-commit hooks
-
-sudo apt-get update
-sudo apt-get install pv
-pip install --upgrade pip
-pip install -r CI/requirements.txt
-
 # install s6 from github/bukzor/s6-packaging
+set -eu
+
 DISTRO="$(lsb_release -si | tr '[:upper:]' '[:lower:]')"
 CODENAME="$(lsb_release -sc)"
 URL="https://github.com/bukzor/s6-packaging/releases/download/v2.2.0.1-1"
@@ -21,6 +10,6 @@ s6="$DISTRO.$CODENAME.s6_2.2.0.1-1_amd64.deb"
 execline="$DISTRO.$CODENAME.execline_2.1.3.1-1_amd64.deb"
 skalibs="$DISTRO.$CODENAME.skalibs_2.3.6.1-1_amd64.deb"
 
-# install s6
-wget $URL/$s6 $URL/$execline $URL/$skalibs
+set -x
+wget -N $URL/$s6 $URL/$execline $URL/$skalibs
 sudo dpkg -i $s6 $execline $skalibs

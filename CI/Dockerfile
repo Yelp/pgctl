@@ -20,8 +20,8 @@ ENV PYTHONUSERBASE=/
 WORKDIR /code
 
 # at this point, we're on par with circle/travis -- let's install our prerequisites
-ADD . CI
-RUN CI/install
+ADD install CI/install
+RUN CI/install/main
 
 # know thy user
 USER nobody

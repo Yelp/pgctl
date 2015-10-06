@@ -11,7 +11,7 @@ matrix:
 
 before_install:
     - export TOP=$PWD
-install: ./CI/install
+install: ./CI/install/main
 script: tox
 after_success: coveralls
  
