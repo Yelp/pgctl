@@ -9,4 +9,5 @@ sudo apt-get install pv
 pip install --upgrade pip
 pip install -r CI/install/requirements.txt
 
+# TODO: pre-install the pre-commit hooks
 CI/install/s6
