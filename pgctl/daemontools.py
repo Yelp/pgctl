@@ -75,10 +75,7 @@ def parse(string, start, divider, type=str):
             result, string = string.split(divider, 1)
         except ValueError:
             # if there's no separator found and we found the `start` token, the whole input is the result
-            if start:
-                result, string = string, ''
-            else:
-                result, string = None, string
+            result, string = string, ''
     else:
         result = None
     if result is not None:
