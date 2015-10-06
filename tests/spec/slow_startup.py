@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import os
 
 import pytest
+from py._path.local import LocalPath as Path
 from testing import assert_command
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
@@ -64,3 +65,11 @@ def it_restarts_on_unready():
     os.remove('playground/slow-startup/readyfile')
     wait_for(it_stopped, limit=5)  # TODO see why it takes so long, we found python taking .5 seconds to start
     wait_for(it_is_ready, limit=5)
+
+
+def it_removes_down_file():
+    path = Path(os.getcwd()).join('playground/slow-startup/down')
+    path.ensure()
+    assert path.check()
+    it_can_succeed()
+    assert not path.check()

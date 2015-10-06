@@ -9,6 +9,7 @@ from subprocess import check_call
 from subprocess import Popen
 
 from cached_property import cached_property
+from py._error import error as pylib_error
 
 from .daemontools import svc
 from .daemontools import SvStat
@@ -130,6 +131,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.assert_exists()
         self.ensure_logs()
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
+        try:
+            self.path.join('down').remove()  # pgctl doesn't support the s6 down file
+        except pylib_error.ENOENT:
+            pass
+
         if self.ready_script.exists():
             with self.notification_fd.open('w') as f:
                 f.write('%i\n' % f.fileno())
