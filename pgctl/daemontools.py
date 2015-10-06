@@ -69,7 +69,11 @@ def svstat_string(service_path):
 
 def svstat_parse(svstat_string):
     r'''
-    up (pid 2557675) 172858 seconds, ready 172856 seconds\n
+    >>> svstat_parse('down (exitcode 0) 0 seconds, normally up, want up, ready 0 seconds')
+    down (exitcode 0) 0 seconds, starting
+
+    >>> svstat_parse('up (pid 3714560) 13 seconds, normally down, ready 7 seconds\n')
+    ready (pid 3714560) 7 seconds
 
     >>> svstat_parse('up (pid 1202562) 100 seconds, ready 10 seconds\n')
     ready (pid 1202562) 10 seconds
@@ -79,9 +83,6 @@ def svstat_parse(svstat_string):
 
     >>> svstat_parse('down 4334 seconds, normally up, want up')
     down 4334 seconds, starting
-
-    >>> svstat_parse('down (exitcode 0) 0 seconds, normally up, want up, ready 0 seconds')
-    down (exitcode 0) 0 seconds, starting
 
     >>> svstat_parse('down 0 seconds, normally up')
     down 0 seconds
@@ -108,41 +109,61 @@ def svstat_parse(svstat_string):
     totally unpredictable error message
     '''
     status = svstat_string.strip()
+    orig_status = status
     debug('RAW   : %s', status)
     state, status = __get_state(status)
+    if state == SvStat.INVALID:
+        return SvStat(state, None, None, None, None)
 
     if status.startswith('(pid '):
-        pid, status = status[5:].rsplit(') ', 1)
+        pid, status = status[5:].split(') ', 1)
         pid = int(pid)
     else:
         pid = None
 
     if status.startswith('(exitcode '):
-        exitcode, status = status[10:].rsplit(') ', 1)
+        exitcode, status = status[10:].split(') ', 1)
         exitcode = int(exitcode)
     else:
         exitcode = None
 
+    if status.startswith('(signal '):
+        _, status = status.split(') ', 1)
+
     try:
         seconds, status = status.split(' seconds', 1)
+        status = status.lstrip(', ')
         seconds = int(seconds)
     except ValueError:
         seconds = None
 
-    if ', want up' in status:
-        process = 'starting'
-    elif ', want down' in status:
-        process = 'stopping'
+    if status.startswith('normally '):
+        try:
+            # we actually dont care about this value
+            _, status = status.split(', ', 1)
+        except ValueError:  # sometimes there is no comma
+            status = ''
+
+    if status.startswith('want '):
+        try:
+            process, status = status.split(', ', 1)
+        except ValueError:
+            process, status = status, ''
+        if process == 'want up':
+            process = 'starting'
+        elif process == 'want down':
+            process = 'stopping'
     else:
         process = None
 
-    if status.startswith(', ready '):
-        state = 'ready'
-        status = status[8:]
+    if status.startswith('ready '):
+        if state == 'up':
+            state = 'ready'
+        status = status[6:]
         seconds, status = status.split(' seconds', 1)
         seconds = int(seconds)
-        process = None
 
+    assert status == '', (status, orig_status)  # we parsed it all.
     return SvStat(state, pid, exitcode, seconds, process)
 
 
@@ -151,7 +172,7 @@ def __get_state(status):
     if first in ('up', 'down'):
         return first, rest
     elif status.startswith('unable to chdir:'):
-        return SvStat.INVALID, rest
+        return SvStat.INVALID, status
     elif (
             status.startswith('s6-svstat: fatal: unable to read status for ') and status.endswith((
                 ': No such file or directory',

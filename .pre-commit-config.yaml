@@ -1,5 +1,5 @@
 -   repo: git://github.com/pre-commit/pre-commit-hooks
-    sha: 516cc9fa72ad09699f2c03ffbd0aa7f60d75b59a
+    sha: f82fb149af2c1b552b50e3e38e38ed3a44d4cda1
     hooks:
     -   id: autopep8-wrapper
     -   id: check-added-large-files
@@ -16,7 +16,7 @@
     -   id: flake8
     -   id: requirements-txt-fixer
 -   repo: git://github.com/asottile/reorder_python_imports
-    sha: 3d86483455ab5bd06cc1069fdd5ac57be5463f10
+    sha: f3dfe379d2ea341c6cf54d926d4585b35dea9251
     hooks:
     -   id: reorder-python-imports
         args:
@@ -26,7 +26,7 @@
         - from __future__ import unicode_literals
 -   repo: local
     hooks:
-    -   id: system
+    -   id: pylint
         name: PyLint
         entry: python -m pylint.__main__
         language: system
