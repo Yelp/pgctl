@@ -16,9 +16,8 @@ ENV PATH=/opt/virtualenv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/
 WORKDIR /code
 
 # at this point, we're on par with circle/travis
-ADD . CI
-RUN CI/install
+ADD install CI/install
+RUN CI/install/main
 ENV TOXENV=python
 ENV USER=nobody
-USER nobody
 CMD tox
