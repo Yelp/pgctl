@@ -35,8 +35,6 @@ def clean_service(service_path):
                         pass
                     else:
                         raise
-                #with ignored(OSErorr(3, 'No such process')):
-                #    os.kill(pid, 10)
             limit -= 1
 
 
