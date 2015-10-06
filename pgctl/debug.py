@@ -6,9 +6,9 @@ from __future__ import unicode_literals
 from os import environ
 from sys import stderr
 
-DEBUG = environ.get('PGCTL_DEBUG', '')
+VERBOSE = environ.get('PGCTL_VERBOSE', '')
 
 
 def debug(msg, *args):
-    if DEBUG:
+    if VERBOSE:
         print('[pgctl] DEBUG:', msg % args, file=stderr)  # pragma: no cover

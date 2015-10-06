@@ -9,6 +9,7 @@ from subprocess import check_call
 from subprocess import Popen
 
 from cached_property import cached_property
+from frozendict import frozendict
 from py._error import error as pylib_error
 
 from .daemontools import svc
@@ -167,7 +168,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def foreground(self):
         exec_(
             ('s6-supervise', self.path.strpath),
-            env=self.supervise_env
+            env=dict(self.supervise_env, PGCTL_DEBUG='true')
         )
 
     @cached_property
@@ -177,9 +178,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     @cached_property
     def supervise_env(self):
         """Returns an environment dict to use for running supervise."""
-        return dict(
+        env = dict(
             os.environ,
             PGCTL_SCRATCH=str(self.scratch_dir),
             # TODO-TEST: assert this env var is available and correct
             PGCTL_SERVICE=str(self.path),
         )
+        env.pop('PGCTL_DEBUG', None)
+        return frozendict(env)

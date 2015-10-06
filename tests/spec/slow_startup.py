@@ -55,8 +55,8 @@ pgctl-poll-ready: timeout while waiting for ready
 
 
 def it_can_succeed():
-    import mock
-    with mock.patch.dict(os.environ, [('PGCTL_TIMEOUT', '5')]):
+    from mock import patch
+    with patch.dict(os.environ, [('PGCTL_TIMEOUT', '5')]):
         assert_command(
             ('pgctl-2015', 'start'),
             '',

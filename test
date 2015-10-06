@@ -15,7 +15,7 @@ fi
 
 export TOP=$(dirname $(readlink -f $0))
 export PROJECT=pgctl
-if [ -z "${PGCTL_DEBUG:-}" ]; then
+if [ -z "${PGCTL_VERBOSE:-}" ]; then
     NCPU=$(getconf _NPROCESSORS_CONF)
     n=$((NCPU < 5 ? NCPU * 2 : 10))
 else
@@ -38,9 +38,10 @@ py.test -n $n "$@" $TOP/tests $src
 unset COVERAGE_PROCESS_START
 combine
 
-if [[ "$@" ]]; then
-    exit 0
-fi
+## TODO: figure out a nice way to disable coverage/lint when running a single test
+#if [[ "$@" ]]; then
+#    exit 0
+#fi
 
 coverage html --rcfile=$TOP/.coveragerc
 coverage report --rcfile=$TOP/.coveragerc

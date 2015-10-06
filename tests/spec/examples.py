@@ -5,14 +5,13 @@ from __future__ import unicode_literals
 
 import os
 from subprocess import check_call
-from subprocess import PIPE
 from subprocess import Popen
 
 import pytest
 from pytest import yield_fixture as fixture
 from testfixtures import StringComparison as S
 from testing import assert_command
-from testing import ctrl_c
+from testing import pty
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
 
@@ -89,7 +88,7 @@ sweet_error
 
         # this pty simulates running in a terminal
         read, write = os.openpty()
-        pty_normalize_newlines(read)
+        pty.normalize_newlines(read)
         p = Popen(('pgctl-2015', 'log'), stdout=write, stderr=write)
         os.close(write)
 
@@ -248,68 +247,6 @@ class DescribeStop(object):
 ''',
             1,
         )
-
-
-def pty_normalize_newlines(fd):
-    r"""
-    Twiddle the tty flags such that \n won't get munged to \r\n.
-    Details:
-        https://docs.python.org/2/library/termios.html
-        http://ftp.gnu.org/old-gnu/Manuals/glibc-2.2.3/html_chapter/libc_17.html#SEC362
-    """
-    import termios as T
-    attrs = T.tcgetattr(fd)
-    attrs[1] &= ~(T.ONLCR | T.OPOST)
-    T.tcsetattr(fd, T.TCSANOW, attrs)
-
-
-def read_line(fd):
-    # read one-byte-at-a-time to avoid deadlocking by reading too much
-    line = ''
-    byte = None
-    while byte not in ('\n', ''):
-        byte = os.read(fd, 1).decode('utf-8')
-        line += byte
-    return line
-
-
-class DescribeDebug(object):
-
-    @fixture
-    def service_name(self):
-        yield 'greeter'
-
-    def assert_works_interactively(self):
-        read, write = os.openpty()
-        pty_normalize_newlines(read)
-        # setsid: this simulates the shell's job-control behavior
-        proc = Popen(('setsid', 'pgctl-2015', 'debug', 'greeter'), stdin=PIPE, stdout=write)
-        os.close(write)
-
-        try:
-            assert read_line(read) == 'What is your name?\n'
-            proc.stdin.write('Buck\n')
-            assert read_line(read) == 'Hello, Buck.\n'
-        finally:
-            ctrl_c(proc)
-
-    def it_works_with_nothing_running(self, in_example_dir):
-        assert_svstat('playground/greeter', state=SvStat.UNSUPERVISED)
-        self.assert_works_interactively()
-
-    def it_fails_with_multiple_services(self, in_example_dir):
-        assert_command(
-            ('pgctl-2015', 'debug', 'abc', 'def'),
-            '',
-            '[pgctl] ERROR: Must debug exactly one service, not: abc, def\n',
-            1,
-        )
-
-    def it_first_stops_the_background_service_if_running(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'greeter'))
-        assert_svstat('playground/greeter', state='up')
-
-        self.assert_works_interactively()
 
 
 class DescribeRestart(object):

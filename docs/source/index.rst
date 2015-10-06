@@ -72,17 +72,6 @@ instructions and usage of ``pgctl`` for getting started quickly.
    user/usage
    user/advanced
 
-Developer Guide
----------------
-This part of the documentation gives an internal look at the design
-decisions for pgctl.
-
-.. toctree::
-   :maxdepth: 2
-
-   developer/design
-
-
 API Documentation
 -----------------
 
@@ -92,7 +81,7 @@ this part of the documentation is for you.
 .. toctree::
    :maxdepth: 2
 
-   developer/api_doc
+   api
 
 
 Contributor Guide
@@ -102,12 +91,10 @@ If you want to contribute to the project, this part of the documentation is for
 you.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
+   :glob:
 
-   dev/contributing
-   dev/philosophy
-   dev/todo
-   dev/authors
+   developer/*
 
 
 .. vim:textwidth=79:shiftwidth=3

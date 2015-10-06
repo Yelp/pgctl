@@ -1,6 +1,4 @@
-==========
-Developers
-==========
+.. design:
 
 Design Rationale
 ================
