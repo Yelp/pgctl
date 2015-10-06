@@ -40,6 +40,18 @@ def it_times_out():
     )
     assert_svstat('playground/slow-startup', state=SvStat.UNSUPERVISED)
 
+    assert_command(
+        ('pgctl-2015', 'log'),
+        '''\
+==> playground/slow-startup/stdout.log <==
+
+==> playground/slow-startup/stderr.log <==
+pgctl-poll-ready: timeout while waiting for ready
+''',
+        '',
+        0,
+    )
+
 
 def it_can_succeed():
     import mock
@@ -65,6 +77,24 @@ def it_restarts_on_unready():
     os.remove('playground/slow-startup/readyfile')
     wait_for(it_stopped, limit=5)  # TODO see why it takes so long, we found python taking .5 seconds to start
     wait_for(it_is_ready, limit=5)
+
+    assert_command(
+        ('pgctl-2015', 'log'),
+        '''\
+==> playground/slow-startup/stdout.log <==
+
+==> playground/slow-startup/stderr.log <==
+pgctl-poll-ready: service's ready check succeeded
+pgctl-poll-ready: service's ready check failed -- we are restarting it for you
+[pgctl] Stopping: slow-startup
+[pgctl] Stopped: slow-startup
+[pgctl] Starting: slow-startup
+pgctl-poll-ready: service's ready check succeeded
+[pgctl] Started: slow-startup
+''',
+        '',
+        0,
+    )
 
 
 def it_removes_down_file():
