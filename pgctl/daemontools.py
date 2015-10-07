@@ -109,9 +109,6 @@ def svstat_parse(svstat_string):
     >>> svstat_parse('down 0 seconds, normally up')
     down 0 seconds
 
-    >>> svstat_parse('down 0 seconds, normally up')
-    down 0 seconds
-
     >>> svstat_parse('s6-svstat: fatal: unable to read status for wat: No such file or directory')
     could not get status, supervisor is down
 
@@ -123,6 +120,14 @@ def svstat_parse(svstat_string):
 
     >>> svstat_parse('totally unpredictable error message')
     totally unpredictable error message
+
+    >>> svstat_parse('down (exitcode 0) 0 seconds, normally up, want wat, ready 0 seconds')
+    Traceback (most recent call last):
+        ...
+    ValueError: unexpected value for `process`: 'wat'
+
+    >>> svstat_parse('down (exitcode 0) 0 seconds, normally up, want up\x00, ready 0 seconds')
+    down (exitcode 0) 0 seconds, starting
     '''
     status = svstat_string.strip()
     debug('RAW   : %s', status)
@@ -152,10 +157,14 @@ def svstat_parse(svstat_string):
     _, buffer = parse(buffer, 'normally ', ', ')
 
     process, buffer = parse(buffer, 'want ', ', ')
-    if process == 'up':
-        process = 'starting'
-    elif process == 'down':
-        process = 'stopping'
+    if process is not None:
+        process = process.strip(b'\x00')  # s6 microbug
+        if process == 'up':
+            process = 'starting'
+        elif process == 'down':
+            process = 'stopping'
+        else:
+            raise ValueError('unexpected value for `process`: %r' % process)
 
     ready, buffer = parse(buffer, 'ready ', ' seconds', int)
     if ready is not None and state == 'up':
