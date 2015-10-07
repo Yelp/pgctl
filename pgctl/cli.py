@@ -56,6 +56,31 @@ def pgctl_print(*print_args, **print_kwargs):
     print(CHANNEL, *print_args, **print_kwargs)
 
 
+def timeout(service_name, error, start_time, timeout_length, check_time):
+    curr_time = now()
+    check_length = curr_time - check_time
+    next_time = curr_time + check_length
+    limit_time = start_time + timeout_length
+
+    # assertion can take a long time. we timeout as close to the limit_time as we can.
+    if abs(curr_time - limit_time) < abs(next_time - limit_time):
+        error_message = "ERROR: '{0}' timed out at {1:.2g} seconds: {2}".format(
+            service_name,
+            timeout_length,
+            error,
+        )
+        if limit_time - curr_time > 0.005:
+            error_message += '(limit is %gs and our check took %.2f seconds)' % (
+                timeout_length,
+                check_length,
+            )
+        pgctl_print(error_message)
+        return True
+    else:
+        debug('service %s still waiting: %.1f seconds.', service_name, limit_time - curr_time)
+        return False
+
+
 class PgctlApp(object):
 
     def __init__(self, config=PGCTL_DEFAULTS):
@@ -80,12 +105,12 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, change_state, assert_state, timeout, changing, changed):
+    def __change_state(self, change_state, assert_state, get_timeout, changing, changed):
         """Changes the state of a supervised service using the svc command"""
         pgctl_print(changing, commafy(self.service_names))
         services = list(self.services)
         failed = []
-        start = now()
+        start_time = now()
         while services:
             for service in self.services:
                 try:
@@ -97,22 +122,9 @@ class PgctlApp(object):
                 try:
                     assert_state(service)
                 except PgctlUserError as error:
-                    # assertion can take a long time. we timeout as close to the limit_time as we can.
-                    curr_time = now()
-                    next_time = curr_time + (curr_time - check_time)
-                    limit_time = start + timeout(service)
-                    if abs(curr_time - limit_time) < abs(next_time - limit_time):
-                        pgctl_print(
-                            "ERROR: '%s' timed out at %g seconds: %s" % (
-                                service.name,
-                                timeout(service),
-                                error,
-                            ),
-                        )
+                    if timeout(service.name, error, start_time, get_timeout(service), check_time):
                         services.remove(service)
                         failed.append(service.name)
-                    else:
-                        debug('service %s still waiting: %.1f seconds.', service.name, limit_time - curr_time)
                 else:
                     pgctl_print(changed, service.name)
                     services.remove(service)
