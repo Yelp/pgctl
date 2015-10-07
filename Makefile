@@ -14,9 +14,12 @@ tests: test
 test: .tox/py27
 	tox -e py27 -- $(ARGS)
 
-.PHONY: integration unit
-integration:
-	$(eval ARGS := -k integration)
+lint:
+	pre-commit run --no-stash
+
+.PHONY: spec unit
+spec:
+	$(eval ARGS := -k spec)
 unit:
 	$(eval ARGS := -k unit)
 
