@@ -107,8 +107,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             raise AssertionError('still supervised?!')
 
     def assert_ready(self):
-        if self.svstat().state != 'ready':
-            raise NotReady('not ready')
+        status = self.svstat()
+        if status.state != 'ready':
+            raise NotReady('not ready: {}'.format(status))
 
     def assert_exists(self):
         if not self.path.check(dir=True):

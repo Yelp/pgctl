@@ -6,6 +6,7 @@ import os
 
 import pytest
 from py._path.local import LocalPath as Path
+from testfixtures import StringComparison as S
 from testing import assert_command
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
@@ -29,13 +30,13 @@ def it_times_out():
 
 ==> playground/slow-startup/stderr.log <==
 ''',
-        '''\
-[pgctl] Starting: slow-startup
-[pgctl] ERROR: 'slow-startup' timed out at 2 seconds: not ready
-[pgctl] Stopping: slow-startup
-[pgctl] Stopped: slow-startup
-[pgctl] ERROR: Some services failed to start: slow-startup
-''',
+        S('''\
+\\[pgctl\\] Starting: slow-startup
+\\[pgctl\\] ERROR: 'slow-startup' timed out at 2 seconds: not ready: up \\(pid \\d+\\) 1 seconds
+\\[pgctl\\] Stopping: slow-startup
+\\[pgctl\\] Stopped: slow-startup
+\\[pgctl\\] ERROR: Some services failed to start: slow-startup
+'''),
         1
     )
     assert_svstat('playground/slow-startup', state=SvStat.UNSUPERVISED)

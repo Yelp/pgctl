@@ -67,9 +67,26 @@ def svstat_string(service_path):
     return status
 
 
+def parse(string, start, divider, type=str):
+    """general purpose tokenizer, used below"""
+    if string.startswith(start):
+        string = string[len(start):]
+        try:
+            result, string = string.split(divider, 1)
+        except ValueError:
+            # if there's no separator found and we found the `start` token, the whole input is the result
+            result, string = string, ''
+    else:
+        result = None
+    if result is not None:
+        result = type(result)
+    return result, string
+
+
 def svstat_parse(svstat_string):
     r'''
-    up (pid 2557675) 172858 seconds, ready 172856 seconds\n
+    >>> svstat_parse('up (pid 3714560) 13 seconds, normally down, ready 7 seconds\n')
+    ready (pid 3714560) 7 seconds
 
     >>> svstat_parse('up (pid 1202562) 100 seconds, ready 10 seconds\n')
     ready (pid 1202562) 10 seconds
@@ -92,9 +109,6 @@ def svstat_parse(svstat_string):
     >>> svstat_parse('down 0 seconds, normally up')
     down 0 seconds
 
-    >>> svstat_parse('down 0 seconds, normally up')
-    down 0 seconds
-
     >>> svstat_parse('s6-svstat: fatal: unable to read status for wat: No such file or directory')
     could not get status, supervisor is down
 
@@ -106,52 +120,21 @@ def svstat_parse(svstat_string):
 
     >>> svstat_parse('totally unpredictable error message')
     totally unpredictable error message
+
+    >>> svstat_parse('down (exitcode 0) 0 seconds, normally up, want wat, ready 0 seconds')
+    Traceback (most recent call last):
+        ...
+    ValueError: unexpected value for `process`: 'wat'
+
+    >>> svstat_parse('down (exitcode 0) 0 seconds, normally up, want up\x00, ready 0 seconds')
+    down (exitcode 0) 0 seconds, starting
     '''
     status = svstat_string.strip()
     debug('RAW   : %s', status)
-    state, status = __get_state(status)
-
-    if status.startswith('(pid '):
-        pid, status = status[5:].rsplit(') ', 1)
-        pid = int(pid)
-    else:
-        pid = None
-
-    if status.startswith('(exitcode '):
-        exitcode, status = status[10:].rsplit(') ', 1)
-        exitcode = int(exitcode)
-    else:
-        exitcode = None
-
-    try:
-        seconds, status = status.split(' seconds', 1)
-        seconds = int(seconds)
-    except ValueError:
-        seconds = None
-
-    if ', want up' in status:
-        process = 'starting'
-    elif ', want down' in status:
-        process = 'stopping'
-    else:
-        process = None
-
-    if status.startswith(', ready '):
-        state = 'ready'
-        status = status[8:]
-        seconds, status = status.split(' seconds', 1)
-        seconds = int(seconds)
-        process = None
-
-    return SvStat(state, pid, exitcode, seconds, process)
-
-
-def __get_state(status):
-    first, rest = status.split(None, 1)
-    if first in ('up', 'down'):
-        return first, rest
+    if status.startswith(('up ', 'down ')):
+        state, buffer = parse(status, '', ' ')
     elif status.startswith('unable to chdir:'):
-        return SvStat.INVALID, rest
+        return SvStat(SvStat.INVALID, None, None, None, None)
     elif (
             status.startswith('s6-svstat: fatal: unable to read status for ') and status.endswith((
                 ': No such file or directory',
@@ -159,9 +142,37 @@ def __get_state(status):
             ))
     ):
         # the service has never been started before; it's down.
-        return SvStat.UNSUPERVISED, ''
+        return SvStat(SvStat.UNSUPERVISED, None, None, None, None)
     else:  # unknown errors
-        return status, ''
+        return SvStat(status, None, None, None, None)
+
+    pid, buffer = parse(buffer, '(pid ', ') ', int)
+    exitcode, buffer = parse(buffer, '(exitcode ', ') ', int)
+    _, buffer = parse(buffer, '(signal ', ') ')
+
+    seconds, buffer = parse(buffer, '', ' seconds', int)
+    buffer = buffer.lstrip(', ')
+
+    # we actually dont care about this value
+    _, buffer = parse(buffer, 'normally ', ', ')
+
+    process, buffer = parse(buffer, 'want ', ', ')
+    if process is not None:
+        process = process.strip(b'\x00')  # s6 microbug
+        if process == 'up':
+            process = 'starting'
+        elif process == 'down':
+            process = 'stopping'
+        else:
+            raise ValueError('unexpected value for `process`: %r' % process)
+
+    ready, buffer = parse(buffer, 'ready ', ' seconds', int)
+    if ready is not None and state == 'up':
+        state = 'ready'
+        seconds = ready
+
+    assert buffer == '', (buffer, status)  # we parsed it all.
+    return SvStat(state, pid, exitcode, seconds, process)
 
 
 def svstat(path):
