@@ -15,6 +15,7 @@ from pgctl.daemontools import SvStat
 
 
 pytestmark = pytest.mark.usefixtures('in_example_dir')
+SLOW_STARTUP_TIME = 6
 
 
 @pytest.yield_fixture
@@ -55,12 +56,13 @@ pgctl-poll-ready: timeout while waiting for ready
 
 
 def it_can_succeed():
-    from mock import patch
-    with patch.dict(os.environ, [('PGCTL_TIMEOUT', '5')]):
+    from mock import patch, ANY
+    with patch.dict(os.environ, [('PGCTL_TIMEOUT', str(SLOW_STARTUP_TIME))]):
         assert_command(
             ('pgctl-2015', 'start'),
             '',
-            '[pgctl] Starting: slow-startup\n[pgctl] Started: slow-startup\n',
+            #'[pgctl] Starting: slow-startup\n[pgctl] Started: slow-startup\n',
+            ANY,
             0
         )
     assert_svstat('playground/slow-startup', state='ready')
@@ -71,13 +73,15 @@ def it_restarts_on_unready():
     def it_is_ready():
         assert_svstat('playground/slow-startup', state='ready')
 
-    def it_stopped():
-        assert_svstat('playground/slow-startup', state=SvStat.UNSUPERVISED)
+    def it_becomes_unready():
+        from testfixtures import Comparison as C
+        from pgctl.daemontools import svstat
+        assert svstat('playground/slow-startup') != C(SvStat, {'state': 'ready'}, strict=False)
 
     it_can_succeed()
     os.remove('playground/slow-startup/readyfile')
-    wait_for(it_stopped, limit=5)  # TODO see why it takes so long, we found python taking .5 seconds to start
-    wait_for(it_is_ready, limit=5)
+    wait_for(it_becomes_unready)
+    wait_for(it_is_ready, limit=SLOW_STARTUP_TIME)
 
     assert_command(
         ('pgctl-2015', 'log'),

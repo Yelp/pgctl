@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # TODO: open source this thing?
 """
-A context manager which implements file-locking.
+General handling of POSIX file locks (flocks).
+
+This is meant to be entirely general purpose.
+pgctl-specific functionality belongs elsewhere.
 
 TODO: put this in its own package?
 """

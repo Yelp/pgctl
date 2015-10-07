@@ -42,7 +42,7 @@ class DirtyTest(object):
 
     LOCKERROR = '''\
 \\[pgctl\\] Stopping: {service}
-\\[pgctl\\] ERROR: '{service}' timed out at {time} seconds: The supervisor has stopped, but these processes did not:
+\\[pgctl\\] ERROR: '{service}' timed out at {time} seconds.*: The supervisor has stopped, but these processes did not:
 UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
 \\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
 

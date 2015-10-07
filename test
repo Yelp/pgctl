@@ -43,7 +43,7 @@ combine
 #    exit 0
 #fi
 
-coverage html --rcfile=$TOP/.coveragerc
-coverage report --rcfile=$TOP/.coveragerc
-
 pre-commit run --all-files
+
+coverage html --rcfile=$TOP/.coveragerc
+coverage report --rcfile=$TOP/.coveragerc --fail-under 100

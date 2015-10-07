@@ -19,7 +19,7 @@ from .daemontools import SvStat
 from .debug import debug
 from .errors import CircularAliases
 from .errors import NoPlayground
-from .errors import PgctlUserError
+from .errors import PgctlUserMessage
 from .errors import Unsupervised
 from .functions import commafy
 from .functions import exec_
@@ -64,16 +64,17 @@ def timeout(service_name, error, start_time, timeout_length, check_time):
 
     # assertion can take a long time. we timeout as close to the limit_time as we can.
     if abs(curr_time - limit_time) < abs(next_time - limit_time):
-        error_message = "ERROR: '{0}' timed out at {1:.2g} seconds: {2}".format(
+        actual_timeout_length = curr_time - start_time
+        error_message = "ERROR: '%s' timed out at %.2g seconds" % (
             service_name,
             timeout_length,
-            error,
         )
-        if limit_time - curr_time > 0.005:
-            error_message += '(limit is %gs and our check took %.2f seconds)' % (
-                timeout_length,
+        if format(timeout_length, '.2g') != format(actual_timeout_length, '.2g'):
+            error_message += ' (actually %.2g, polling at %.2g interval)' % (
+                actual_timeout_length,
                 check_length,
             )
+        error_message += ': ' + str(error)
         pgctl_print(error_message)
         return True
     else:
@@ -96,7 +97,7 @@ class PgctlApp(object):
         command = getattr(self, command)
         try:
             result = command()
-        except PgctlUserError as error:
+        except PgctlUserMessage as error:
             # we don't need or want a stack trace for user errors
             result = str(error)
 
@@ -121,7 +122,7 @@ class PgctlApp(object):
                 check_time = now()
                 try:
                     assert_state(service)
-                except PgctlUserError as error:
+                except PgctlUserMessage as error:
                     if timeout(service.name, error, start_time, get_timeout(service), check_time):
                         services.remove(service)
                         failed.append(service.name)

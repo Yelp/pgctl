@@ -16,6 +16,7 @@ from .daemontools import svc
 from .daemontools import SvStat
 from .daemontools import svstat
 from .debug import debug
+from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
 from .flock import flock
@@ -28,18 +29,13 @@ def idempotent_supervise(wrapped):
     """Run supervise(2), but be successful if it's run too many times."""
 
     def wrapper(self):
-        try:
-            with flock(self.path.strpath) as lock:
-                debug('LOCK: %i', lock)
-                self.ensure_directory_structure()
-                return wrapped(self)
-        except Locked:
-            # if it's already supervised, we're good to go:
-            if Popen(('s6-svok', self.path.strpath)).wait() == 0:
-                return
-            else:
-                check_lock(self.path.strpath)  # pragma: no cover, we don't expect to hit this case
-                raise AssertionError('locked, but supervise is down, but no processes found, ten times?!')
+        if Popen(('s6-svok', self.path.strpath)).wait() == 0:
+            return 'supervisor is running'
+
+        with flock(self.path.strpath) as lock:
+            debug('LOCK: %i', lock)
+            self.ensure_directory_structure()
+            return wrapped(self)
 
     return wrapper
 
@@ -103,9 +99,23 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         return self.__get_timeout('timeout-ready', self.default_timeout)
 
     def assert_stopped(self):
-        check_lock(self.path.strpath)
         if self.svstat().state != SvStat.UNSUPERVISED:
-            raise AssertionError('still supervised?!')
+            raise NotReady('supervisor is running')
+
+        race_limit = 10
+        while True:
+            try:
+                with flock(self.path.strpath) as lock:
+                    debug('LOCK! (%i)', lock)
+                    return  # assertion success
+            except Locked:
+                check_lock(self.path.strpath)
+                # there's a race: processes can die between when we check the lock and try to list them
+                debug('RACE! (%i)', race_limit)
+                if race_limit > 0:
+                    race_limit -= 1
+                else:
+                    raise Impossible('locked, but supervise is down, but no processes found, ten times?!')
 
     def assert_ready(self):
         status = self.svstat()
