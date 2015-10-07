@@ -6,3 +6,4 @@
 pip
 pudb
 tox
+twine
