@@ -7,8 +7,7 @@ slowterm() {
     trap - TERM INT
     sleep 0.75 &
     # during this test case, we've set the PGCTL_WAIT_PERIOD to 1.5 seconds
-    sleep 2.25 &
-    exit -15
+    sleep 2.25
 }
 trap slowterm TERM INT
 
