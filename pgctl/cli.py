@@ -73,7 +73,7 @@ def timeout(service_name, error, start_time, timeout_length, check_time):
             error_message += ' (actually %.2g, polling at %.2g interval)' % (
                 actual_timeout_length,
                 check_length,
-            )
+            )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
         error_message += ': ' + str(error)
         pgctl_print(error_message)
         return True

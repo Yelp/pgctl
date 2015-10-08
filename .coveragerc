@@ -9,7 +9,7 @@ data_file = $TOP/.coverage
 [report]
 exclude_lines =
     # Have to re-enable the standard pragma
-    \#.*pragma:\s*no\s*cover
+    \#.*pragma:\s*no.?cover
     \#.*never returns
     \#.*doesn't return
 
