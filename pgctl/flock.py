@@ -46,6 +46,17 @@ def acquire(file_or_dir):
     return fd
 
 
+def locked(file_or_dir):
+    """check if a file (or directory) is locked"""
+    try:
+        fd = acquire(file_or_dir)
+    except Locked:
+        return True
+    else:
+        os.close(fd)
+        return False
+
+
 @contextmanager
 def flock(file_or_dir):
     """A context for flock.acquire()."""

@@ -20,7 +20,7 @@ from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
 from .flock import flock
-from .flock import Locked
+from .flock import locked
 from .functions import check_lock
 from .functions import exec_
 
@@ -102,20 +102,16 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if self.svstat().state != SvStat.UNSUPERVISED:
             raise NotReady('supervisor is running')
 
-        race_limit = 10
-        while True:
-            try:
-                with flock(self.path.strpath) as lock:
-                    debug('LOCK! (%i)', lock)
-                    return  # assertion success
-            except Locked:
-                check_lock(self.path.strpath)
-                # there's a race: processes can die between when we check the lock and try to list them
-                debug('RACE! (%i)', race_limit)
-                if race_limit > 0:
-                    race_limit -= 1
-                else:
-                    raise Impossible('locked, but supervise is down, but no processes found, ten times?!')
+        if not locked(self.path.strpath):
+            return  # assertion success
+
+        check_lock(self.path.strpath)
+
+        # there's a race: processes can die between when we check the lock and try to list them
+        if not locked(self.path.strpath):
+            return  # assertion success
+
+        raise Impossible('supervise is down, but lock is held, but no processes found.')
 
     def assert_ready(self):
         status = self.svstat()
