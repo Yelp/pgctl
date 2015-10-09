@@ -27,13 +27,13 @@ def it_times_out():
     assert_command(
         ('pgctl-2015', 'start'),
         '''\
-==> playground/slow-startup/stdout.log <==
-
-==> playground/slow-startup/stderr.log <==
 ''',
         S('''\
 \\[pgctl\\] Starting: slow-startup
 \\[pgctl\\] ERROR: service 'slow-startup' failed to start after [\\d.]+ seconds.*, its status is up \\(pid \\d+\\) \\d+ seconds
+==> playground/slow-startup/stdout\\.log <==
+
+==> playground/slow-startup/stderr\\.log <==
 \\[pgctl\\] Stopping: slow-startup
 \\[pgctl\\] Stopped: slow-startup
 \\[pgctl\\] ERROR: Some services failed to start: slow-startup

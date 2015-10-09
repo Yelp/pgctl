@@ -190,6 +190,7 @@ class PgctlApp(object):
         if childpid:
             os.waitpid(childpid, 0)
         else:
+            os.dup2(2, 1)  # send log to stderr
             failapp.log(interactive=False)  # doesn't return
         if state == 'start':
             # we don't want services that failed to start to be 'up'

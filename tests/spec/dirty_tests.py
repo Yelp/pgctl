@@ -50,7 +50,7 @@ There are two ways you can fix this:
   \\* temporarily: lsof -t playground/{service} | xargs kill -9
   \\* permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
-\\[pgctl\\] ERROR: Some services failed to stop: {service}
+{log}\\[pgctl\\] ERROR: Some services failed to stop: {service}
 $'''
 
     @pytest.yield_fixture(autouse=True)
@@ -118,14 +118,18 @@ sweet_error
         )
         assert_command(
             ('pgctl-2015', 'restart', 'sweet'),
-            '''\
+            '',
+            S(self.LOCKERROR.format(
+                service='sweet',
+                time='5',
+                cmd='sleep infinity',
+                log='''\
 ==> playground/sweet/stdout.log <==
 sweet
 
 ==> playground/sweet/stderr.log <==
 sweet_error
-''',
-            S(self.LOCKERROR.format(service='sweet', time='5', cmd='sleep infinity')),
+''')),
             1,
         )
 
@@ -141,14 +145,19 @@ sweet_error
         )
         assert_command(
             ('pgctl-2015', 'restart', 'slow-startup'),
-            '''\
+            '',
+            S(self.LOCKERROR.format(
+                service='slow-startup',
+                time='5',
+                cmd='sleep 987654',
+                log='''\
 ==> playground/slow-startup/stdout.log <==
 
 ==> playground/slow-startup/stderr.log <==
 pgctl-poll-ready: service's ready check succeeded
 pgctl-poll-ready: service is stopping -- quitting the poll
 ''',
-            S(self.LOCKERROR.format(service='slow-startup', time='5', cmd='sleep 987654')),
+            )),
             1,
         )
 
@@ -171,16 +180,15 @@ class DescribeSlowShutdown(DirtyTest):
         assert_svstat('playground/sweet', state='up')
         assert_command(
             ('pgctl-2015', 'stop'),
-            '''\
-==> playground/sweet/stdout.log <==
-sweet
-
-==> playground/sweet/stderr.log <==
-sweet_error
-''',
+            '',
             S('''\
 \\[pgctl] Stopping: sweet
-\\[pgctl] ERROR: service 'sweet' failed to stop after 1.5 seconds.*, its status is ready \\(pid \\d+\\) 1 seconds
+\\[pgctl] ERROR: service 'sweet' failed to stop after 1\\.5 seconds.*, its status is ready \\(pid \\d+\\) \\d+ seconds
+==> playground/sweet/stdout\\.log <==
+sweet
+
+==> playground/sweet/stderr\\.log <==
+sweet_error
 \\[pgctl] ERROR: Some services failed to stop: sweet
 '''),
             1,
