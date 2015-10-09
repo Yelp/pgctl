@@ -50,6 +50,47 @@ PGCTL_DEFAULTS = frozendict({
 CHANNEL = '[pgctl]'
 
 
+class StateChange(object):
+
+    def __init__(self, service):
+        self.service = service
+        self.name = service.name
+
+
+class start(StateChange):
+
+    def change(self):
+        return self.service.start()
+
+    def assert_(self):
+        return self.service.assert_ready()
+
+    def get_timeout(self):
+        return self.service.timeout_ready
+
+    class strings(object):
+        change = 'start'
+        changing = 'Starting:'
+        changed = 'Started:'
+
+
+class stop(StateChange):
+
+    def change(self):
+        return self.service.stop()
+
+    def assert_(self):
+        return self.service.assert_stopped()
+
+    def get_timeout(self):
+        return self.service.timeout_stop
+
+    class strings(object):
+        change = 'stop'
+        changing = 'Stopping:'
+        changed = 'Stopped:'
+
+
 def pgctl_print(*print_args, **print_kwargs):
     from sys import stderr
     print_kwargs.setdefault('file', stderr)
@@ -106,28 +147,28 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, change_state, assert_state, get_timeout, change, changing, changed):
+    def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
-        pgctl_print(changing, commafy(self.service_names))
-        services = list(self.services)
+        pgctl_print(state.strings.changing, commafy(self.service_names))
+        services = [state(service) for service in self.services]
         failed = []
         start_time = now()
         while services:
-            for service in self.services:
+            for service in services:
                 try:
-                    change_state(service)
+                    service.change()
                 except Unsupervised:
                     pass  # handled in state assertion, below
             for service in tuple(services):
                 check_time = now()
                 try:
-                    assert_state(service)
+                    service.assert_()
                 except PgctlUserMessage as error:
-                    if timeout(service.name, error, change, start_time, get_timeout(service), check_time):
+                    if timeout(service.name, error, state.strings.change, start_time, service.get_timeout(), check_time):
                         services.remove(service)
                         failed.append(service.name)
                 else:
-                    pgctl_print(changed, service.name)
+                    pgctl_print(state.strings.changed, service.name)
                     services.remove(service)
 
             time.sleep(self.poll)
@@ -157,26 +198,12 @@ class PgctlApp(object):
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(
-            lambda service: service.start(),
-            lambda service: service.assert_ready(),
-            lambda service: service.timeout_ready,
-            'start',
-            'Starting:',
-            'Started:',
-        )
+        failed = self.__change_state(start)
         return self.__show_failure('start', failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(
-            lambda service: service.stop(),
-            lambda service: service.assert_stopped(),
-            lambda service: service.timeout_stop,
-            'stop',
-            'Stopping:',
-            'Stopped:',
-        )
+        failed = self.__change_state(stop)
         return self.__show_failure('stop', failed)
 
     def status(self):
