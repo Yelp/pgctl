@@ -33,7 +33,7 @@ def it_times_out():
 ''',
         S('''\
 \\[pgctl\\] Starting: slow-startup
-\\[pgctl\\] ERROR: 'slow-startup' timed out at 2 seconds: not ready: up \\(pid \\d+\\) \\d+ seconds
+\\[pgctl\\] ERROR: service 'slow-startup' failed to start after [\\d.]+ seconds.*, its status is up \\(pid \\d+\\) \\d+ seconds
 \\[pgctl\\] Stopping: slow-startup
 \\[pgctl\\] Stopped: slow-startup
 \\[pgctl\\] ERROR: Some services failed to start: slow-startup

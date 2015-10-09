@@ -56,7 +56,7 @@ def pgctl_print(*print_args, **print_kwargs):
     print(CHANNEL, *print_args, **print_kwargs)
 
 
-def timeout(service_name, error, start_time, timeout_length, check_time):
+def timeout(service_name, error, action_name, start_time, timeout_length, check_time):
     curr_time = now()
     check_length = curr_time - check_time
     next_time = curr_time + check_length
@@ -65,16 +65,16 @@ def timeout(service_name, error, start_time, timeout_length, check_time):
     # assertion can take a long time. we timeout as close to the limit_time as we can.
     if abs(curr_time - limit_time) < abs(next_time - limit_time):
         actual_timeout_length = curr_time - start_time
-        error_message = "ERROR: '%s' timed out at %.2g seconds" % (
+        error_message = "ERROR: service '%s' failed to %s after %.2g seconds" % (
             service_name,
-            timeout_length,
+            action_name,
+            actual_timeout_length,
         )
         if format(timeout_length, '.2g') != format(actual_timeout_length, '.2g'):
-            error_message += ' (actually %.2g, polling at %.2g interval)' % (
-                actual_timeout_length,
+            error_message += ' (it took %.2gs to poll)' % (
                 check_length,
             )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
-        error_message += ': ' + str(error)
+        error_message += ', ' + str(error)
         pgctl_print(error_message)
         return True
     else:
@@ -106,7 +106,7 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, change_state, assert_state, get_timeout, changing, changed):
+    def __change_state(self, change_state, assert_state, get_timeout, change, changing, changed):
         """Changes the state of a supervised service using the svc command"""
         pgctl_print(changing, commafy(self.service_names))
         services = list(self.services)
@@ -123,7 +123,7 @@ class PgctlApp(object):
                 try:
                     assert_state(service)
                 except PgctlUserMessage as error:
-                    if timeout(service.name, error, start_time, get_timeout(service), check_time):
+                    if timeout(service.name, error, change, start_time, get_timeout(service), check_time):
                         services.remove(service)
                         failed.append(service.name)
                 else:
@@ -161,6 +161,7 @@ class PgctlApp(object):
             lambda service: service.start(),
             lambda service: service.assert_ready(),
             lambda service: service.timeout_ready,
+            'start',
             'Starting:',
             'Started:',
         )
@@ -172,6 +173,7 @@ class PgctlApp(object):
             lambda service: service.stop(),
             lambda service: service.assert_stopped(),
             lambda service: service.timeout_stop,
+            'stop',
             'Stopping:',
             'Stopped:',
         )

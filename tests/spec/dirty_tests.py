@@ -42,7 +42,7 @@ class DirtyTest(object):
 
     LOCKERROR = '''\
 \\[pgctl\\] Stopping: {service}
-\\[pgctl\\] ERROR: '{service}' timed out at {time} seconds.*: The supervisor has stopped, but these processes did not:
+\\[pgctl\\] ERROR: service '{service}' failed to stop after [\\d.]+ seconds.*, these runaway processes did not stop:
 UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
 \\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
 
@@ -178,7 +178,11 @@ sweet
 ==> playground/sweet/stderr.log <==
 sweet_error
 ''',
-            S(self.LOCKERROR.format(service='sweet', time='1\\.5', cmd='sleep 2\\.25')),
+            S('''\
+\\[pgctl] Stopping: sweet
+\\[pgctl] ERROR: service 'sweet' failed to stop after 1.5 seconds.*, its status is ready \\(pid \\d+\\) 1 seconds
+\\[pgctl] ERROR: Some services failed to stop: sweet
+'''),
             1,
         )
 

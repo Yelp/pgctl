@@ -30,7 +30,7 @@ def idempotent_supervise(wrapped):
 
     def wrapper(self):
         if Popen(('s6-svok', self.path.strpath)).wait() == 0:
-            return 'supervisor is running'
+            return
 
         with flock(self.path.strpath) as lock:
             debug('LOCK: %i', lock)
@@ -99,8 +99,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         return self.__get_timeout('timeout-ready', self.default_timeout)
 
     def assert_stopped(self):
-        if self.svstat().state != SvStat.UNSUPERVISED:
-            raise NotReady('supervisor is running')
+        status = self.svstat()
+        if status.state != SvStat.UNSUPERVISED:
+            raise NotReady('its status is ' + str(status))
 
         if not locked(self.path.strpath):
             return  # assertion success
@@ -116,7 +117,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def assert_ready(self):
         status = self.svstat()
         if status.state != 'ready':
-            raise NotReady('not ready: {}'.format(status))
+            raise NotReady('its status is ' + str(status))
 
     def assert_exists(self):
         if not self.path.check(dir=True):

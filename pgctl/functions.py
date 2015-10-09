@@ -102,7 +102,7 @@ def check_lock(path):
     if processes:
         raise LockHeld(
             '''\
-The supervisor has stopped, but these processes did not:
+these runaway processes did not stop:
 %s
 There are two ways you can fix this:
   * temporarily: lsof -t %s | xargs kill -9
