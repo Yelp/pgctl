@@ -16,10 +16,11 @@ from .daemontools import svc
 from .daemontools import SvStat
 from .daemontools import svstat
 from .debug import debug
+from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
 from .flock import flock
-from .flock import Locked
+from .flock import locked
 from .functions import check_lock
 from .functions import exec_
 
@@ -28,18 +29,13 @@ def idempotent_supervise(wrapped):
     """Run supervise(2), but be successful if it's run too many times."""
 
     def wrapper(self):
-        try:
-            with flock(self.path.strpath) as lock:
-                debug('LOCK: %i', lock)
-                self.ensure_directory_structure()
-                return wrapped(self)
-        except Locked:
-            # if it's already supervised, we're good to go:
-            if Popen(('s6-svok', self.path.strpath)).wait() == 0:
-                return
-            else:
-                check_lock(self.path.strpath)  # pragma: no cover, we don't expect to hit this case
-                raise AssertionError('locked, but supervise is down, but no processes found, ten times?!')
+        if Popen(('s6-svok', self.path.strpath)).wait() == 0:
+            return
+
+        with flock(self.path.strpath) as lock:
+            debug('LOCK: %i', lock)
+            self.ensure_directory_structure()
+            return wrapped(self)
 
     return wrapper
 
@@ -103,14 +99,25 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         return self.__get_timeout('timeout-ready', self.default_timeout)
 
     def assert_stopped(self):
+        status = self.svstat()
+        if status.state != SvStat.UNSUPERVISED:
+            raise NotReady('its status is ' + str(status))
+
+        if not locked(self.path.strpath):
+            return  # assertion success
+
         check_lock(self.path.strpath)
-        if self.svstat().state != SvStat.UNSUPERVISED:
-            raise AssertionError('still supervised?!')
+
+        # there's a race: processes can die between when we check the lock and try to list them
+        if not locked(self.path.strpath):
+            return  # assertion success
+
+        raise Impossible('supervise is down, but lock is held, but no processes found.')
 
     def assert_ready(self):
         status = self.svstat()
         if status.state != 'ready':
-            raise NotReady('not ready: {}'.format(status))
+            raise NotReady('its status is ' + str(status))
 
     def assert_exists(self):
         if not self.path.check(dir=True):

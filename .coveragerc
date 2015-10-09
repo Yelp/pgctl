@@ -9,11 +9,12 @@ data_file = $TOP/.coverage
 [report]
 exclude_lines =
     # Have to re-enable the standard pragma
-    \#.*pragma:\s*no\s*cover
+    \#.*pragma:\s*no.?cover
     \#.*never returns
     \#.*doesn't return
 
     # Don't complain if tests don't hit defensive assertion code:
+    ^\s*raise Impossible\b
     ^\s*raise AssertionError\b
     ^\s*raise NotImplementedError\b
     ^\s*return NotImplemented\b

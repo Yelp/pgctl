@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 # TODO: open source this thing?
 """
-A context manager which implements file-locking.
+General handling of POSIX file locks (flocks).
+
+This is meant to be entirely general purpose.
+pgctl-specific functionality belongs elsewhere.
 
 TODO: put this in its own package?
 """
@@ -41,6 +44,17 @@ def acquire(file_or_dir):
             raise
 
     return fd
+
+
+def locked(file_or_dir):
+    """check if a file (or directory) is locked"""
+    try:
+        fd = acquire(file_or_dir)
+    except Locked:
+        return True
+    else:
+        os.close(fd)
+        return False
 
 
 @contextmanager

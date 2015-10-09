@@ -19,7 +19,7 @@ from .daemontools import SvStat
 from .debug import debug
 from .errors import CircularAliases
 from .errors import NoPlayground
-from .errors import PgctlUserError
+from .errors import PgctlUserMessage
 from .errors import Unsupervised
 from .functions import commafy
 from .functions import exec_
@@ -50,13 +50,54 @@ PGCTL_DEFAULTS = frozendict({
 CHANNEL = '[pgctl]'
 
 
+class StateChange(object):
+
+    def __init__(self, service):
+        self.service = service
+        self.name = service.name
+
+
+class start(StateChange):
+
+    def change(self):
+        return self.service.start()
+
+    def assert_(self):
+        return self.service.assert_ready()
+
+    def get_timeout(self):
+        return self.service.timeout_ready
+
+    class strings(object):
+        change = 'start'
+        changing = 'Starting:'
+        changed = 'Started:'
+
+
+class stop(StateChange):
+
+    def change(self):
+        return self.service.stop()
+
+    def assert_(self):
+        return self.service.assert_stopped()
+
+    def get_timeout(self):
+        return self.service.timeout_stop
+
+    class strings(object):
+        change = 'stop'
+        changing = 'Stopping:'
+        changed = 'Stopped:'
+
+
 def pgctl_print(*print_args, **print_kwargs):
     from sys import stderr
     print_kwargs.setdefault('file', stderr)
     print(CHANNEL, *print_args, **print_kwargs)
 
 
-def timeout(service_name, error, start_time, timeout_length, check_time):
+def timeout(service_name, error, action_name, start_time, timeout_length, check_time):
     curr_time = now()
     check_length = curr_time - check_time
     next_time = curr_time + check_length
@@ -64,16 +105,17 @@ def timeout(service_name, error, start_time, timeout_length, check_time):
 
     # assertion can take a long time. we timeout as close to the limit_time as we can.
     if abs(curr_time - limit_time) < abs(next_time - limit_time):
-        error_message = "ERROR: '{0}' timed out at {1:.2g} seconds: {2}".format(
+        actual_timeout_length = curr_time - start_time
+        error_message = "ERROR: service '%s' failed to %s after %.2g seconds" % (
             service_name,
-            timeout_length,
-            error,
+            action_name,
+            actual_timeout_length,
         )
-        if limit_time - curr_time > 0.005:
-            error_message += '(limit is %gs and our check took %.2f seconds)' % (
-                timeout_length,
+        if format(timeout_length, '.2g') != format(actual_timeout_length, '.2g'):
+            error_message += ' (it took %.2gs to poll)' % (
                 check_length,
-            )
+            )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
+        error_message += ', ' + str(error)
         pgctl_print(error_message)
         return True
     else:
@@ -96,7 +138,7 @@ class PgctlApp(object):
         command = getattr(self, command)
         try:
             result = command()
-        except PgctlUserError as error:
+        except PgctlUserMessage as error:
             # we don't need or want a stack trace for user errors
             result = str(error)
 
@@ -105,28 +147,28 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, change_state, assert_state, get_timeout, changing, changed):
+    def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
-        pgctl_print(changing, commafy(self.service_names))
-        services = list(self.services)
+        pgctl_print(state.strings.changing, commafy(self.service_names))
+        services = [state(service) for service in self.services]
         failed = []
         start_time = now()
         while services:
-            for service in self.services:
+            for service in services:
                 try:
-                    change_state(service)
+                    service.change()
                 except Unsupervised:
                     pass  # handled in state assertion, below
             for service in tuple(services):
                 check_time = now()
                 try:
-                    assert_state(service)
-                except PgctlUserError as error:
-                    if timeout(service.name, error, start_time, get_timeout(service), check_time):
+                    service.assert_()
+                except PgctlUserMessage as error:
+                    if timeout(service.name, error, state.strings.change, start_time, service.get_timeout(), check_time):
                         services.remove(service)
                         failed.append(service.name)
                 else:
-                    pgctl_print(changed, service.name)
+                    pgctl_print(state.strings.changed, service.name)
                     services.remove(service)
 
             time.sleep(self.poll)
@@ -148,6 +190,7 @@ class PgctlApp(object):
         if childpid:
             os.waitpid(childpid, 0)
         else:
+            os.dup2(2, 1)  # send log to stderr
             failapp.log(interactive=False)  # doesn't return
         if state == 'start':
             # we don't want services that failed to start to be 'up'
@@ -156,24 +199,12 @@ class PgctlApp(object):
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(
-            lambda service: service.start(),
-            lambda service: service.assert_ready(),
-            lambda service: service.timeout_ready,
-            'Starting:',
-            'Started:',
-        )
+        failed = self.__change_state(start)
         return self.__show_failure('start', failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(
-            lambda service: service.stop(),
-            lambda service: service.assert_stopped(),
-            lambda service: service.timeout_stop,
-            'Stopping:',
-            'Stopped:',
-        )
+        failed = self.__change_state(stop)
         return self.__show_failure('stop', failed)
 
     def status(self):
