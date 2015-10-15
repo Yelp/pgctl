@@ -6,9 +6,6 @@ from __future__ import unicode_literals
 
 from .debug import debug
 
-NO_SUCH_FILE = OSError(2, 'No such file.')
-PERMISSION_DENIED = OSError(13, 'Permission denied.')
-
 
 def stat(path):
     from os import stat

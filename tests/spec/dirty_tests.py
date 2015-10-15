@@ -33,7 +33,7 @@ def clean_service(service_path):
                 try:
                     os.system('ps -fj %i' % pid)
                     os.kill(pid, signal.SIGTERM)
-                except OSError as error:
+                except OSError as error:  # race condition -- process stopped between list and kill :pragma: no-cover
                     if error.errno == 3:  # no such process
                         pass
                     else:
@@ -183,7 +183,7 @@ class DescribeSlowShutdown(DirtyTest):
             '',
             S('''\
 \\[pgctl] Stopping: sweet
-\\[pgctl] ERROR: service 'sweet' failed to stop after 1\\.5 seconds.*, its status is ready \\(pid \\d+\\) \\d+ seconds
+\\[pgctl] ERROR: service 'sweet' failed to stop after [\\d.]+ seconds.*, its status is ready \\(pid \\d+\\) \\d+ seconds
 ==> playground/sweet/stdout\\.log <==
 sweet
 
