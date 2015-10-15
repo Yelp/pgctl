@@ -7,6 +7,7 @@ devenv:  .tox/devenv
 	# it's simpler to not try to make tox do this.
 	virtualenv --python=python2.7 .tox/pgctl
 	.tox/pgctl/bin/pip install --upgrade -r requirements.d/dev.txt
+	.tox/pgctl/bin/python ./tests/testing/install_coverage_pth.py
 	ln -sf pgctl .tox/devenv
 
 .PHONY: tests test

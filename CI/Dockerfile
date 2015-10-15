@@ -5,7 +5,6 @@ RUN apt-get update \
         make \
         python-virtualenv \
         wget \
-        lsof \
         ca-certificates \
         git \
     && apt-get clean

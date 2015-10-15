@@ -63,9 +63,15 @@ class DescribeBestrelpath(object):
 class DescribeCheckLock(object):
 
     def it_fails_when_there_are_locks(self, tmpdir):
-        with tmpdir.as_cwd():
-            with ShouldRaise(LockHeld):
-                check_lock(tmpdir.strpath)
+        lockfile = tmpdir.ensure('lock')
+        lock = lockfile.open()
+
+        with ShouldRaise(LockHeld):
+            check_lock(lockfile.strpath)
+
+        lock.close()
+
+        check_lock(lockfile.strpath)
 
     def it_passes_when_there_are_no_locks(self, tmpdir):
         assert check_lock(tmpdir.strpath) is None

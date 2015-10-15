@@ -4,7 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-from subprocess import CalledProcessError
+import signal
 from subprocess import check_call
 
 import pytest
@@ -15,27 +15,30 @@ from testing.assertions import assert_svstat
 from pgctl.daemontools import SvStat
 from pgctl.errors import LockHeld
 from pgctl.functions import check_lock
-from pgctl.functions import lsof
+from pgctl.fuser import fuser
 
 
 def clean_service(service_path):
     # we use SIGTERM; SIGKILL is cheating.
-    print('killing.')
     limit = 100
-    while limit > 0:  # pragma: no cover: we don't expect to ever hit the limit
+    while limit > 0:  # pragma: no branch: we don't expect to ever hit the limit
+        assert os.path.isdir(service_path), service_path
         try:
             check_lock(service_path)
+            print('lock released -- done.')
             break
         except LockHeld:
-            for pid in lsof(service_path):
+            print('lock held -- killing!')
+            for pid in fuser(service_path):
                 try:
-                    os.kill(pid, 10)
+                    os.system('ps -fj %i' % pid)
+                    os.kill(pid, signal.SIGTERM)
                 except OSError as error:
                     if error.errno == 3:  # no such process
                         pass
                     else:
                         raise
-            limit -= 1
+        limit -= 1
 
 
 class DirtyTest(object):
@@ -58,11 +61,8 @@ $'''
         try:
             yield in_example_dir
         finally:
-            try:
-                clean_service('playground/sweet')
-                clean_service('playground/slow-startup')
-            except CalledProcessError:
-                pass
+            for service in in_example_dir.join('playground').listdir():
+                clean_service(str(service))
 
 
 class DescribeOrphanSubprocess(DirtyTest):

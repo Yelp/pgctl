@@ -9,7 +9,6 @@ import os
 
 from frozendict import frozendict
 
-from .debug import debug
 from .errors import LockHeld
 
 
@@ -65,28 +64,14 @@ def bestrelpath(path, relto=None):
         return path
 
 
-def lsof(path):
-    """return a list of pids which have `path` open"""
-    from subprocess import Popen, PIPE, CalledProcessError
-    cmd = ('lsof', '-tau', str(os.getuid()), path)
-    debug('CMD: %s', cmd)
-    proc = Popen(cmd, stdout=PIPE, stderr=PIPE)
-    stdout, stderr = proc.communicate()
-    if stdout == stderr == '':
-        return []
-    elif proc.returncode != 0:
-        raise CalledProcessError(proc.returncode, cmd, (stdout, stderr))
-    else:
-        return [int(line) for line in stdout.split()]
-
-
 def ps(pids):
     """Give a (somewhat) human-readable printout of a list of processes"""
+    pids = tuple([str(pid) for pid in pids])
     if not pids:
         return ''
 
     from subprocess import PIPE, Popen
-    cmd = ('ps', '-fj',) + tuple([str(pid) for pid in pids])
+    cmd = ('ps', '--forest', '-wfj',) + pids
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     stdout, _ = process.communicate()
     if stdout.count('\n') > 1:
@@ -98,7 +83,8 @@ def ps(pids):
 
 def check_lock(path):
     # TODO: message seems to indicate we should svok here
-    processes = ps(lsof(path))
+    from .fuser import fuser
+    processes = ps(fuser(path))
     if processes:
         raise LockHeld(
             '''\
