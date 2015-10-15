@@ -7,7 +7,7 @@ def normalize_newlines(fd):
     Twiddle the tty flags such that \n won't get munged to \r\n.
     Details:
         https://docs.python.org/2/library/termios.html
-        http://ftp.gnu.org/old-gnu/Manuals/glibc-2.2.3/html_chapter/libc_17.html#SEC362
+        http://www.gnu.org/software/libc/manual/html_mono/libc.html#Output-Modes
     """
     import termios as T
     attrs = T.tcgetattr(fd)
