@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 import os
 
 import pytest
-from testing import assert_command
+from testing.subprocess import assert_command
 
 from pgctl import __version__
 

@@ -6,10 +6,10 @@ import os
 
 import pytest
 from py._path.local import LocalPath as Path
-from testing import assert_command
 from testing import norm
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
+from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
 

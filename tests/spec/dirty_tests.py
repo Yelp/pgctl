@@ -8,9 +8,9 @@ import signal
 from subprocess import check_call
 
 import pytest
-from testing import assert_command
 from testing import norm
 from testing.assertions import assert_svstat
+from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
 from pgctl.errors import LockHeld

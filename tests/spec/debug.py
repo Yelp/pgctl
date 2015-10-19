@@ -7,10 +7,10 @@ from subprocess import PIPE
 from subprocess import Popen
 
 import pytest
-from testing import assert_command
-from testing import ctrl_c
 from testing import pty
 from testing.assertions import assert_svstat
+from testing.subprocess import assert_command
+from testing.subprocess import ctrl_c
 
 from pgctl.daemontools import SvStat
 

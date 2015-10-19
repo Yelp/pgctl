@@ -5,7 +5,7 @@ from __future__ import unicode_literals
 from sys import executable
 
 from testfixtures import ShouldRaise
-from testing import assert_command
+from testing.subprocess import assert_command
 
 
 def assert_does_not_find(path):

@@ -9,11 +9,11 @@ from subprocess import Popen
 
 import pytest
 from pytest import yield_fixture as fixture
-from testing import assert_command
 from testing import norm
 from testing import pty
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
+from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
 
