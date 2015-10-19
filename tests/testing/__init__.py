@@ -6,24 +6,50 @@ from __future__ import unicode_literals
 import sys
 
 
-def run(process, input=None):
-    """like Popen.communicate, but still show the output"""
+def _show_both(stdout, stderr):
+    print(stdout, end='')
+    print(stderr, file=sys.stderr, end='')
+
+
+def run(cmd, **popen_args):
+    """run the command, show the output, and return (stdout, stderr, returncode)"""
+    from subprocess import Popen, PIPE
+    process = Popen(cmd, stdout=PIPE, stderr=PIPE, **popen_args)
     stdout, stderr = process.communicate()
-    print(stdout)
-    print(stderr, file=sys.stderr)
-    return stdout, stderr
+    _show_both(stdout, stderr)
+    return stdout, stderr, process.returncode
 
 
-def assert_command(cmd, stdout, stderr, returncode, **popen_args):
+# TODO: move to pgctl.subprocess
+def quote(cmd):
+    from pipes import quote
+    return ' '.join(quote(arg) for arg in cmd)
+
+
+def _banner(message):
+    message = ' %s ' % message
+    message = message.center(73, '=')
+    message = 'TEST: %s\n' % message
+    _show_both(message, message)
+
+
+# TODO: move to testing.subprocess
+def assert_command(cmd, stdout, stderr, returncode, norm=None, **popen_args):
     # this allows py.test to hide this frame during test debugging
     __tracebackhide__ = True  # pylint:disable=unused-variable
-    from subprocess import Popen, PIPE
-    p = Popen(cmd, stdout=PIPE, stderr=PIPE, **popen_args)
-    actual_out, actual_err = run(p)
+    message = 'TEST: assert_command()\t%s\n' % quote(cmd)
+    _show_both(message, message)
+    _banner('actual')
+    actual_out, actual_err, returncode = run(cmd, **popen_args)
+    if norm:
+        actual_out = norm(actual_out)
+        actual_err = norm(actual_err)
+        _banner('normed')
+        _show_both(actual_out, actual_err)
     # in order of most-informative error first.
     assert stderr == actual_err
     assert stdout == actual_out
-    assert returncode == p.returncode
+    assert returncode == returncode
 
 
 def ctrl_c(process):

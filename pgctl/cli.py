@@ -249,8 +249,7 @@ class PgctlApp(object):
         logfiles = []
         for service in self.services:
             service.ensure_logs()
-            logfiles.append(service.path.join('stdout.log').relto(pwd))
-            logfiles.append(service.path.join('stderr.log').relto(pwd))
+            logfiles.append(service.path.join('log').relto(pwd))
         exec_(tail + tuple(logfiles))  # never returns
 
     def debug(self):
