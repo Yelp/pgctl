@@ -177,9 +177,8 @@ def svstat_parse(svstat_string):
 
 def prepend_timestamps_to(logfile):
     """write a timestamped log to a file. The return value is a file descriptor to write to."""
-    tai64n = _pipeline(('tai64n',), PIPE, PIPE)
-    _pipeline(('tai64nlocal',), tai64n.stdout, logfile)
-    return tai64n.stdin
+    timestamps = _pipeline(('pgctl-timestamp'), PIPE, logfile)
+    return timestamps.stdin
 
 
 def _pipeline(cmd, stdin, stdout):
