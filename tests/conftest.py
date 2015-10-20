@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint:disable=redefined-outer-name,unused-argument
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import os

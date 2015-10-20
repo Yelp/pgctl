@@ -1,11 +1,15 @@
-#!/usr/bin/setsid bash
+#!/bin/bash
 set -eu
 # Users must follow this pattern if they can't exec a single subprocess.
 # TODO: simplify this use case by improving dumb-init:
 #       https://github.com/Yelp/dumb-init/issues/4
 term() {
-    trap - TERM
-    kill -- -$$
+    # ignore SIGTERM for the moment
+    trap '' TERM
+    # list the process leader of each job, kill them all
+    jobs -p | xargs -n1 --verbose kill
+    # the usual exit code (128 + 15 means SIGTERM)
+    exit 143
 }
 trap term TERM
 

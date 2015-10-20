@@ -9,11 +9,11 @@ from subprocess import Popen
 
 import pytest
 from pytest import yield_fixture as fixture
-from testfixtures import StringComparison as S
-from testing import assert_command
+from testing import norm
 from testing import pty
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
+from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
 
@@ -30,13 +30,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> playground/ohhi/stdout.log <==
+==> playground/ohhi/log <==
 
-==> playground/ohhi/stderr.log <==
-
-==> playground/sweet/stdout.log <==
-
-==> playground/sweet/stderr.log <==
+==> playground/sweet/log <==
 ''',
             '',
             0,
@@ -48,18 +44,15 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> playground/ohhi/stdout.log <==
+==> playground/ohhi/log <==
 
-==> playground/ohhi/stderr.log <==
-
-==> playground/sweet/stdout.log <==
-sweet
-
-==> playground/sweet/stderr.log <==
-sweet_error
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
 ''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
         check_call(('pgctl-2015', 'restart', 'sweet'))
@@ -67,20 +60,17 @@ sweet_error
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> playground/ohhi/stdout.log <==
+==> playground/ohhi/log <==
 
-==> playground/ohhi/stderr.log <==
-
-==> playground/sweet/stdout.log <==
-sweet
-sweet
-
-==> playground/sweet/stderr.log <==
-sweet_error
-sweet_error
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
 ''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
     def it_logs_continuously_when_run_interactively(self, in_example_dir):
@@ -120,17 +110,19 @@ sweet_error
                     raise
             buf += block
 
+        from testfixtures import StringComparison as S
+        buf = norm.pgctl(buf)
+        print('NORMED:')
+        print(buf)
         assert buf == S('''(?s)\
-==> playground/ohhi/stdout\\.log <==
-o.*
-==> playground/ohhi/stderr\\.log <==
-e.*
-==> playground/sweet/stdout\\.log <==
-sweet
+==> playground/ohhi/log <==
+{TIMESTAMP} [oe].*
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
 
-==> playground/sweet/stderr\\.log <==
-sweet_error
-.*$''')
+==> playground/ohhi/log <==
+.*{TIMESTAMP} .*$''')
         assert p.poll() is None  # it's still running
 
         p.terminate()
@@ -328,9 +320,10 @@ class DescribeStatus(object):
         check_call(('pgctl-2015', 'start', 'sleep'))
         assert_command(
             ('pgctl-2015', 'status', 'sleep'),
-            S('sleep: ready \\(pid \\d+\\) \\d+ seconds\\n$'),
+            'sleep: ready (pid {PID}) {TIME} seconds\n',
             '',
             0,
+            norm=norm.pgctl,
         )
 
     def it_displays_the_status_of_multiple_services(self, in_example_dir):
@@ -338,12 +331,13 @@ class DescribeStatus(object):
         check_call(('pgctl-2015', 'start', 'sleep'))
         assert_command(
             ('pgctl-2015', 'status', 'sleep', 'tail'),
-            S('''\
-sleep: ready \\(pid \\d+\\) \\d+ seconds
+            '''\
+sleep: ready (pid {PID}) {TIME} seconds
 tail: down
-$'''),
+''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
     def it_displays_the_status_of_all_services(self, in_example_dir):
@@ -351,12 +345,13 @@ $'''),
         check_call(('pgctl-2015', 'start', 'tail'))
         assert_command(
             ('pgctl-2015', 'status'),
-            S('''\
+            '''\
 sleep: down
-tail: ready \\(pid \\d+\\) \\d+ seconds
-$'''),
+tail: ready (pid {PID}) {TIME} seconds
+''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
     def it_displays_status_for_unknown_services(self, in_example_dir):
@@ -435,13 +430,12 @@ class DescribeEnvironment(object):
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> playground/environment/stdout.log <==
-ohhi
-
-==> playground/environment/stderr.log <==
+==> playground/environment/log <==
+{TIMESTAMP} ohhi
 ''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
         check_call(('sh', '-c', 'MYVAR=bye pgctl-2015 restart'))
@@ -449,14 +443,13 @@ ohhi
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> playground/environment/stdout.log <==
-ohhi
-bye
-
-==> playground/environment/stderr.log <==
+==> playground/environment/log <==
+{TIMESTAMP} ohhi
+{TIMESTAMP} bye
 ''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
 

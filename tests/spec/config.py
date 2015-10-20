@@ -6,7 +6,7 @@ import os
 from contextlib import contextmanager
 
 import mock
-from testing import assert_command
+from testing.subprocess import assert_command
 
 from pgctl.config import Config
 

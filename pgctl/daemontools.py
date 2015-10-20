@@ -175,5 +175,23 @@ def svstat_parse(svstat_string):
     return SvStat(state, pid, exitcode, seconds, process)
 
 
+def prepend_timestamps_to(logfile):
+    """write a timestamped log to a file. The return value is a file descriptor to write to."""
+    timestamps = _pipeline(('pgctl-timestamp'), PIPE, logfile)
+    return timestamps.stdin
+
+
+def _pipeline(cmd, stdin, stdout):
+    return Popen(
+        cmd,
+        stdin=stdin,
+        stdout=stdout,
+        # prevents deadlock undertest where the framework wants to read exhaustively from stderr
+        stderr=STDOUT,
+        # we don't need/want to maintain a lock here, because we'll die when our input pipe closes
+        close_fds=True,
+    )
+
+
 def svstat(path):
     return svstat_parse(svstat_string(path))

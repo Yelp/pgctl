@@ -12,7 +12,7 @@ def stat(path):
     try:
         path = stat(path)
     except EnvironmentError as error:
-        debug('fuser suppressed:', error)
+        debug('fuser suppressed: %s', error)
         return None
     else:
         return (path.st_ino, path.st_dev)
@@ -23,7 +23,7 @@ def listdir(path):
     try:
         return listdir(path)
     except EnvironmentError as error:
-        debug('fuser suppressed:', error)
+        debug('fuser suppressed: %s', error)
         return ()
 
 

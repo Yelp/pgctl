@@ -12,6 +12,7 @@ from cached_property import cached_property
 from frozendict import frozendict
 from py._error import error as pylib_error
 
+from .daemontools import prepend_timestamps_to
 from .daemontools import svc
 from .daemontools import SvStat
 from .daemontools import svstat
@@ -124,8 +125,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             raise NoSuchService("No such playground service: '%s'" % self.name)
 
     def ensure_logs(self):
-        self.path.ensure('stdout.log')
-        self.path.ensure('stderr.log')
+        self.path.ensure('log')
 
     def ensure_directory_structure(self):
         """Ensure that the scratch directory exists and symlinks supervise.
@@ -162,14 +162,19 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     @idempotent_supervise
     def background(self):
         """Run supervise(1), while ensuring it is properly symlinked."""
-        return Popen(
-            ('s6-supervise', self.path.strpath),
-            stdin=open(os.devnull, 'w'),
-            stdout=self.path.join('stdout.log').open('a'),
-            stderr=self.path.join('stderr.log').open('a'),
-            env=self.supervise_env,
-            close_fds=False,  # we must keep the flock file descriptor opened.
-        )
+        with self.path.as_cwd():
+            log = self.path.join('log').open('a')
+            log = prepend_timestamps_to(log)
+            result = Popen(
+                ('s6-supervise', self.path.strpath),
+                stdin=open(os.devnull, 'w'),
+                stdout=log.fileno(),
+                stderr=log.fileno(),
+                env=self.supervise_env,
+                close_fds=False,  # we must keep the flock file descriptor opened.
+            )
+            log.close()
+        return result
 
     @idempotent_supervise
     def foreground(self):

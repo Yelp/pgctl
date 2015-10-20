@@ -8,9 +8,9 @@ import signal
 from subprocess import check_call
 
 import pytest
-from testfixtures import StringComparison as S
-from testing import assert_command
+from testing import norm
 from testing.assertions import assert_svstat
+from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
 from pgctl.errors import LockHeld
@@ -44,7 +44,7 @@ def clean_service(service_path):
 class DirtyTest(object):
 
     LOCKERROR = '''\
-\\[pgctl\\] Stopping: {service}
+[pgctl] Stopping: {service}
 \\[pgctl\\] ERROR: service '{service}' failed to stop after [\\d.]+ seconds.*, these runaway processes did not stop:
 UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
 \\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
@@ -91,19 +91,16 @@ class DescribeOrphanSubprocess(DirtyTest):
         assert_command(
             ('pgctl-2015', 'log'),
             '''\
-==> playground/slow-startup/stdout.log <==
+==> playground/slow-startup/log <==
+{TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
 
-==> playground/slow-startup/stderr.log <==
-pgctl-poll-ready: service's ready check succeeded
-
-==> playground/sweet/stdout.log <==
-sweet
-
-==> playground/sweet/stderr.log <==
-sweet_error
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
 ''',
             '',
             0,
+            norm=norm.pgctl,
         )
 
     def it_shows_error_on_stop_for_sweet(self):
@@ -119,18 +116,23 @@ sweet_error
         assert_command(
             ('pgctl-2015', 'restart', 'sweet'),
             '',
-            S(self.LOCKERROR.format(
-                service='sweet',
-                time='5',
-                cmd='sleep infinity',
-                log='''\
-==> playground/sweet/stdout.log <==
-sweet
+            '''\
+[pgctl] Stopping: sweet
+[pgctl] ERROR: service 'sweet' failed to stop after {TIME} seconds, these runaway processes did not stop:
+{PS-HEADER}
+{PS-STATS} sleep infinity
 
-==> playground/sweet/stderr.log <==
-sweet_error
-''')),
+There are two ways you can fix this:
+  * temporarily: lsof -t playground/sweet | xargs kill -9
+  * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
+[pgctl] ERROR: Some services failed to stop: sweet
+''',
             1,
+            norm=norm.pgctl,
         )
 
     def it_shows_error_on_stop_for_slow_start(self):
@@ -146,19 +148,23 @@ sweet_error
         assert_command(
             ('pgctl-2015', 'restart', 'slow-startup'),
             '',
-            S(self.LOCKERROR.format(
-                service='slow-startup',
-                time='5',
-                cmd='sleep 987654',
-                log='''\
-==> playground/slow-startup/stdout.log <==
+            '''\
+[pgctl] Stopping: slow-startup
+[pgctl] ERROR: service 'slow-startup' failed to stop after {TIME} seconds, these runaway processes did not stop:
+{PS-HEADER}
+{PS-STATS} sleep 987654
 
-==> playground/slow-startup/stderr.log <==
-pgctl-poll-ready: service's ready check succeeded
-pgctl-poll-ready: service is stopping -- quitting the poll
+There are two ways you can fix this:
+  * temporarily: lsof -t playground/slow-startup | xargs kill -9
+  * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+==> playground/slow-startup/log <==
+{TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
+{TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
+[pgctl] ERROR: Some services failed to stop: slow-startup
 ''',
-            )),
             1,
+            norm=norm.pgctl,
         )
 
 
@@ -181,17 +187,16 @@ class DescribeSlowShutdown(DirtyTest):
         assert_command(
             ('pgctl-2015', 'stop'),
             '',
-            S('''\
-\\[pgctl] Stopping: sweet
-\\[pgctl] ERROR: service 'sweet' failed to stop after [\\d.]+ seconds.*, its status is ready \\(pid \\d+\\) \\d+ seconds
-==> playground/sweet/stdout\\.log <==
-sweet
-
-==> playground/sweet/stderr\\.log <==
-sweet_error
-\\[pgctl] ERROR: Some services failed to stop: sweet
-'''),
+            '''\
+[pgctl] Stopping: sweet
+[pgctl] ERROR: service 'sweet' failed to stop after {TIME} seconds, its status is ready (pid {PID}) {TIME} seconds
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
+[pgctl] ERROR: Some services failed to stop: sweet
+''',
             1,
+            norm=norm.pgctl,
         )
 
     def it_can_shut_down_successfully(self):

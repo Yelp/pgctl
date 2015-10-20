@@ -21,6 +21,9 @@ exclude_lines =
 
     # Don't complain if tests don't hit re-raise of unexpected errors:
     ^\s*raise$
+
+    # if main is covered, we're good:
+    ^\s*exit\(main\(\)\)$
 show_missing = True
 
 [html]
