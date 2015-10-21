@@ -9,6 +9,7 @@ import os
 
 from frozendict import frozendict
 
+from .daemontools import svok
 from .errors import LockHeld
 
 
@@ -82,10 +83,11 @@ def ps(pids):
 
 
 def check_lock(path):
-    # TODO: message seems to indicate we should svok here
     from .fuser import fuser
     processes = ps(fuser(path))
-    if processes:
+    if svok(path):
+        return
+    elif processes:
         raise LockHeld(
             '''\
 these runaway processes did not stop:
@@ -101,3 +103,16 @@ There are two ways you can fix this:
 
 def commafy(items):
     return ', '.join(str(x) for x in items)
+
+
+def set_non_inheritable(fd):
+    """
+    disable the "inheritability" of a file descriptor
+
+    See Also:
+        https://docs.python.org/3/library/os.html#inheritance-of-file-descriptors
+        https://github.com/python/cpython/blob/65e6c1eff3/Python/fileutils.c#L846-L857
+    """
+    from termios import FIOCLEX
+    from fcntl import ioctl
+    return ioctl(fd, FIOCLEX)
