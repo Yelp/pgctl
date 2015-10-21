@@ -104,16 +104,16 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if status.state != SvStat.UNSUPERVISED:
             raise NotReady('its status is ' + str(status))
 
-        if not locked(self.path.strpath):
-            return  # assertion success
+        racelimit = 10
+        while racelimit > 0:
+            racelimit -= 1
 
-        check_lock(self.path.strpath)
+            if not locked(self.path.strpath):
+                return  # assertion success
 
-        # there's a race: processes can die between when we check the lock and try to list them
-        if not locked(self.path.strpath):
-            return  # assertion success
+            check_lock(self.path.strpath)
 
-        raise Impossible('supervise is down, but lock is held, but no processes found.')
+        raise Impossible('lost the race 10 times in a row')
 
     def assert_ready(self):
         status = self.svstat()

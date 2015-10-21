@@ -49,14 +49,14 @@ class SvStat(
         return format.format(self)
 
 
+def svok(path):
+    return Popen(('s6-svok', path)).wait() == 0
+
+
 def svstat_string(service_path):
     """Wrapper for daemontools svstat cmd"""
     # svstat *always* exits with code zero...
-    cmd = ('s6-svok', service_path)
-    process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
-    status, _ = process.communicate()
-    assert status == ''
-    if process.returncode != 0:
+    if not svok(service_path):
         return SvStat.UNSUPERVISED
 
     cmd = ('s6-svstat', service_path)

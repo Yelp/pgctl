@@ -8,7 +8,6 @@ from pytest import yield_fixture as fixture
 from testfixtures import ShouldRaise
 
 from pgctl.flock import flock
-from pgctl.flock import Locked
 
 
 @fixture
@@ -19,7 +18,7 @@ def tmpfile(tmpdir):
 
 
 def assert_locked(tmpfile):
-    with ShouldRaise(Locked(11)):
+    with ShouldRaise(flock.Locked(tmpfile)):
         with flock(tmpfile):
             raise AssertionError('this should not work')
 

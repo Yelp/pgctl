@@ -39,7 +39,7 @@ def acquire(file_or_dir):
     except IOError as error:
         if error.errno == 11:
             os.close(fd)
-            six.reraise(Locked, Locked(11))
+            six.reraise(Locked, Locked(file_or_dir))
         else:
             raise
 
@@ -65,3 +65,6 @@ def flock(file_or_dir):
         yield fd
     finally:
         os.close(fd)
+
+# handy alias =X
+flock.Locked = Locked
