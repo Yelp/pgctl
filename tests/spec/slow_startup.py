@@ -79,7 +79,7 @@ def it_restarts_on_unready():
     it_can_succeed()
     os.remove('playground/slow-startup/readyfile')
     wait_for(it_becomes_unready)
-    wait_for(it_is_ready, limit=SLOW_STARTUP_TIME)
+    wait_for(it_is_ready)
 
     assert_command(
         ('pgctl-2015', 'log'),

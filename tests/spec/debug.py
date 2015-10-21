@@ -77,7 +77,7 @@ def it_disables_polling_heartbeat():
         proc = Popen(('pgctl-2015', 'debug', 'slow-startup'), stdin=open(os.devnull), stdout=PIPE, stderr=PIPE)
 
     from testing.assertions import wait_for
-    wait_for(lambda: assert_svstat('playground/slow-startup', state='ready'), limit=5)
+    wait_for(lambda: assert_svstat('playground/slow-startup', state='ready'))
 
     check_call(('pgctl-2015', 'stop'))
     stdout, stderr = proc.communicate()
