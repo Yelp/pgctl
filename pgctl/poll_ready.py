@@ -67,8 +67,6 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
             print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you', file=sys.stderr)
-            # we chdir to avoid holding the service-is-up lock.
-            os.chdir(os.path.join(os.environ.get('PGCTL_SERVICE', '.'), '..'))
             exec_(('pgctl-2015', 'restart', service))  # doesn't return
 
 
