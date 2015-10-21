@@ -88,9 +88,10 @@ class DescribePgctlLog(object):
 
         assert p.poll() is None  # it's still running
 
-        # needs to loop for at least two seconds because the default event loop
+        # needs to loop for several seconds because the default event loop
         # in tail-f is one second.
-        retries = 20
+        limit = 3.0
+        wait = .1
         buf = ''
         while True:
             try:
@@ -99,10 +100,10 @@ class DescribePgctlLog(object):
             except OSError as error:
                 print('ERROR:', error)
                 if error.errno == 11:  # other end didn't write yet
-                    if retries > 0:
-                        retries -= 1
+                    if limit > 0:
                         import time
-                        time.sleep(.1)
+                        time.sleep(wait)
+                        limit -= wait
                         continue
                     else:
                         break
