@@ -9,7 +9,7 @@ def assert_svstat(service, **attrs):
     assert svstat(service) == C(SvStat, attrs, strict=False)
 
 
-def wait_for(assertion, sleep=.05, limit=2.0):
+def wait_for(assertion, sleep=.05, limit=10.0):
     """Some flakey assertions need to be retried."""
     # TODO(Yelp/pgctl#28): take this out once we can 'check'
     import time
