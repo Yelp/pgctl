@@ -9,8 +9,8 @@ from testfixtures import ShouldRaise
 
 from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
-from pgctl.functions import check_lock
 from pgctl.functions import JSONEncoder
+from pgctl.functions import show_runaway_processes
 from pgctl.functions import uniq
 
 
@@ -60,18 +60,18 @@ class DescribeBestrelpath(object):
         assert bestrelpath('/a/b', '/a/b/c/d') == '/a/b'
 
 
-class DescribeCheckLock(object):
+class DescribeShowRunawayProcesses(object):
 
     def it_fails_when_there_are_locks(self, tmpdir):
         lockfile = tmpdir.ensure('lock')
         lock = lockfile.open()
 
         with ShouldRaise(LockHeld):
-            check_lock(lockfile.strpath)
+            show_runaway_processes(lockfile.strpath)
 
         lock.close()
 
-        check_lock(lockfile.strpath)
+        show_runaway_processes(lockfile.strpath)
 
     def it_passes_when_there_are_no_locks(self, tmpdir):
-        assert check_lock(tmpdir.strpath) is None
+        assert show_runaway_processes(tmpdir.strpath) is None

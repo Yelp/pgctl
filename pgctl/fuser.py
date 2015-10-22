@@ -11,7 +11,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from .debug import debug
+from .debug import trace
 
 
 def stat(path):
@@ -19,7 +19,7 @@ def stat(path):
     try:
         path = stat(path)
     except EnvironmentError as error:
-        debug('fuser suppressed: %s', error)
+        trace('fuser suppressed: %s', error)
         return None
     else:
         return (path.st_ino, path.st_dev)
@@ -30,7 +30,7 @@ def listdir(path):
     try:
         return listdir(path)
     except EnvironmentError as error:
-        debug('fuser suppressed: %s', error)
+        trace('fuser suppressed: %s', error)
         return ()
 
 

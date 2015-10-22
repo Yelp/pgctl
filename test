@@ -1,48 +1,47 @@
 #!/bin/bash
 set -eu
+export TOP=$(dirname $(readlink -f $0))
+export PROJECT=pgctl
+export COVERAGE_PROCESS_START=$TOP/.coveragerc
+
+combine() {
+    unset COVERAGE_PROCESS_START
+    coverage combine --rcfile=$TOP/.coveragerc
+}
+fail() {
+    combine
+    echo '[31;1mFAIL[m'
+}
+trap fail ERR
+
 # the travis default umask is 002, but ubuntu's is 022
 umask 022
 
-fail() { echo '[31;1mFAIL[m'; }
-trap fail ERR
-
+set -x
+# See: https://bitbucket.org/ned/coveragepy/issue/340/keyerror-subpy
 if [ -n "$VIRTUAL_ENV" -a -d $VIRTUAL_ENV/local ]; then
-    # see: https://bitbucket.org/ned/coveragepy/issue/340/keyerror-subpy
     rm -rf $VIRTUAL_ENV/local
     find $VIRTUAL_ENV -name '*.pyc' -print0 | xargs -0r rm
     find $VIRTUAL_ENV -name '__pycache__' -print0 | xargs -0r rmdir
 fi
 
-export TOP=$(dirname $(readlink -f $0))
-export PROJECT=pgctl
-if [ -z "${PGCTL_VERBOSE:-}" ]; then
-    NCPU=$(getconf _NPROCESSORS_CONF)
-    n=$((NCPU < 5 ? NCPU * 2 : 10))
-else
-    n="0 -s"
-fi
+# clean out any leftover coverage data
+rm -f $TOP/.coverage.* $TOP/.coverage
+# we actually do want to get coverage for our test-infra scripts:
 
 # See: http://nedbatchelder.com/code/coverage/subprocess.html
 $TOP/tests/testing/install_coverage_pth.py
 
-# careful not to leave .coverage.$HOST.$RANDOM files laying about on failure.
-combine() { coverage combine --rcfile=$TOP/.coveragerc; }
-trap combine ERR
-
-combine
-coverage erase --rcfile=$TOP/.coveragerc
-
-export COVERAGE_PROCESS_START=$TOP/.coveragerc
-src=$($TOP/tests/testing/get_modulefile.py $PROJECT)
-py.test -n $n "$@" $TOP/tests $src
-unset COVERAGE_PROCESS_START
+# default arguments
+if [ -z "$*" ]; then
+    NCPU=$(getconf _NPROCESSORS_CONF)
+    n=$((NCPU < 5 ? NCPU * 2 : 10))
+    set -- -n $n $TOP/tests $($TOP/tests/testing/get_modulefile.py $PROJECT)
+fi
+py.test "$@"
 combine
 
 ## TODO: figure out a nice way to disable coverage/lint when running a single test
-#if [[ "$@" ]]; then
-#    exit 0
-#fi
-
 pre-commit run --all-files
 
 coverage html --rcfile=$TOP/.coveragerc
