@@ -2,15 +2,13 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from sys import executable
-
 from testfixtures import ShouldRaise
 from testing.subprocess import assert_command
 
 
 def assert_does_not_find(path):
     assert_command(
-        (executable, '-m', 'pgctl.fuser', path),
+        ('pgctl-fuser', path),
         '',
         '',
         0,
@@ -27,7 +25,7 @@ def it_can_find_the_user(tmpdir):
 
         from os import getpid
         assert_command(
-            (executable, '-m', 'pgctl.fuser', str(testfile)),
+            ('pgctl-fuser', str(testfile)),
             '%i\n' % getpid(),
             '',
             0,
@@ -35,6 +33,16 @@ def it_can_find_the_user(tmpdir):
         )
 
     assert_does_not_find(str(testfile))
+
+
+def it_shows_help_given_no_arguments():
+    from pgctl.fuser import __doc__
+    assert_command(
+        ('pgctl-fuser',),
+        '',
+        __doc__ + '\n',
+        1,
+    )
 
 
 def it_properly_ignores_nosuchfile():
