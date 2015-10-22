@@ -7,6 +7,8 @@ RUN apt-get update \
         wget \
         ca-certificates \
         git \
+        gcc \
+        libc6-dev \
     && apt-get clean
 
 RUN virtualenv /opt/virtualenv

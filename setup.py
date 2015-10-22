@@ -25,6 +25,7 @@ def main():
             'cached-property',
             'py',
             'six',
+            's6',
         ],
         # FIXME: all tests still pass if you break this.
         entry_points={
