@@ -1,8 +1,10 @@
 machine:
     environment:
-        TOP: $PWD
         TOXENV: python
 
 dependencies:
-    pre:
+    override:
         - ./CI/install/main
+        - tox --notest
+    cache_directories:
+        - ~/.cache
