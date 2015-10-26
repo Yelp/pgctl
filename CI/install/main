@@ -4,8 +4,6 @@ set -eux
 umask 022
 chmod -R g-w .
 
-sudo apt-get update
-sudo apt-get install pv
 pip install --upgrade pip
 pip install -r CI/install/requirements.txt
 
