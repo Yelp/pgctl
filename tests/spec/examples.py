@@ -90,6 +90,7 @@ class DescribePgctlLog(object):
 
         # needs to loop for several seconds because the default event loop
         # in tail-f is one second.
+        # TODO: buf is a list, use wait_for() to append to it
         limit = 3.0
         wait = .1
         buf = ''

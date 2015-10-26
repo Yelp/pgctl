@@ -7,6 +7,8 @@ export COVERAGE_PROCESS_START=$TOP/.coveragerc
 combine() {
     unset COVERAGE_PROCESS_START
     coverage combine --rcfile=$TOP/.coveragerc
+    coverage html --rcfile=$TOP/.coveragerc
+    coverage report --rcfile=$TOP/.coveragerc --fail-under 100
 }
 fail() {
     combine
@@ -37,12 +39,11 @@ if [ -z "$*" ]; then
     NCPU=$(getconf _NPROCESSORS_CONF)
     n=$((NCPU < 5 ? NCPU * 2 : 10))
     set -- -n $n $TOP/tests $($TOP/tests/testing/get_modulefile.py $PROJECT)
+
+    # don't measure coverage during linting
+    COVERAGE_PROCESS_START= pre-commit run --all-files
+else
+    COVERAGE_PROCESS_START= pre-commit run --no-stash
 fi
 py.test "$@"
 combine
-
-## TODO: figure out a nice way to disable coverage/lint when running a single test
-pre-commit run --all-files
-
-coverage html --rcfile=$TOP/.coveragerc
-coverage report --rcfile=$TOP/.coveragerc --fail-under 100
