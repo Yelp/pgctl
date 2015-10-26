@@ -9,7 +9,7 @@ from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
 
-from .debug import debug
+from .debug import trace
 from .errors import Unsupervised
 
 
@@ -17,7 +17,7 @@ def svc(args):
     """Wrapper for daemontools svc cmd"""
     # svc never writes to stdout.
     cmd = ('s6-svc',) + tuple(args)
-    debug('CMD: %s', cmd)
+    trace('CMD: %s', cmd)
     process = Popen(cmd, stderr=PIPE)
     _, error = process.communicate()
     if error.startswith('s6-svc: fatal: unable to control '):
@@ -130,7 +130,7 @@ def svstat_parse(svstat_string):
     down (exitcode 0) 0 seconds, starting
     '''
     status = svstat_string.strip()
-    debug('RAW   : %s', status)
+    trace('RAW   : %s', status)
     if status.startswith(('up ', 'down ')):
         state, buffer = parse(status, '', ' ')
     elif status.startswith('unable to chdir:'):

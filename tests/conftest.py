@@ -55,18 +55,40 @@ def service_name():
 
 
 @fixture(autouse=True)
-def wait4():
-    """wait for all subprocesses to finish."""
-    yield
-    i = 0
+def disinherit_pytest_pipe():
+    """
+    pytest creates some weird pipe on fd3 when running under xdist
+    this prevents tests from ending due to subprocesses
+
+    Solution: disinherit the pipe.
+    """
+    from pgctl.functions import set_non_inheritable
     try:
-        while i < 1000:
-            os.wait3(os.WNOHANG)
-            i += 1  # we only hit this when tests are broken. pragma: no cover
-        raise AssertionError("there's a subprocess that's still running")
-    except OSError as error:
-        if error.errno == 10:  # no child processes
-            return
+        set_non_inheritable(3)
+    except IOError as error:  # this only happens under single-process pytest  :pragma:nocover:
+        if error.errno == 9:  # no such fd
+            pass
         else:
             raise
-    raise AssertionError('Should never get here.')
+    yield
+
+
+@fixture(autouse=True)
+def wait4(tmpdir):
+    """wait for all subprocesses to finish."""
+    lock = tmpdir.join('pytest-subprocesses.lock')
+    try:
+        from pgctl.flock import flock
+        with flock(lock.strpath):
+            yield
+    finally:
+        from pgctl.fuser import fuser
+        from pgctl.functions import ps
+        fusers = True
+        i = 0
+        while fusers and i < 10:
+            fusers = tuple(fuser(lock.strpath))
+            i += 1  # we only hit this when tests are broken. pragma: no cover
+        fusers = ps(fusers)
+        if fusers:
+            raise AssertionError("there's a subprocess that's still running:\n%s" % ps(fusers))

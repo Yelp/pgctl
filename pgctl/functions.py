@@ -9,7 +9,6 @@ import os
 
 from frozendict import frozendict
 
-from .daemontools import svok
 from .errors import LockHeld
 
 
@@ -82,12 +81,10 @@ def ps(pids):
         return ''  # pragma: no cover, we don't expect to hit this
 
 
-def check_lock(path):
+def show_runaway_processes(path):
     from .fuser import fuser
     processes = ps(fuser(path))
-    if svok(path):
-        return
-    elif processes:
+    if processes:
         raise LockHeld(
             '''\
 these runaway processes did not stop:

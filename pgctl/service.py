@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import os
 from collections import namedtuple
+from contextlib import contextmanager
 from subprocess import check_call
 from subprocess import Popen
 
@@ -14,28 +15,26 @@ from py._error import error as pylib_error
 
 from .daemontools import prepend_timestamps_to
 from .daemontools import svc
+from .daemontools import svok
 from .daemontools import SvStat
 from .daemontools import svstat
 from .debug import debug
+from .debug import trace
 from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
-from .flock import flock
-from .flock import locked
-from .functions import check_lock
+from .flock import Locked
 from .functions import exec_
+from .functions import show_runaway_processes
 
 
 def idempotent_supervise(wrapped):
     """Run supervise(2), but be successful if it's run too many times."""
 
     def wrapper(self):
-        if Popen(('s6-svok', self.path.strpath)).wait() == 0:
+        if svok(self.path.strpath):
             return
-
-        with flock(self.path.strpath) as lock:
-            debug('LOCK: %i', lock)
-            self.ensure_directory_structure()
+        else:
             return wrapped(self)
 
     return wrapper
@@ -43,7 +42,6 @@ def idempotent_supervise(wrapped):
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
     # TODO-TEST: regression: these cached-properties are actually cached
-    __defaults__ = (None,)
 
     def __str__(self):
         return self.name
@@ -61,7 +59,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                     (result.process == 'starting' and result.exitcode == 0 and result.seconds == 0)
             ):
                 result = result._replace(state='ready')
-        debug('PARSED: %s', result)
+        trace('PARSED: %s', result)
         return result
 
     @cached_property
@@ -108,10 +106,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         while racelimit > 0:
             racelimit -= 1
 
-            if not locked(self.path.strpath):
-                return  # assertion success
-
-            check_lock(self.path.strpath)
+            try:
+                with self.flock():
+                    return  # assertion success; nothing is running
+            except Locked:
+                show_runaway_processes(self.path.strpath)
 
         raise Impossible('lost the race 10 times in a row')
 
@@ -159,42 +158,65 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             self.path.join('supervise').strpath,
         ))
 
+    @contextmanager
+    def flock(self):
+        # if we already have the lock, from a parent process, use it.
+        lock = os.environ.pop('PGCTL_SERVICE_LOCK', None)
+        debug('parentlock: %r', lock)
+        if lock:
+            lock = int(lock)
+            debug('retrieved parent lock! %i', lock)
+            try:
+                yield lock
+            finally:
+                os.close(lock)
+        else:
+            from .flock import flock
+            with flock(self.path.strpath) as lock:
+                debug('LOCK: %i', lock)
+                self.ensure_directory_structure()
+                with self.path.as_cwd():
+                    yield lock
+
     @idempotent_supervise
     def background(self):
         """Run supervise(1), while ensuring it is properly symlinked."""
-        with self.path.as_cwd():
+        with self.flock() as lock:
             log = self.path.join('log').open('a')
             log = prepend_timestamps_to(log)
-            result = Popen(
+            Popen(
                 ('s6-supervise', self.path.strpath),
                 stdin=open(os.devnull, 'w'),
                 stdout=log.fileno(),
                 stderr=log.fileno(),
-                env=self.supervise_env,
+                env=self.supervise_env(lock, debug=False),
                 close_fds=False,  # we must keep the flock file descriptor opened.
             )
             log.close()
-        return result
 
     @idempotent_supervise
     def foreground(self):
-        exec_(
-            ('s6-supervise', self.path.strpath),
-            env=dict(self.supervise_env, PGCTL_DEBUG='true')
-        )
+        with self.flock() as lock:
+            exec_(
+                ('s6-supervise', self.path.strpath),
+                env=self.supervise_env(lock, debug=True),
+            )
 
     @cached_property
     def name(self):
         return self.path.basename
 
-    @cached_property
-    def supervise_env(self):
+    def supervise_env(self, lock, debug):
         """Returns an environment dict to use for running supervise."""
         env = dict(
             os.environ,
             PGCTL_SCRATCH=str(self.scratch_dir),
             # TODO-TEST: assert this env var is available and correct
             PGCTL_SERVICE=str(self.path),
+            PGCTL_SERVICE_LOCK=str(lock),
         )
-        env.pop('PGCTL_DEBUG', None)
+        if debug:
+            env['PGCTL_DEBUG'] = 'true'
+        else:
+            env.pop('PGCTL_DEBUG', None)
         return frozendict(env)

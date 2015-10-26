@@ -3,6 +3,8 @@ set -eu
 # Users must follow this pattern if they can't exec a single subprocess.
 # TODO: simplify this use case by improving dumb-init:
 #       https://github.com/Yelp/dumb-init/issues/4
+# FIXME: this recipe still doesn't work if there's a full pipeline buffer that
+#       takes significant time to empty: yes | pv -qL 10
 term() {
     # ignore SIGTERM for the moment
     trap '' TERM
@@ -13,7 +15,14 @@ term() {
 }
 trap term TERM
 
-yes oh, hi! | pv -qL 10 &
-yes error | pv -qL 10 >&2 &
+slowprint() {
+    while :; do
+        echo "$@"
+        sleep 0.1
+    done
+}
+
+slowprint oh, hi! &
+slowprint error >&2 &
 
 wait

@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import argparse
 import os
 import time
-from subprocess import MAXFD
 from time import time as now
 
 from cached_property import cached_property
@@ -17,6 +16,7 @@ from .config import Config
 from .configsearch import search_parent_directories
 from .daemontools import SvStat
 from .debug import debug
+from .debug import trace
 from .errors import CircularAliases
 from .errors import LockHeld
 from .errors import NoPlayground
@@ -122,7 +122,7 @@ def timeout(service_name, error, action_name, start_time, timeout_length, check_
         pgctl_print(error_message)
         return True
     else:
-        debug('service %s still waiting: %.1f seconds.', service_name, limit_time - curr_time)
+        trace('service %s still waiting: %.1f seconds.', service_name, limit_time - curr_time)
         return False
 
 
@@ -133,8 +133,6 @@ class PgctlApp(object):
 
     def __call__(self):
         """Run the app."""
-        # ensure no weird file descriptors are open.
-        os.closerange(3, MAXFD)
         # config guarantees this is set
         command = self.pgconf['command']
         # argparse guarantees this is an attribute
@@ -153,6 +151,7 @@ class PgctlApp(object):
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
+        debug('changestate')
         try:
             with flock(self.pgdir.strpath) as lock:
                 set_non_inheritable(lock)
@@ -210,7 +209,7 @@ class PgctlApp(object):
         if state == 'start':
             # we don't want services that failed to start to be 'up'
             failapp.stop()
-        return 'Some services failed to %s: %s' % (state, commafy(failed))
+        raise PgctlUserMessage('Some services failed to %s: %s' % (state, commafy(failed)))
 
     def start(self):
         """Idempotent start of a service or group of services"""
@@ -233,15 +232,13 @@ class PgctlApp(object):
 
     def restart(self):
         """Starts and stops a service"""
-        result = self.stop()
-        if result:
-            return result
-        return self.start()
+        self.stop()
+        self.start()
 
     def reload(self):
         """Reloads the configuration for a service"""
         pgctl_print('reload:', commafy(self.service_names))
-        return 'reloading is not yet implemented.'
+        raise PgctlUserMessage('reloading is not yet implemented.')
 
     def log(self, interactive=None):
         """Displays the stdout and stderr for a service or group of services"""
@@ -271,7 +268,9 @@ class PgctlApp(object):
             # start supervise in the foreground with the service up
             service, = self.services  # pylint:disable=unpacking-non-sequence
         except ValueError:
-            return 'Must debug exactly one service, not: ' + commafy(self.service_names)
+            raise PgctlUserMessage(
+                'Must debug exactly one service, not: ' + commafy(self.service_names),
+            )
 
         self.stop()
         service.foreground()  # never returns
