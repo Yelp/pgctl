@@ -1,8 +1,8 @@
-**note:** For maintainers only.
+**NOTE:** This guide is only useful for the owners of the pgctl project.
 
 1. `git checkout upstream/master -b {{branch}}`
-1. bump setup.py
-1. bump doc versions in docs/source/conf.py
+1. bump `pgctl/__init__.py`
+1. bump doc versions in `docs/source/conf.py`
 1. `git commit -m "{{version}}"`
 1. Create a pull request
 1. Wait for review / merge
@@ -13,4 +13,4 @@
     1. if you need to set up pypy auth, `python setup.py register` and follow the prompts
     1. `python setup.py sdist`
     1. `twine upload --skip-existing dist/*`
-1. `fetch_python_package pgctl` -- upload to pypi.yelpcorp:  
+1. `fetch_python_package pgctl` -- upload to pypi.yelpcorp
