@@ -38,6 +38,8 @@ $TOP/tests/testing/install_coverage_pth.py
 if [ -z "$*" ]; then
     NCPU=$(getconf _NPROCESSORS_CONF)
     n=$((NCPU < 5 ? NCPU * 2 : 10))
+    # FIXME: the coverage drops out if we run in parallel D:
+    n=0
     set -- -n $n $TOP/tests $($TOP/tests/testing/get_modulefile.py $PROJECT)
 
     # don't measure coverage during linting
