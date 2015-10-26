@@ -94,7 +94,9 @@ you.
    :maxdepth: 2
    :glob:
 
-   developer/*
+   developer/contributing
+   developer/design
+   developer/bugs
 
 
 .. vim:textwidth=79:shiftwidth=3
