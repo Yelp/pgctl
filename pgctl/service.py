@@ -15,7 +15,6 @@ from py._error import error as pylib_error
 
 from .daemontools import prepend_timestamps_to
 from .daemontools import svc
-from .daemontools import svok
 from .daemontools import SvStat
 from .daemontools import svstat
 from .debug import debug
@@ -23,21 +22,32 @@ from .debug import trace
 from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
-from .flock import Locked
 from .functions import exec_
 from .functions import show_runaway_processes
 
 
-def idempotent_supervise(wrapped):
-    """Run supervise(2), but be successful if it's run too many times."""
-
-    def wrapper(self):
-        if svok(self.path.strpath):
-            return
+@contextmanager
+def flock(path):
+    """attempt to show the user a better message on failure, and handle the race condition"""
+    race_limit = 10
+    from . import flock
+    while True:
+        try:
+            lock = flock.acquire(path)
+        except flock.Locked:
+            show_runaway_processes(path)
+            if race_limit > 0:
+                race_limit -= 1
+            else:
+                raise Impossible('lock is held, but not by any process, ten times')
         else:
-            return wrapped(self)
+            debug('LOCK: %i', lock)
+            break
 
-    return wrapper
+    try:
+        yield lock
+    finally:
+        flock.release(lock)
 
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
@@ -46,8 +56,14 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def __str__(self):
         return self.name
 
+    def supervised(self):
+        # TODO-TEST: bring service up, clean symlink, run Service.supervised()
+        self.ensure_exists()
+        from .daemontools import svok
+        return svok(self.path.strpath)
+
     def svstat(self):
-        self.assert_exists()
+        self.ensure_exists()
         with self.path.dirpath().as_cwd():
             result = svstat(self.name)
         if not self.notification_fd.exists():
@@ -77,7 +93,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        self.assert_exists()
+        self.ensure_exists()
         svc(('-dx', self.path.strpath))
 
     def __get_timeout(self, name, default):
@@ -102,26 +118,27 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if status.state != SvStat.UNSUPERVISED:
             raise NotReady('its status is ' + str(status))
 
-        racelimit = 10
-        while racelimit > 0:
-            racelimit -= 1
-
-            try:
-                with self.flock():
-                    return  # assertion success; nothing is running
-            except Locked:
-                show_runaway_processes(self.path.strpath)
-
-        raise Impossible('lost the race 10 times in a row')
+        with self.flock():
+            return  # assertion success; nothing is running
 
     def assert_ready(self):
         status = self.svstat()
         if status.state != 'ready':
             raise NotReady('its status is ' + str(status))
 
-    def assert_exists(self):
+    def ensure_exists(self):
         if not self.path.check(dir=True):
             raise NoSuchService("No such playground service: '%s'" % self.name)
+        else:
+            # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
+            supervise_in_scratch = self.scratch_dir.join('supervise')
+            supervise_in_scratch.ensure_dir()
+            # TODO-TEST: a test that fails without -n
+            check_call((
+                'ln', '-sfn', '--',
+                supervise_in_scratch.strpath,
+                self.path.join('supervise').strpath,
+            ))
 
     def ensure_logs(self):
         self.path.ensure('log')
@@ -136,7 +153,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         Instead, we stick them in a scratch directory outside of the repo.
         """
         # TODO: enforce that we have the supervise lock when this is called, somehow
-        self.assert_exists()
+        self.ensure_exists()
         self.ensure_logs()
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
         try:
@@ -147,16 +164,6 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if self.ready_script.exists():
             with self.notification_fd.open('w') as f:
                 f.write('%i\n' % f.fileno())
-        supervise_in_scratch = self.scratch_dir.join('supervise')
-        supervise_in_scratch.ensure_dir()
-
-        # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
-        # TODO-TEST: a test that fails without -n
-        check_call((
-            'ln', '-sfn', '--',
-            supervise_in_scratch.strpath,
-            self.path.join('supervise').strpath,
-        ))
 
     @contextmanager
     def flock(self):
@@ -171,16 +178,17 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             finally:
                 os.close(lock)
         else:
-            from .flock import flock
             with flock(self.path.strpath) as lock:
                 debug('LOCK: %i', lock)
                 self.ensure_directory_structure()
                 with self.path.as_cwd():
                     yield lock
 
-    @idempotent_supervise
     def background(self):
         """Run supervise(1), while ensuring it is properly symlinked."""
+        if self.supervised():
+            return
+
         with self.flock() as lock:
             log = self.path.join('log').open('a')
             log = prepend_timestamps_to(log)
@@ -194,7 +202,6 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             )
             log.close()
 
-    @idempotent_supervise
     def foreground(self):
         with self.flock() as lock:
             exec_(

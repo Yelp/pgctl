@@ -366,6 +366,31 @@ tail: ready (pid {PID}) {TIME} seconds
             1,
         )
 
+    def it_can_recover_from_a_git_clean(self, in_example_dir, service_name):
+        def assert_status():
+            assert_command(
+                ('pgctl-2015', 'status'),
+                '''\
+sleep: down
+tail: ready (pid {PID}) {TIME} seconds
+''',
+                '',
+                0,
+                norm=norm.pgctl,
+            )
+
+        check_call(('pgctl-2015', 'start', 'tail'))
+        assert_status()
+
+        # simulate a git-clean: blow everything away, create a fresh copy
+        parent_dir = in_example_dir.join('..')
+        with parent_dir.as_cwd():
+            in_example_dir.remove(rec=True)
+            from testing import copy_example
+            copy_example(service_name, parent_dir)
+
+        assert_status()
+
 
 class DescribeReload(object):
 

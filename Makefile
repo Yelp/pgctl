@@ -16,7 +16,7 @@ test: .tox/py27
 	tox -e py27 -- $(ARGS)
 
 lint:
-	pre-commit run --no-stash
+	git diff --name-only | xargs pre-commit run --files
 
 .PHONY: spec unit
 spec:
