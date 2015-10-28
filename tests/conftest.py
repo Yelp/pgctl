@@ -5,12 +5,10 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-import shutil
 
 from py._path.local import LocalPath as Path
 from pytest import yield_fixture as fixture
-
-TOP = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from testing import copy_example
 
 from pgctl.cli import PgctlApp
 
@@ -20,16 +18,14 @@ def in_example_dir(tmpdir, homedir, service_name):
     os.environ['HOME'] = homedir.strpath
     os.environ.pop('XDG_RUNTIME_DIR', None)
 
-    template_dir = os.path.join(TOP, 'tests/examples', service_name)
-    tmpdir = tmpdir.join(service_name)
-    shutil.copytree(template_dir, tmpdir.strpath)
+    example_dir = copy_example(service_name, tmpdir)
 
-    with tmpdir.as_cwd():
+    with example_dir.as_cwd():
         try:
-            yield tmpdir
+            yield example_dir
         finally:
             #  pytest does a chdir before calling cleanup handlers
-            with tmpdir.as_cwd():
+            with example_dir.as_cwd():
                 PgctlApp().stop()
 
 

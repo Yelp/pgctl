@@ -38,12 +38,16 @@ def acquire(file_or_dir):
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except IOError as error:
         if error.errno == 11:
-            os.close(fd)
+            release(fd)
             six.reraise(Locked, Locked(file_or_dir))
         else:
             raise
 
     return fd
+
+
+def release(lock):
+    os.close(lock)
 
 
 @contextmanager
