@@ -113,3 +113,22 @@ def set_non_inheritable(fd):
     from termios import FIOCLEX
     from fcntl import ioctl
     return ioctl(fd, FIOCLEX)
+
+
+def symlink_if_necessary(path, destination):
+    """forcefully create a symlink with a given value, but only if it doesn't already exist"""
+    # TODO-TEST
+    from py._error import error as pylib_error
+    try:
+        supervise_link = destination.readlink()
+    except (pylib_error.ENOENT, pylib_error.EINVAL):
+        supervise_link = None
+
+    if supervise_link != path.strpath:
+        # TODO-TEST: a test that fails without -n
+        from subprocess import check_call
+        check_call((
+            'ln', '-sfn', '--',
+            path.strpath,
+            destination.strpath,
+        ))

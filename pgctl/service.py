@@ -6,12 +6,10 @@ from __future__ import unicode_literals
 import os
 from collections import namedtuple
 from contextlib import contextmanager
-from subprocess import check_call
 from subprocess import Popen
 
 from cached_property import cached_property
 from frozendict import frozendict
-from py._error import error as pylib_error
 
 from .daemontools import prepend_timestamps_to
 from .daemontools import svc
@@ -24,6 +22,7 @@ from .errors import NoSuchService
 from .errors import NotReady
 from .functions import exec_
 from .functions import show_runaway_processes
+from .functions import symlink_if_necessary
 
 
 @contextmanager
@@ -129,16 +128,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def ensure_exists(self):
         if not self.path.check(dir=True):
             raise NoSuchService("No such playground service: '%s'" % self.name)
-        else:
-            # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
-            supervise_in_scratch = self.scratch_dir.join('supervise')
-            supervise_in_scratch.ensure_dir()
-            # TODO-TEST: a test that fails without -n
-            check_call((
-                'ln', '-sfn', '--',
-                supervise_in_scratch.strpath,
-                self.path.join('supervise').strpath,
-            ))
+
+        # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
+        supervise_in_scratch = self.scratch_dir.join('supervise')
+        supervise_in_scratch.ensure_dir()
+        symlink_if_necessary(supervise_in_scratch, self.path.join('supervise'))
 
     def ensure_logs(self):
         self.path.ensure('log')
@@ -156,6 +150,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.ensure_exists()
         self.ensure_logs()
         self.path.ensure('nosetsid')  # see http://skarnet.org/software/s6/servicedir.html
+        from py._error import error as pylib_error
         try:
             self.path.join('down').remove()  # pgctl doesn't support the s6 down file
         except pylib_error.ENOENT:
