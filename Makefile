@@ -50,6 +50,11 @@ clean:
 realclean: clean
 	rm -rf .tox
 
+.PHONY: release
+release:
+	python setup.py sdist
+	twine upload --skip-existing dist/*
+	fetch_python_package pgctl
 
 # disable default implicit rules
 .SUFFIXES:
