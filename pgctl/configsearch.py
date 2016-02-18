@@ -19,6 +19,7 @@ def get_filesystem_id(path):
 
 def insecure(path):
     """Can this path can be altered by someone other than the owner (or root)?"""
+    # TODO: return the reason it's insecure, and have caller print warning
     from os.path import isdir
     pathstat = os.stat(path)
     mode = pathstat.st_mode

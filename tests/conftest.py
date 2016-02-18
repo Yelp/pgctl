@@ -10,8 +10,6 @@ from py._path.local import LocalPath as Path
 from pytest import yield_fixture as fixture
 from testing import copy_example
 
-from pgctl.cli import PgctlApp
-
 
 @fixture
 def in_example_dir(tmpdir, homedir, service_name):
@@ -26,6 +24,9 @@ def in_example_dir(tmpdir, homedir, service_name):
         finally:
             #  pytest does a chdir before calling cleanup handlers
             with example_dir.as_cwd():
+                # XXX: this is imported here so the blanking of
+                # XDG_RUNTIME_DIR above affects this call
+                from pgctl.cli import PgctlApp
                 PgctlApp().stop()
 
 
