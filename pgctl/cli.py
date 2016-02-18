@@ -8,6 +8,7 @@ import os
 import time
 from time import time as now
 
+import six
 from cached_property import cached_property
 from frozendict import frozendict
 from py._path.local import LocalPath as Path
@@ -143,7 +144,7 @@ class PgctlApp(object):
             # we don't need or want a stack trace for user errors
             result = str(error)
 
-        if isinstance(result, basestring):
+        if isinstance(result, six.string_types):
             return CHANNEL + ' ERROR: ' + result
         else:
             return result

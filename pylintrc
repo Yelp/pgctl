@@ -1,13 +1,13 @@
 [MESSAGES CONTROL]
 disable=
+    fixme,
     locally-disabled,
     missing-docstring,
-    fixme,
-    star-args,
-    redefined-builtin,
     no-init,
+    redefined-builtin,
     redefined-outer-name,
-
+    redefined-variable-type,
+    star-args,
 
 [REPORTS]
 output-format=colorized

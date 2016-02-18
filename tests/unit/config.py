@@ -6,13 +6,10 @@ import os
 
 import mock
 import pytest
-parametrize = pytest.mark.parametrize
+from testfixtures import ShouldRaise
+from testfixtures import StringComparison as S
 
 import pgctl.config as C
-from testfixtures import (
-    ShouldRaise,
-    StringComparison as S,
-)
 
 
 class example1(object):
@@ -69,7 +66,7 @@ services:
         'services': ['first', 'second', 'third'],
     }
 
-    parameters = parametrize(
+    parameters = pytest.mark.parametrize(
         'format,suffix',
         (
             ('ini', 'ini'),
