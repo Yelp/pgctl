@@ -14,7 +14,7 @@ def main():
         description='A tool to configure and manage developer playgrounds.',
         url='http://pgctl.readthedocs.org/en/latest/',
         version=__version__,
-        platforms='linux',
+        platforms=['linux'],
         classifiers=[
             'License :: OSI Approved :: MIT License',
             'Programming Language :: Python :: 2',
