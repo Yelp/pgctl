@@ -33,6 +33,7 @@ def it_is_disallowed():
     second = Popen(('pgctl-2015', 'restart'), stdout=PIPE, stderr=PIPE)
 
     first_stdout, first_stderr = first.communicate()
+    first_stdout, first_stderr = first_stdout.decode('UTF-8'), first_stderr.decode('UTF-8')
     show_both(first_stdout, first_stderr)
     assert norm.pgctl(first_stderr) == '''\
 [pgctl] Stopping: sweet
@@ -46,6 +47,7 @@ def it_is_disallowed():
     assert first.returncode == 1
 
     second_stdout, second_stderr = second.communicate()
+    second_stdout, second_stderr = second_stdout.decode('UTF-8'), second_stderr.decode('UTF-8')
     show_both(second_stdout, second_stderr)
     assert second_stderr == '[pgctl] ERROR: another pgctl instance is already managing this playground.\n'
     assert second_stdout == ''
