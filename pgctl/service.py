@@ -20,7 +20,6 @@ from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
 from .functions import exec_
-from .functions import set_fd_inheritable
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
 from .subprocess import Popen
@@ -44,7 +43,6 @@ def flock(path):
             debug('LOCK: %i', lock)
             break
 
-    set_fd_inheritable(lock, True)
     try:
         yield lock
     finally:

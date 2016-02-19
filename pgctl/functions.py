@@ -104,23 +104,6 @@ def commafy(items):
     return ', '.join(str(x) for x in items)
 
 
-def set_fd_inheritable(fd, inheritable):
-    """
-    disable the "inheritability" of a file descriptor
-
-    See Also:
-        https://docs.python.org/3/library/os.html#inheritance-of-file-descriptors
-        https://github.com/python/cpython/blob/65e6c1eff3/Python/fileutils.c#L846-L857
-    """
-    from fcntl import ioctl
-    if inheritable:
-        from termios import FIONCLEX
-        return ioctl(fd, FIONCLEX)
-    else:
-        from termios import FIOCLEX
-        return ioctl(fd, FIOCLEX)
-
-
 def symlink_if_necessary(path, destination):
     """forcefully create a symlink with a given value, but only if it doesn't already exist"""
     # TODO-TEST
