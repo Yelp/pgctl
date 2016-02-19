@@ -159,7 +159,7 @@ def svstat_parse(svstat_string):
 
     process, buffer = parse(buffer, 'want ', ', ')
     if process is not None:
-        process = process.strip(b'\x00')  # s6 microbug
+        process = process.strip('\x00')  # s6 microbug
         if process == 'up':
             process = 'starting'
         elif process == 'down':
