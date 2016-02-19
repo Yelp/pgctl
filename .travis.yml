@@ -4,6 +4,7 @@ env:
 python:
     # in order of most-valuable tests first
     - "2.7"
+    - "3.5"
 
 matrix:
     # notify a failed build as soon as anything fails
