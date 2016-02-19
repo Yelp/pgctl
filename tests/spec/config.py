@@ -6,6 +6,7 @@ import os
 from contextlib import contextmanager
 
 import mock
+from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
 from pgctl.config import Config
@@ -66,28 +67,29 @@ class DescribeCombined(object):
         from sys import executable
         expected_output = '''\
 {
-    "app": "app", 
-    "app/a": "app/a", 
-    "app/b": "app/b", 
+    "app": "app",
+    "app/a": "app/a",
+    "app/b": "app/b",
     "apps": [
-        "1", 
-        "2", 
+        "1",
+        "2",
         "3"
-    ], 
-    "environ": "environ", 
+    ],
+    "environ": "environ",
     "environs": [
-        "1", 
-        "2", 
+        "1",
+        "2",
         "3"
-    ], 
-    "etc": "etc", 
+    ],
+    "etc": "etc",
     "home": "home"
 }
-'''  # noqa
+'''
         with setup(tmpdir):
             assert_command(
                 (executable, '-m', 'pgctl.config', 'my'),
                 expected_output,
                 '',
                 0,
+                norm=norm_trailing_whitespace_json,
             )

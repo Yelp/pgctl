@@ -59,9 +59,9 @@ def disinherit_pytest_pipe():
 
     Solution: disinherit the pipe.
     """
-    from pgctl.functions import set_non_inheritable
+    from pgctl.flock import set_fd_inheritable
     try:
-        set_non_inheritable(3)
+        set_fd_inheritable(3, False)
     except IOError as error:  # this only happens under single-process pytest  :pragma:nocover:
         if error.errno == 9:  # no such fd
             pass

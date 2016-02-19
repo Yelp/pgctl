@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 
 import json
 import os
+import sys
 
 from frozendict import frozendict
 
@@ -70,10 +71,11 @@ def ps(pids):
     if not pids:
         return ''
 
-    from subprocess import PIPE, Popen
+    from .subprocess import PIPE, Popen
     cmd = ('ps', '--forest', '-wfj',) + pids
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     stdout, _ = process.communicate()
+    stdout = stdout.decode('UTF-8')
     if stdout.count('\n') > 1:
         return stdout
     else:
@@ -102,19 +104,6 @@ def commafy(items):
     return ', '.join(str(x) for x in items)
 
 
-def set_non_inheritable(fd):
-    """
-    disable the "inheritability" of a file descriptor
-
-    See Also:
-        https://docs.python.org/3/library/os.html#inheritance-of-file-descriptors
-        https://github.com/python/cpython/blob/65e6c1eff3/Python/fileutils.c#L846-L857
-    """
-    from termios import FIOCLEX
-    from fcntl import ioctl
-    return ioctl(fd, FIOCLEX)
-
-
 def symlink_if_necessary(path, destination):
     """forcefully create a symlink with a given value, but only if it doesn't already exist"""
     # TODO-TEST
@@ -126,9 +115,15 @@ def symlink_if_necessary(path, destination):
 
     if supervise_link != path.strpath:
         # TODO-TEST: a test that fails without -n
-        from subprocess import check_call
+        from .subprocess import check_call
         check_call((
             'ln', '-sfn', '--',
             path.strpath,
             destination.strpath,
         ))
+
+
+def print_stderr(s):
+    # Sadness: https://bugs.python.org/issue13601
+    print(s, file=sys.stderr)
+    sys.stderr.flush()

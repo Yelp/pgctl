@@ -61,7 +61,7 @@ class DescribeFlock(object):
         assert os.path.isdir(tmpfile)
 
     def it_stays_locked_for_the_lifetime_of_subprocesses(self, tmpfile):
-        from subprocess import Popen
+        from pgctl.subprocess import Popen
 
         with flock(tmpfile):
             p = Popen(('sleep', '99999'))

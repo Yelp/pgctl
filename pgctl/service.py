@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 import os
 from collections import namedtuple
 from contextlib import contextmanager
-from subprocess import Popen
 
 from cached_property import cached_property
 from frozendict import frozendict
@@ -23,6 +22,7 @@ from .errors import NotReady
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
+from .subprocess import Popen
 
 
 @contextmanager

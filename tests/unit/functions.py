@@ -4,8 +4,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import six
 from frozendict import frozendict
 from testfixtures import ShouldRaise
+from testing.norm import norm_trailing_whitespace_json
 
 from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
@@ -36,19 +38,20 @@ class DescribeJSONEncoder(object):
             }),
         })
         result = JSONEncoder(sort_keys=True, indent=4).encode(test_dict)
-        assert result == '''\
+        assert norm_trailing_whitespace_json(result) == '''\
 {
     "aliases": {
         "default": ""
-    }, 
-    "pgdir": "playground", 
+    },
+    "pgdir": "playground",
     "services": [
         "default"
     ]
-}'''  # noqa
+}'''
 
     def it_encodes_other(self):
-        with ShouldRaise(TypeError("<type 'object'> is not JSON serializable")):
+        msg = 'type' if six.PY2 else 'class'
+        with ShouldRaise(TypeError("<{} 'object'> is not JSON serializable".format(msg))):
             JSONEncoder(sort_keys=True, indent=4).encode(object)
 
 

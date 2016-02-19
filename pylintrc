@@ -1,5 +1,6 @@
 [MESSAGES CONTROL]
 disable=
+    bad-continuation,
     fixme,
     locally-disabled,
     missing-docstring,
@@ -39,10 +40,11 @@ max-line-length=131
 # max-module-lines=500
 
 [TYPECHECK]
-ignored-classes=pytest,LocalPath
+ignored-classes=pytest,LocalPath,_MovedItems
 
 [SIMILARITIES]
 ignore-imports=yes
+min-similarity-lines=5
 
 [DESIGN]
 min-public-methods=0

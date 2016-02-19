@@ -4,25 +4,24 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-from subprocess import check_call
-from subprocess import Popen
 
 import pytest
-from pytest import yield_fixture as fixture
+import six
 from testing import norm
 from testing import pty
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
+from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
-
-parametrize = pytest.mark.parametrize
+from pgctl.subprocess import check_call
+from pgctl.subprocess import Popen
 
 
 class DescribePgctlLog(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'output'
 
@@ -93,7 +92,7 @@ class DescribePgctlLog(object):
         # TODO: buf is a list, use wait_for() to append to it
         limit = 3.0
         wait = .1
-        buf = ''
+        buf = b''
         while True:
             try:
                 block = os.read(read, 1024)
@@ -113,7 +112,7 @@ class DescribePgctlLog(object):
             buf += block
 
         from testfixtures import StringComparison as S
-        buf = norm.pgctl(buf)
+        buf = norm.pgctl(buf.decode('UTF-8'))
         print('NORMED:')
         print(buf)
         assert buf == S('''(?s)\
@@ -163,7 +162,7 @@ class DescribePgctlLog(object):
 
 class DescribeDateExample(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'date'
 
@@ -175,7 +174,7 @@ class DescribeDateExample(object):
 
 class DescribeTailExample(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'tail'
 
@@ -268,7 +267,7 @@ class DescribeRestart(object):
 
 class DescribeStartMultipleServices(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'multiple'
 
@@ -304,7 +303,7 @@ class DescribeStartMultipleServices(object):
 
 class DescribeStatus(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'multiple'
 
@@ -408,7 +407,7 @@ class DescribeReload(object):
 
 class DescribeAliases(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'output'
 
@@ -447,7 +446,7 @@ class DescribeAliases(object):
 
 class DescribeEnvironment(object):
 
-    @fixture
+    @pytest.yield_fixture
     def service_name(self):
         yield 'environment'
 
@@ -482,7 +481,7 @@ class DescribeEnvironment(object):
 
 class DescribePgdirMissing(object):
 
-    @parametrize(
+    @pytest.mark.parametrize(
         'command',
         ('start', 'stop', 'status', 'restart', 'reload', 'log', 'debug'),
     )
@@ -502,17 +501,17 @@ class DescribePgdirMissing(object):
         "default": [
             "(all services)"
         ]
-    }, 
-    "command": "config", 
-    "pgdir": "playground", 
-    "pghome": "~/.run/pgctl", 
-    "poll": ".01", 
+    },
+    "command": "config",
+    "pgdir": "playground",
+    "pghome": "~/.run/pgctl",
+    "poll": ".01",
     "services": [
         "default"
-    ], 
+    ],
     "timeout": "2.0"
 }
-'''  # noqa
+'''
 
         with tmpdir.as_cwd():
             assert_command(
@@ -520,6 +519,7 @@ class DescribePgdirMissing(object):
                 expected_output,
                 '',
                 0,
+                norm=norm_trailing_whitespace_json,
             )
 
     def it_can_still_show_help(self, tmpdir):
@@ -547,15 +547,20 @@ optional arguments:
             )
 
     def it_still_shows_help_without_args(self, tmpdir):
+        expected = '''\
+usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+                  {{start,stop,status,restart,reload,log,debug,config}}
+                  [services [services ...]]
+pgctl-2015: error: {}
+'''.format(
+            'too few arguments'
+            if six.PY2 else
+            'the following arguments are required: command'
+        )
         with tmpdir.as_cwd():
             assert_command(
                 ('pgctl-2015'),
                 '',
-                '''\
-usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
-                  {start,stop,status,restart,reload,log,debug,config}
-                  [services [services ...]]
-pgctl-2015: error: too few arguments
-''',
+                expected,
                 2,
             )

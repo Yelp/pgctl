@@ -23,6 +23,23 @@ class Locked(IOError):
     pass
 
 
+def set_fd_inheritable(fd, inheritable):
+    """
+    disable the "inheritability" of a file descriptor
+
+    See Also:
+        https://docs.python.org/3/library/os.html#inheritance-of-file-descriptors
+        https://github.com/python/cpython/blob/65e6c1eff3/Python/fileutils.c#L846-L857
+    """
+    from fcntl import ioctl
+    if inheritable:
+        from termios import FIONCLEX
+        return ioctl(fd, FIONCLEX)
+    else:
+        from termios import FIOCLEX
+        return ioctl(fd, FIOCLEX)
+
+
 def acquire(file_or_dir):
     """raises flock.Locked on failure"""
     try:
@@ -43,6 +60,7 @@ def acquire(file_or_dir):
         else:
             raise
 
+    set_fd_inheritable(fd, True)
     return fd
 
 

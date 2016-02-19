@@ -24,10 +24,10 @@ from .errors import NoPlayground
 from .errors import PgctlUserMessage
 from .errors import Unsupervised
 from .flock import flock
+from .flock import set_fd_inheritable
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
-from .functions import set_non_inheritable
 from .functions import uniq
 from .service import Service
 from pgctl import __version__
@@ -99,6 +99,7 @@ def pgctl_print(*print_args, **print_kwargs):
     from sys import stderr
     print_kwargs.setdefault('file', stderr)
     print(CHANNEL, *print_args, **print_kwargs)
+    stderr.flush()
 
 
 def timeout(service_name, error, action_name, start_time, timeout_length, check_time):
@@ -155,7 +156,7 @@ class PgctlApp(object):
         debug('changestate')
         try:
             with flock(self.pgdir.strpath) as lock:
-                set_non_inheritable(lock)
+                set_fd_inheritable(lock, False)
                 return self.__locked_change_state(state)
         except flock.Locked:
             raise LockHeld('another pgctl instance is already managing this playground.')

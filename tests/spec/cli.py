@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 import os
 
 import pytest
+import six
+from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
 from pgctl import __version__
@@ -34,23 +36,24 @@ class DescribeCli(object):
         "default": [
             "(all services)"
         ]
-    }}, 
-    "command": "config", 
-    "pgdir": "playground", 
-    "pghome": "{pghome}", 
-    "poll": ".01", 
+    }},
+    "command": "config",
+    "pgdir": "playground",
+    "pghome": "{pghome}",
+    "poll": ".01",
     "services": [
         "default"
-    ], 
+    ],
     "timeout": "2.0"
 }}
-'''.format(pghome=expected_pghome)  # noqa
+'''.format(pghome=expected_pghome)
 
         assert_command(
             ('pgctl-2015', 'config'),
             expected_output,
             '',
             0,
+            norm=norm_trailing_whitespace_json,
             cwd=tmpdir.strpath,
             env=env,
         )
@@ -61,6 +64,7 @@ class DescribeCli(object):
             expected_output,
             '',
             0,
+            norm=norm_trailing_whitespace_json,
             cwd=tmpdir.strpath,
             env=env,
         )
@@ -71,17 +75,23 @@ class DescribeCli(object):
             '',
             '''\
 usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
-                  {start,stop,status,restart,reload,log,debug,config}
+                  {{start,stop,status,restart,reload,log,debug,config}}
                   [services [services ...]]
-pgctl-2015: error: too few arguments
-''',
+pgctl-2015: error: {}
+'''.format(
+                'too few arguments'
+                if six.PY2 else
+                'the following arguments are required: command'
+            ),
             2,  # too few arguments
         )
 
     def it_shows_version(self):
+        version_s = __version__ + '\n'
         assert_command(
             ('pgctl-2015', '--version'),
-            '',
-            __version__ + '\n',
+            # argparse changes where `version` goes in py3
+            '' if six.PY2 else version_s,
+            version_s if six.PY2 else '',
             0,  # too few arguments
         )
