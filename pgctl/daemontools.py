@@ -165,7 +165,7 @@ def svstat_parse(svstat_string):
         elif process == 'down':
             process = 'stopping'
         else:
-            raise ValueError('unexpected value for `process`: %r' % process)
+            raise ValueError("unexpected value for `process`: '%s'" % process)
 
     ready, buffer = parse(buffer, 'ready ', ' seconds', int)
     if ready is not None and state == 'up':
