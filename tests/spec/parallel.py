@@ -1,14 +1,15 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from subprocess import PIPE
-from subprocess import Popen
 from time import sleep
 
 import pytest
 from testing import norm
 from testing.subprocess import assert_command
 from testing.subprocess import show_both
+
+from pgctl.subprocess import PIPE
+from pgctl.subprocess import Popen
 
 
 @pytest.mark.parametrize('service_name', ['slow-shutdown'])

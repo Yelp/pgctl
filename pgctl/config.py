@@ -16,6 +16,8 @@ import logging
 from os import environ
 from os.path import join
 
+import six
+
 try:
     from yaml import load as yaml_load
 except ImportError:  # pragma: no cover
@@ -48,8 +50,7 @@ class Config(object):
     def from_file(self, filename):
         # TODO P3: refactor this spaghetti
         if filename.endswith(('.conf', '.ini')):
-            from ConfigParser import SafeConfigParser
-            parser = SafeConfigParser()
+            parser = six.moves.configparser.SafeConfigParser()
             parser.read(filename)
             result = dict(parser.items(self.projectname))
             for key, value in result.items():

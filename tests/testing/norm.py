@@ -34,3 +34,7 @@ class pgctl(Normalized):
         # TODO-TEST: the slow-fuser case:
         (Regex(r' \(it took [\d.]+s to poll\)'), ''),
     )
+
+
+def norm_trailing_whitespace_json(string):
+    return string.replace(' \n', '\n')

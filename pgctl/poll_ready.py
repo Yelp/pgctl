@@ -10,9 +10,9 @@ from __future__ import unicode_literals
 
 import os
 import os.path
-import sys
 
 from .functions import exec_
+from .functions import print_stderr
 
 
 def floatfile(filename):
@@ -33,7 +33,7 @@ def getval(filename, envname, default):
 
 
 def check_ready():
-    from subprocess import call
+    from .subprocess import call
     return call('./ready')
 
 
@@ -41,8 +41,8 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
     from time import sleep
     while True:
         if check_ready() == 0:
-            print('pgctl-poll-ready: service\'s ready check succeeded', file=sys.stderr)
-            os.write(notification_fd, 'ready\n')
+            print_stderr('pgctl-poll-ready: service\'s ready check succeeded')
+            os.write(notification_fd, b'ready\n')
             break
 
         if timeout <= 0:
@@ -52,13 +52,13 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             timeout -= poll_ready
 
     if down_event is None:
-        print('pgctl-poll-ready: heartbeat is disabled during debug -- quitting', file=sys.stderr)
+        print_stderr('pgctl-poll-ready: heartbeat is disabled during debug -- quitting')
         return
 
     # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
     while True:
         if down_event.poll() is not None:
-            print('pgctl-poll-ready: service is stopping -- quitting the poll', file=sys.stderr)
+            print_stderr('pgctl-poll-ready: service is stopping -- quitting the poll')
             break
         elif check_ready() == 0:
             sleep(poll_down)
@@ -66,7 +66,7 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             down_event.terminate()
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
-            print('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you', file=sys.stderr)
+            print_stderr('pgctl-poll-ready: service\'s ready check failed -- we are restarting it for you')
             exec_(('pgctl-2015', 'restart', service))  # doesn't return
 
 
@@ -88,7 +88,7 @@ def main():
         if debug:
             down_event = None
         else:
-            from subprocess import Popen
+            from .subprocess import Popen
             down_event = Popen(
                 ('s6-ftrig-wait', 'event', 'd'),
                 stdout=open(os.devnull, 'w'),  # this prints 'd' otherwise

@@ -5,9 +5,7 @@
     -   id: check-added-large-files
     -   id: check-case-conflict
     -   id: check-docstring-first
-    -   id: check-json
     -   id: check-merge-conflict
-    -   id: check-xml
     -   id: check-yaml
     -   id: debug-statements
     -   id: detect-private-key
@@ -15,6 +13,7 @@
     -   id: end-of-file-fixer
     -   id: flake8
     -   id: requirements-txt-fixer
+    -   id: trailing-whitespace
 -   repo: git://github.com/asottile/reorder_python_imports
     sha: 3d86483455ab5bd06cc1069fdd5ac57be5463f10
     hooks:

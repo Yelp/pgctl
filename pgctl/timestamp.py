@@ -21,13 +21,13 @@ def prepend_timestamps(infile, outfile):
     needstamp = True
     while True:
         c = infile.read(1)
-        if c == '':  # EOF
+        if c == b'':  # EOF
             break
         elif needstamp:
-            outfile.write(timestamp())
+            outfile.write(timestamp().encode('UTF-8'))
             needstamp = False
         outfile.write(c)
-        if c == '\n':
+        if c == b'\n':
             needstamp = True
 
 

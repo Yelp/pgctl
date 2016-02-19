@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 
 import os
 import signal
-from subprocess import check_call
 
 import pytest
 from testing import norm
@@ -16,6 +15,7 @@ from pgctl.daemontools import SvStat
 from pgctl.errors import LockHeld
 from pgctl.functions import show_runaway_processes
 from pgctl.fuser import fuser
+from pgctl.subprocess import check_call
 
 
 def clean_service(service_path):

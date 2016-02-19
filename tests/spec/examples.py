@@ -4,8 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-from subprocess import check_call
-from subprocess import Popen
 
 import pytest
 from pytest import yield_fixture as fixture
@@ -13,9 +11,12 @@ from testing import norm
 from testing import pty
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
+from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
+from pgctl.subprocess import check_call
+from pgctl.subprocess import Popen
 
 parametrize = pytest.mark.parametrize
 
@@ -502,17 +503,17 @@ class DescribePgdirMissing(object):
         "default": [
             "(all services)"
         ]
-    }, 
-    "command": "config", 
-    "pgdir": "playground", 
-    "pghome": "~/.run/pgctl", 
-    "poll": ".01", 
+    },
+    "command": "config",
+    "pgdir": "playground",
+    "pghome": "~/.run/pgctl",
+    "poll": ".01",
     "services": [
         "default"
-    ], 
+    ],
     "timeout": "2.0"
 }
-'''  # noqa
+'''
 
         with tmpdir.as_cwd():
             assert_command(
@@ -520,6 +521,7 @@ class DescribePgdirMissing(object):
                 expected_output,
                 '',
                 0,
+                norm=norm_trailing_whitespace_json,
             )
 
     def it_can_still_show_help(self, tmpdir):

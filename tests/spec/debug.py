@@ -2,9 +2,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import os
-from subprocess import check_call
-from subprocess import PIPE
-from subprocess import Popen
 
 import pytest
 from testing import pty
@@ -13,6 +10,9 @@ from testing.subprocess import assert_command
 from testing.subprocess import ctrl_c
 
 from pgctl.daemontools import SvStat
+from pgctl.subprocess import check_call
+from pgctl.subprocess import PIPE
+from pgctl.subprocess import Popen
 
 pytestmark = pytest.mark.usefixtures('in_example_dir')
 greeter_service = pytest.mark.parametrize('service_name', ['greeter'])
@@ -40,7 +40,8 @@ def assert_works_interactively():
 
     try:
         assert read_line(read) == 'What is your name?\n'
-        proc.stdin.write('Buck\n')
+        proc.stdin.write(b'Buck\n')
+        proc.stdin.flush()
         assert read_line(read) == 'Hello, Buck.\n'
     finally:
         ctrl_c(proc)
@@ -81,6 +82,7 @@ def it_disables_polling_heartbeat():
 
     check_call(('pgctl-2015', 'stop'))
     stdout, stderr = proc.communicate()
+    stdout, stderr = stdout.decode('UTF-8'), stderr.decode('UTF-8')
 
     assert stderr == '''\
 [pgctl] Stopping: slow-startup

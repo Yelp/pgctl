@@ -26,6 +26,7 @@ def debug(msg, *args, **kwargs):
     level = kwargs.pop('level', 1)
     if level <= VERBOSE:
         print('[pgctl] DEBUG:', msg % args, file=stderr)  # pragma: no cover
+        stderr.flush()
 
 
 def trace(msg, *args):

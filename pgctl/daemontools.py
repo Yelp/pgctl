@@ -4,13 +4,13 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from collections import namedtuple
-from subprocess import CalledProcessError
-from subprocess import PIPE
-from subprocess import Popen
-from subprocess import STDOUT
 
 from .debug import trace
 from .errors import Unsupervised
+from .subprocess import CalledProcessError
+from .subprocess import PIPE
+from .subprocess import Popen
+from .subprocess import STDOUT
 
 
 def svc(args):
@@ -20,11 +20,11 @@ def svc(args):
     trace('CMD: %s', cmd)
     process = Popen(cmd, stderr=PIPE)
     _, error = process.communicate()
-    if error.startswith('s6-svc: fatal: unable to control '):
+    if error.startswith(b's6-svc: fatal: unable to control '):
         raise Unsupervised(cmd, error)
     if process.returncode:  # pragma: no cover: there's no known way to hit this.
         import sys
-        sys.stderr.write(error)
+        sys.stderr.write(error.decode('UTF-8'))
         raise CalledProcessError(process.returncode, cmd)
 
 
@@ -62,6 +62,7 @@ def svstat_string(service_path):
     cmd = ('s6-svstat', service_path)
     process = Popen(cmd, stdout=PIPE, stderr=STDOUT)
     status, _ = process.communicate()
+    status = status.decode('UTF-8')
 
     #status is listed per line for each argument
     return status

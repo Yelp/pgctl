@@ -14,7 +14,7 @@ before_install:
 install: ./CI/install/main
 script: tox
 after_success: coveralls
- 
+
 # sudo:false gives us the new, faster cluster and enables caches for public repos
 # http://docs.travis-ci.com/user/workers/container-based-infrastructure/
 sudo: false
