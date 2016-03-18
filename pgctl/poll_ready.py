@@ -37,29 +37,27 @@ def check_ready():
     return call('./ready')
 
 
-def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+def pgctl_poll_ready(down_event, notification_fd, poll_ready, poll_down, check_ready=check_ready):
     from time import sleep
-    while True:
-        if check_ready() == 0:
+    while True:  # waiting for the service to come up.
+        if down_event.poll() is not None:
+            print_stderr('pgctl-poll-ready: service is stopping -- quitting the poll')
+            return
+        elif check_ready() == 0:
             print_stderr('pgctl-poll-ready: service\'s ready check succeeded')
             os.write(notification_fd, b'ready\n')
             break
-
-        if timeout <= 0:
-            return 'pgctl-poll-ready: timeout while waiting for ready'
         else:
             sleep(poll_ready)
-            timeout -= poll_ready
 
-    if down_event is None:
+    if os.environ.get('PGCTL_DEBUG', ''):
         print_stderr('pgctl-poll-ready: heartbeat is disabled during debug -- quitting')
         return
 
-    # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
-    while True:
+    while True:  # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
         if down_event.poll() is not None:
             print_stderr('pgctl-poll-ready: service is stopping -- quitting the poll')
-            break
+            return
         elif check_ready() == 0:
             sleep(poll_down)
         else:
@@ -80,21 +78,16 @@ def main():
         from sys import argv
         exec_(argv[1:])  # never returns
     else:  # child
-        timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
         # this subprocess listens for the s6 down event: http://skarnet.org/software/s6/s6-supervise.html
-        debug = os.environ.get('PGCTL_DEBUG', '')
-        if debug:
-            down_event = None
-        else:
-            from .subprocess import Popen
-            down_event = Popen(
-                ('s6-ftrig-wait', 'event', 'd'),
-                stdout=open(os.devnull, 'w'),  # this prints 'd' otherwise
-            )
+        from .subprocess import Popen
+        down_event = Popen(
+            ('s6-ftrig-wait', 'event', 'd'),
+            stdout=open(os.devnull, 'w'),  # this prints 'd' otherwise
+        )
 
-        return pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down)
+        return pgctl_poll_ready(down_event, notification_fd, poll_ready, poll_down)
 
 
 if __name__ == '__main__':

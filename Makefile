@@ -1,14 +1,12 @@
 .PHONY: all
-all: devenv test
+all: venv test
 
-.PHONY: devenv
-devenv:  .tox/devenv
-.tox/devenv: .tox/pgctl 
+venv: setup.py requirements.d/*.txt Makefile tox.ini
 	# it's simpler to not try to make tox do this.
-	virtualenv --python=python2.7 .tox/pgctl
-	.tox/pgctl/bin/pip install --upgrade -r requirements.d/dev.txt
-	.tox/pgctl/bin/python ./tests/testing/install_coverage_pth.py
-	ln -sf pgctl .tox/devenv
+	rm -rf venv
+	virtualenv --prompt='(pgctl)' --python=python2.7 venv
+	venv/bin/pip install --upgrade pip setuptools wheel
+	venv/bin/pip install --upgrade -r requirements.d/dev.txt
 
 .PHONY: tests test
 tests: test
