@@ -45,7 +45,7 @@ def it_times_out():
         ('pgctl-2015', 'log'),
         '''\
 ==> playground/slow-startup/log <==
-{TIMESTAMP} pgctl-poll-ready: timeout while waiting for ready
+{TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
 ''',
         '',
         0,
