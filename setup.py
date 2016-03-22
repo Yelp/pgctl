@@ -43,6 +43,11 @@ def main():
 
         author='Buck Evan',
         author_email='buck.2019@gmail.com',
+        options={
+            'bdist_wheel': {
+                'universal': 1,
+            }
+        },
     )
 
 
