@@ -42,6 +42,9 @@ max-line-length=131
 [TYPECHECK]
 ignored-classes=pytest,LocalPath,_MovedItems
 
+[VARIABLES]
+dummy-variables-rgx=_$|dummy|^unused
+
 [SIMILARITIES]
 ignore-imports=yes
 min-similarity-lines=5

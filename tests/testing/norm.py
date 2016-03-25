@@ -5,6 +5,8 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from re import compile as Regex
+from re import escape
+from sys import prefix
 
 
 class Normalized(str):
@@ -33,6 +35,8 @@ class pgctl(Normalized):
         ),
         # TODO-TEST: the slow-fuser case:
         (Regex(r' \(it took [\d.]+s to poll\)'), ''),
+        (Regex(r'\B%s\b' % escape(prefix)), '${PREFIX}'),
+        (Regex(r'/(pypy3?|python[23])(\.[0-9]+)? '), '/python '),
     )
 
 
