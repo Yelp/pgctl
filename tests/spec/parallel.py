@@ -49,6 +49,11 @@ def it_is_disallowed():
     second_stdout, second_stderr = second.communicate()
     second_stdout, second_stderr = second_stdout.decode('UTF-8'), second_stderr.decode('UTF-8')
     show_both(second_stdout, second_stderr)
-    assert second_stderr == '[pgctl] ERROR: another pgctl instance is already managing this playground.\n'
+    assert norm.pgctl(second_stderr) == '''\
+[pgctl] ERROR: another pgctl command is currently managing this playground:
+{PS-HEADER}
+{PS-STATS} ${PREFIX}/bin/python2.7 ${PREFIX}/bin/pgctl-2015 restart
+
+'''
     assert second_stdout == ''
     assert second.returncode == 1

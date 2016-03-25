@@ -22,13 +22,16 @@ from .errors import CircularAliases
 from .errors import LockHeld
 from .errors import NoPlayground
 from .errors import PgctlUserMessage
+from .errors import reraise
 from .errors import Unsupervised
 from .flock import flock
 from .flock import set_fd_inheritable
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
+from .functions import ps
 from .functions import uniq
+from .fuser import fuser
 from .service import Service
 from pgctl import __version__
 
@@ -153,13 +156,15 @@ class PgctlApp(object):
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
-        debug('changestate')
-        try:
-            with flock(self.pgdir.strpath) as lock:
-                set_fd_inheritable(lock, False)
-                return self.__locked_change_state(state)
-        except flock.Locked:
-            raise LockHeld('another pgctl instance is already managing this playground.')
+        def lock_held(pgdir):
+            reraise(LockHeld(
+                'another pgctl command is currently managing this playground:\n' +
+                ps(fuser(pgdir))
+            ))
+
+        with flock(self.pgdir.strpath, on_fail=lock_held) as lock:
+            set_fd_inheritable(lock, False)
+            return self.__locked_change_state(state)
 
     def __locked_change_state(self, state):
         """the critical section of __change_state"""

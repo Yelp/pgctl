@@ -40,7 +40,11 @@ def set_fd_inheritable(fd, inheritable):
         return ioctl(fd, FIOCLEX)
 
 
-def acquire(file_or_dir):
+def _acquire_fail(path):
+    six.reraise(Locked, Locked(path))
+
+
+def acquire(file_or_dir, on_fail=_acquire_fail):
     """raises flock.Locked on failure"""
     try:
         fd = os.open(file_or_dir, os.O_CREAT)
@@ -56,7 +60,7 @@ def acquire(file_or_dir):
     except IOError as error:
         if error.errno == 11:
             release(fd)
-            six.reraise(Locked, Locked(file_or_dir))
+            return on_fail(file_or_dir)
         else:
             raise
 
@@ -69,9 +73,11 @@ def release(lock):
 
 
 @contextmanager
-def flock(file_or_dir):
+def flock(file_or_dir, **acquire_args):
     """A context for flock.acquire()."""
-    fd = acquire(file_or_dir)
+    fd = None
+    while fd is None:
+        fd = acquire(file_or_dir, **acquire_args)
     try:
         yield fd
     finally:

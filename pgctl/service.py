@@ -19,34 +19,25 @@ from .debug import trace
 from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
+from .errors import reraise
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
 from .subprocess import Popen
 
 
-@contextmanager
 def flock(path):
     """attempt to show the user a better message on failure, and handle the race condition"""
-    race_limit = 10
-    from . import flock
-    while True:
-        try:
-            lock = flock.acquire(path)
-        except flock.Locked:
-            show_runaway_processes(path)
-            if race_limit > 0:
-                race_limit -= 1
-            else:
-                raise Impossible('lock is held, but not by any process, ten times')
+    def handle_race(path):
+        show_runaway_processes(path)
+        if handle_race.limit > 0:
+            handle_race.limit -= 1
         else:
-            debug('LOCK: %i', lock)
-            break
+            reraise(Impossible('lock is held, but not by any process, ten times'))
+    handle_race.limit = 10
 
-    try:
-        yield lock
-    finally:
-        flock.release(lock)
+    from .flock import flock
+    return flock(path, on_fail=handle_race)
 
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
