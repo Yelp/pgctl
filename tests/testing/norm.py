@@ -36,6 +36,7 @@ class pgctl(Normalized):
         # TODO-TEST: the slow-fuser case:
         (Regex(r' \(it took [\d.]+s to poll\)'), ''),
         (Regex(r'\B%s\b' % escape(prefix)), '${PREFIX}'),
+        (Regex(r'/(pypy3?|python[23])(\.[0-9]+)? '), '/python '),
     )
 
 

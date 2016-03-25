@@ -52,7 +52,7 @@ def it_is_disallowed():
     assert norm.pgctl(second_stderr) == '''\
 [pgctl] ERROR: another pgctl command is currently managing this playground:
 {PS-HEADER}
-{PS-STATS} ${PREFIX}/bin/python2.7 ${PREFIX}/bin/pgctl-2015 restart
+{PS-STATS} ${PREFIX}/bin/python ${PREFIX}/bin/pgctl-2015 restart
 
 '''
     assert second_stdout == ''
