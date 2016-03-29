@@ -50,9 +50,9 @@ realclean: clean
 
 .PHONY: release
 release:
-	python setup.py sdist
+	python setup.py sdist bdist_wheel
 	twine upload --skip-existing dist/*
-	fetch_python_package pgctl
+	fetch-python-package pgctl
 
 # disable default implicit rules
 .SUFFIXES:
