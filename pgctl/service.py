@@ -20,6 +20,7 @@ from .errors import Impossible
 from .errors import NoSuchService
 from .errors import NotReady
 from .errors import reraise
+from .functions import bestrelpath
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
@@ -42,6 +43,7 @@ def flock(path):
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
     # TODO-TEST: regression: these cached-properties are actually cached
+    __exists = False
 
     def __str__(self):
         return self.name
@@ -87,7 +89,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         svc(('-dx', self.path.strpath))
 
     def __get_timeout(self, name, default):
-        timeout = self.path.join(name)
+        timeout = self.path.join(name, abs=1)
         if timeout.check():
             debug('%s exists', name)
             return float(timeout.read().strip())
@@ -117,13 +119,18 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             raise NotReady('its status is ' + str(status))
 
     def ensure_exists(self):
+        if self.__exists:
+            return
+
         if not self.path.check(dir=True):
-            raise NoSuchService("No such playground service: '%s'" % self.name)
+            raise NoSuchService("No such service: '%s'" % bestrelpath(str(self.path)))
 
         # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
+        # this will re-connect the service to its state descriptors if the symlinks have been deleted or moved
         supervise_in_scratch = self.scratch_dir.join('supervise')
         supervise_in_scratch.ensure_dir()
         symlink_if_necessary(supervise_in_scratch, self.path.join('supervise'))
+        self.__exists = True
 
     def ensure_logs(self):
         self.path.ensure('log')

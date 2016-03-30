@@ -32,7 +32,7 @@ def in_example_dir(tmpdir, homedir, service_name):
 
 @fixture
 def scratch_dir(pghome_dir, service_name, in_example_dir):
-    yield pghome_dir.join(Path().join('playground', service_name).relto(str('/')))
+    yield pghome_dir.join(Path().join('playground', service_name).relto(str('/')), abs=1)
 
 
 @fixture

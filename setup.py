@@ -27,6 +27,7 @@ def main():
         install_requires=[
             'frozendict',
             'cached-property',
+            'contextlib2',
             'py',
             'six',
             's6',

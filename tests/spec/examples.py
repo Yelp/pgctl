@@ -171,6 +171,21 @@ class DescribeDateExample(object):
         check_call(('pgctl-2015', 'start', 'date'))
         wait_for(lambda: scratch_dir.join('now.date').isfile())
 
+    def it_can_start_via_abspath_service(self, in_example_dir, scratch_dir, tmpdir):
+        with tmpdir.ensure_dir('arbitrary').as_cwd():
+            assert not scratch_dir.join('now.date').isfile()
+            date_abspath = str(in_example_dir.join('playground/date'))
+            check_call(('pgctl-2015', 'start', date_abspath))
+            wait_for(lambda: scratch_dir.join('now.date').isfile())
+
+    def it_can_start_via_abspath_pgdir(self, in_example_dir, scratch_dir, tmpdir):
+        with tmpdir.ensure_dir('arbitrary').as_cwd():
+            assert not scratch_dir.join('now.date').isfile()
+            env = os.environ.copy()
+            env['PGCTL_PGDIR'] = str(in_example_dir.join('playground'))
+            check_call(('pgctl-2015', 'start', 'date'), env=env)
+            wait_for(lambda: scratch_dir.join('now.date').isfile())
+
 
 class DescribeTailExample(object):
 
@@ -196,8 +211,7 @@ class DescribeStart(object):
             ('pgctl-2015', 'start', 'unknown'),
             '',
             '''\
-[pgctl] Starting: unknown
-[pgctl] ERROR: No such playground service: 'unknown'
+[pgctl] ERROR: No such service: 'playground/unknown'
 ''',
             1,
         )
@@ -235,8 +249,7 @@ class DescribeStop(object):
             ('pgctl-2015', 'stop', 'unknown'),
             '',
             '''\
-[pgctl] Stopping: unknown
-[pgctl] ERROR: No such playground service: 'unknown'
+[pgctl] ERROR: No such service: 'playground/unknown'
 ''',
             1,
         )
@@ -360,7 +373,7 @@ tail: ready (pid {PID}) {TIME} seconds
             ('pgctl-2015', 'status', 'garbage'),
             '',
             '''\
-[pgctl] ERROR: No such playground service: 'garbage'
+[pgctl] ERROR: No such service: 'playground/garbage'
 ''',
             1,
         )

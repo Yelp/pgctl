@@ -19,19 +19,13 @@ from .daemontools import SvStat
 from .debug import debug
 from .debug import trace
 from .errors import CircularAliases
-from .errors import LockHeld
 from .errors import NoPlayground
 from .errors import PgctlUserMessage
-from .errors import reraise
 from .errors import Unsupervised
-from .flock import flock
-from .flock import set_fd_inheritable
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
-from .functions import ps
 from .functions import uniq
-from .fuser import fuser
 from .service import Service
 from pgctl import __version__
 
@@ -156,14 +150,31 @@ class PgctlApp(object):
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
-        def lock_held(pgdir):
+        def lock_held(path):
+            from .errors import reraise
+            from .errors import LockHeld
+            from .functions import bestrelpath
+            from .functions import ps
+            from .fuser import fuser
             reraise(LockHeld(
-                'another pgctl command is currently managing this playground:\n' +
-                ps(fuser(pgdir))
+                'another pgctl command is currently managing this service: (%s)\n%s' %
+                (bestrelpath(path), ps(fuser(path)))
             ))
 
-        with flock(self.pgdir.strpath, on_fail=lock_held) as lock:
-            set_fd_inheritable(lock, False)
+        from contextlib2 import ExitStack
+        with ExitStack() as context:
+            for service in self.services:
+                service.ensure_exists()
+
+                # This lock represents a pgctl cli interacting with the service.
+                from .flock import flock
+                lock = context.enter_context(flock(
+                    str(service.path.join('.pgctl.lock')),
+                    on_fail=lock_held,
+                ))
+                from .flock import set_fd_inheritable
+                set_fd_inheritable(lock, False)
+
             return self.__locked_change_state(state)
 
     def __locked_change_state(self, state):
@@ -288,10 +299,13 @@ class PgctlApp(object):
 
     def service_by_name(self, service_name):
         """Return an instantiated Service, by name."""
-        path = self.pgdir.join(service_name)
+        if os.path.isabs(service_name):
+            path = Path(service_name)
+        else:
+            path = self.pgdir.join(service_name, abs=1)
         return Service(
             path,
-            self.pghome.join(path.relto(str('/'))),
+            self.pghome.join(path.relto(str('/')), abs=1),
             self.pgconf['timeout'],
         )
 
@@ -355,7 +369,7 @@ class PgctlApp(object):
     def pgdir(self):
         """Retrieve the set playground directory"""
         for parent in search_parent_directories():
-            pgdir = Path(parent).join(self.pgconf['pgdir'])
+            pgdir = Path(parent).join(self.pgconf['pgdir'], abs=1)
             if pgdir.check(dir=True):
                 return pgdir
         raise NoPlayground(

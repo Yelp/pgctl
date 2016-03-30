@@ -50,7 +50,7 @@ def it_is_disallowed():
     second_stdout, second_stderr = second_stdout.decode('UTF-8'), second_stderr.decode('UTF-8')
     show_both(second_stdout, second_stderr)
     assert norm.pgctl(second_stderr) == '''\
-[pgctl] ERROR: another pgctl command is currently managing this playground:
+[pgctl] ERROR: another pgctl command is currently managing this service: (playground/sweet/.pgctl.lock)
 {PS-HEADER}
 {PS-STATS} ${PREFIX}/bin/python ${PREFIX}/bin/pgctl-2015 restart
 
