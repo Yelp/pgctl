@@ -2,7 +2,6 @@
 
 1. `git checkout upstream/master -b {{branch}}`
 1. bump `pgctl/__init__.py`
-1. bump doc versions in `docs/source/conf.py`
 1. `git commit -m "{{version}}"`
 1. Create a pull request
 1. Wait for review / merge
