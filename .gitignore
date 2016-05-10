@@ -26,3 +26,4 @@ venv/
 /coverage-html
 docs/build
 .coverage.*
+.cache/

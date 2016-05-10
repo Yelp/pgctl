@@ -273,11 +273,11 @@ class PgctlApp(object):
             # TODO-TEST: pgctl log | pb should be non-interactive
             tail += ('--follow=name', '--retry')
 
-        pwd = Path()
         logfiles = []
         for service in self.services:
             service.ensure_logs()
-            logfiles.append(service.path.join('log').relto(pwd))
+            from .functions import bestrelpath
+            logfiles.append(bestrelpath(str(service.path.join('log'))))
         exec_(tail + tuple(logfiles))  # never returns
 
     def debug(self):
