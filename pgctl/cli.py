@@ -289,9 +289,13 @@ class PgctlApp(object):
             raise PgctlUserMessage(
                 'Must debug exactly one service, not: ' + commafy(self.service_names),
             )
-
         self.stop()
-        service.foreground()  # never returns
+        try:
+            result = service.foreground()
+        except KeyboardInterrupt:
+            result = 1
+        self.start()
+        return result
 
     def config(self):
         """Print the configuration for a service"""
