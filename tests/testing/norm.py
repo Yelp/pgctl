@@ -18,11 +18,17 @@ class Normalized(str):
         return super(Normalized, cls).__new__(cls, value)
 
 
-class pgctl(Normalized):
+class timestamp(Normalized):
     """normalize pgctl's output"""
     rules = (
         # 2015-10-16 17:05:56.635827500
         (Regex(r'(?m)^\d{4}(-\d\d){2} (\d\d:){2}\d\d\.\d{6,9} '), '{TIMESTAMP} '),
+    )
+
+
+class pgctl(Normalized):
+    """normalize pgctl's output"""
+    rules = timestamp.rules + (
         (Regex(r'\(pid \d+\)'), '(pid {PID})'),
         (Regex(r' [\d.]+ seconds'), ' {TIME} seconds'),
         (
