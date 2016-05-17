@@ -70,7 +70,9 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             down_event.terminate()
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
-            print_stderr('pgctl-poll-ready: failed for more than {0:.2f} seconds -- we are restarting this service for you'.format(timeout))
+            print_stderr(
+                'pgctl-poll-ready: failed for more than {0:.2f} seconds -- we are restarting this service for you'.format(timeout)
+            )
             exec_(('pgctl-2015', 'restart', service))  # doesn't return
 
 
