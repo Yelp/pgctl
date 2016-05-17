@@ -45,6 +45,7 @@ def assert_works_interactively():
         assert read_line(read) == 'Hello, Buck.\n'
     finally:
         ctrl_c(proc)
+        proc.wait()
 
 
 @greeter_service
@@ -71,6 +72,12 @@ def it_first_stops_the_background_service_if_running():
     assert_works_interactively()
 
 
+@greeter_service
+def it_starts_the_service_in_the_background_after_debugging():
+    assert_works_interactively()
+    assert_svstat('playground/greeter', state='up')
+
+
 @slow_startup_service
 def it_disables_polling_heartbeat():
     from mock import patch
@@ -84,11 +91,12 @@ def it_disables_polling_heartbeat():
     stdout, stderr = proc.communicate()
     stdout, stderr = stdout.decode('UTF-8'), stderr.decode('UTF-8')
 
-    assert stderr == '''\
+    assert stderr.startswith('''\
 [pgctl] Stopping: slow-startup
 [pgctl] Stopped: slow-startup
 pgctl-poll-ready: service's ready check succeeded
 pgctl-poll-ready: heartbeat is disabled during debug -- quitting
-'''
+[pgctl] ERROR: another pgctl command is currently managing this service: (playground/slow-startup/.pgctl.lock)
+''')
     assert stdout == ''
-    assert proc.returncode == 0
+    assert proc.returncode == 1
