@@ -1,5 +1,5 @@
 -   repo: git://github.com/pre-commit/pre-commit-hooks
-    sha: 516cc9fa72ad09699f2c03ffbd0aa7f60d75b59a
+    sha: adbb569fe9a64ad9bce3b53a77f1bc39ef31f682
     hooks:
     -   id: autopep8-wrapper
     -   id: check-added-large-files
@@ -15,7 +15,7 @@
     -   id: requirements-txt-fixer
     -   id: trailing-whitespace
 -   repo: git://github.com/asottile/reorder_python_imports
-    sha: 3d86483455ab5bd06cc1069fdd5ac57be5463f10
+    sha: 017e2f64306853ec7f000db52b8280da27eb3b96
     hooks:
     -   id: reorder-python-imports
         args:

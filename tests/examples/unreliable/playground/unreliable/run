@@ -1,0 +1,4 @@
+#!/bin/bash
+set -eu
+# this service takes two seconds to become ready
+exec pgctl-poll-ready sleep infinity

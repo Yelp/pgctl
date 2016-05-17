@@ -85,8 +85,11 @@ def it_restarts_on_unready():
         ('pgctl-2015', 'log'),
         '''\
 ==> playground/slow-startup/log <==
-{TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
-{TIMESTAMP} pgctl-poll-ready: service's ready check failed -- we are restarting it for you
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed for more than {TIME} seconds -- we are restarting this service for you
 {TIMESTAMP} [pgctl] Stopping: slow-startup
 {TIMESTAMP} [pgctl] Stopped: slow-startup
 {TIMESTAMP} [pgctl] Starting: slow-startup
