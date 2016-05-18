@@ -294,7 +294,7 @@ class PgctlApp(object):
             result = service.foreground()
         except KeyboardInterrupt:
             result = 1
-        self.start()
+        self.restart()
         return result
 
     def config(self):
