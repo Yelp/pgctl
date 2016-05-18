@@ -38,8 +38,8 @@ def check_ready():
 
 
 def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
-    if os.environ.get('PGCTL_DEBUG', '')
-        print_stderr('pgctl-poll-ready: heartbeat is disabled during debug -- quitting')
+    if os.environ.get('PGCTL_DEBUG'):
+        print_stderr('pgctl-poll-ready: disabled during debug -- quitting')
         return
 
     from time import sleep
