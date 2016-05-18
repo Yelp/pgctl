@@ -9,6 +9,7 @@ disable=
     redefined-outer-name,
     redefined-variable-type,
     star-args,
+    misplaced-comparison-constant,
 
 [REPORTS]
 output-format=colorized

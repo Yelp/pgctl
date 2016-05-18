@@ -4,7 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-import subprocess
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -22,6 +21,7 @@ from .errors import NoSuchService
 from .errors import NotReady
 from .errors import reraise
 from .functions import bestrelpath
+from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
 from .subprocess import Popen
@@ -197,7 +197,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def foreground(self):
         with self.flock() as lock:
-            return subprocess.call(
+            exec_(
                 ('s6-supervise', self.path.strpath),
                 env=self.supervise_env(lock, debug=True),
             )

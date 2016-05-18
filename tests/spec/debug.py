@@ -16,7 +16,7 @@ from pgctl.subprocess import Popen
 
 pytestmark = pytest.mark.usefixtures('in_example_dir')
 greeter_service = pytest.mark.parametrize('service_name', ['greeter'])
-slow_startup_service = pytest.mark.parametrize('service_name', ['slow-startup'])
+unreliable_service = pytest.mark.parametrize('service_name', ['unreliable'])
 
 
 def read_line(fd):
@@ -72,31 +72,23 @@ def it_first_stops_the_background_service_if_running():
     assert_works_interactively()
 
 
-@greeter_service
-def it_starts_the_service_in_the_background_after_debugging():
-    assert_works_interactively()
-    assert_svstat('playground/greeter', state='up')
-
-
-@slow_startup_service
-def it_disables_polling_heartbeat():
+@unreliable_service
+def it_disables_polling():
     from mock import patch
     with patch.dict(os.environ, [('PGCTL_TIMEOUT', '5')]):
-        proc = Popen(('pgctl-2015', 'debug', 'slow-startup'), stdin=open(os.devnull), stdout=PIPE, stderr=PIPE)
+        proc = Popen(('pgctl-2015', 'debug', 'unreliable'), stdin=open(os.devnull), stdout=PIPE, stderr=PIPE)
 
     from testing.assertions import wait_for
-    wait_for(lambda: assert_svstat('playground/slow-startup', state='ready'))
+    wait_for(lambda: assert_svstat('playground/unreliable', state='up'))
 
     check_call(('pgctl-2015', 'stop'))
     stdout, stderr = proc.communicate()
     stdout, stderr = stdout.decode('UTF-8'), stderr.decode('UTF-8')
 
-    assert stderr.startswith('''\
-[pgctl] Stopping: slow-startup
-[pgctl] Stopped: slow-startup
-pgctl-poll-ready: service's ready check succeeded
-pgctl-poll-ready: heartbeat is disabled during debug -- quitting
-[pgctl] ERROR: another pgctl command is currently managing this service: (playground/slow-startup/.pgctl.lock)
-''')
+    assert '''\
+[pgctl] Stopping: unreliable
+[pgctl] Stopped: unreliable
+pgctl-poll-ready: disabled during debug -- quitting
+''' == stderr
     assert stdout == ''
-    assert proc.returncode == 1
+    assert proc.returncode == 0
