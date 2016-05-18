@@ -72,12 +72,6 @@ def it_first_stops_the_background_service_if_running():
     assert_works_interactively()
 
 
-@greeter_service
-def it_starts_the_service_in_the_background_after_debugging():
-    assert_works_interactively()
-    assert_svstat('playground/greeter', state='up')
-
-
 @unreliable_service
 def it_disables_polling():
     from mock import patch
