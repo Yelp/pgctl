@@ -38,10 +38,6 @@ def check_ready():
 
 
 def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
-    if os.environ.get('PGCTL_DEBUG'):
-        print_stderr('pgctl-poll-ready: disabled during debug -- quitting')
-        return
-
     from time import sleep
     while True:  # waiting for the service to come up.
         if down_event.poll() is not None:
@@ -85,6 +81,8 @@ def main():
         # run the wrapped command in the main process
         from sys import argv
         exec_(argv[1:])  # never returns
+    elif os.environ.get('PGCTL_DEBUG'):
+        print_stderr('pgctl-poll-ready: disabled during debug -- quitting')
     else:  # child
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')

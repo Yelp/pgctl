@@ -95,8 +95,6 @@ def it_disables_polling():
 [pgctl] Stopping: unreliable
 [pgctl] Stopped: unreliable
 pgctl-poll-ready: disabled during debug -- quitting
-[pgctl] ERROR: another pgctl command is currently managing this service: (playground/unreliable/.pgctl.lock)
-
 ''' == stderr
     assert stdout == ''
-    assert proc.returncode == 1
+    assert proc.returncode == 0
