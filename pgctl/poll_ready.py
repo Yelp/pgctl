@@ -38,6 +38,10 @@ def check_ready():
 
 
 def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+    if os.environ.get('PGCTL_DEBUG', '')
+        print_stderr('pgctl-poll-ready: heartbeat is disabled during debug -- quitting')
+        return
+
     from time import sleep
     while True:  # waiting for the service to come up.
         if down_event.poll() is not None:
@@ -49,10 +53,6 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             break
         else:
             sleep(poll_ready)
-
-    if os.environ.get('PGCTL_DEBUG', ''):
-        print_stderr('pgctl-poll-ready: heartbeat is disabled during debug -- quitting')
-        return
 
     timeout_unready = timeout
     while True:  # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
