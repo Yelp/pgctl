@@ -6,6 +6,7 @@ import os
 import pytest
 from testing import pty
 from testing.assertions import assert_svstat
+from testing.assertions import wait_for
 from testing.subprocess import assert_command
 from testing.subprocess import ctrl_c
 
@@ -74,21 +75,19 @@ def it_first_stops_the_background_service_if_running():
 
 @unreliable_service
 def it_disables_polling():
-    from mock import patch
-    with patch.dict(os.environ, [('PGCTL_TIMEOUT', '5')]):
-        proc = Popen(('pgctl-2015', 'debug', 'unreliable'), stdin=open(os.devnull), stdout=PIPE, stderr=PIPE)
+    stderr = open('stderr', 'w')
+    proc = Popen(('pgctl-2015', 'debug', 'unreliable'), stdin=open(os.devnull), stdout=PIPE, stderr=stderr)
 
-    from testing.assertions import wait_for
-    wait_for(lambda: assert_svstat('playground/unreliable', state='up'))
-
-    check_call(('pgctl-2015', 'stop'))
-    stdout, stderr = proc.communicate()
-    stdout, stderr = stdout.decode('UTF-8'), stderr.decode('UTF-8')
-
-    assert '''\
+    def check_file_contents():
+        expected = '''\
 [pgctl] Stopping: unreliable
 [pgctl] Stopped: unreliable
 pgctl-poll-ready: disabled during debug -- quitting
-''' == stderr
-    assert stdout == ''
-    assert proc.returncode == 0
+'''
+        with open('stderr') as fd:
+            actual = fd.read()
+        return expected == actual
+
+    wait_for(check_file_contents)
+    proc.terminate()
+    stderr.close()
