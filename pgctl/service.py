@@ -198,9 +198,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def foreground(self):
         with self.flock() as lock:
             exec_(
-                ('s6-supervise', self.path.strpath),
+                (str(self.path.join('run')),),
                 env=self.supervise_env(lock, debug=True),
-            )
+            )  # never returns
 
     @cached_property
     def name(self):
