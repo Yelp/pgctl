@@ -54,15 +54,16 @@ class JSONEncoder(json.JSONEncoder):
 
 
 def bestrelpath(path, relto=None):
+    """Return a relative path only if it's under $PWD (or `relto`)"""
     if relto is None:
         from os import getcwd
         relto = getcwd()
     from os.path import relpath
     relpath = relpath(path, relto)
-    if len(relpath) < len(path):
-        return relpath
-    else:
+    if relpath.startswith('.'):
         return path
+    else:
+        return relpath
 
 
 def ps(pids):

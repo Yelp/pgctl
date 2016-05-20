@@ -59,7 +59,7 @@ class DescribeBestrelpath(object):
 
     def it_prefers_shorter_strings(self):
         assert bestrelpath('/a/b/c', '/a/b') == 'c'
-        assert bestrelpath('/a/b', '/a/b/c') == '..'
+        assert bestrelpath('/a/b', '/a/b/c') == '/a/b'
         assert bestrelpath('/a/b', '/a/b/c/d') == '/a/b'
 
 

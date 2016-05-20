@@ -22,6 +22,7 @@ from .errors import CircularAliases
 from .errors import NoPlayground
 from .errors import PgctlUserMessage
 from .errors import Unsupervised
+from .functions import bestrelpath
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
@@ -153,7 +154,6 @@ class PgctlApp(object):
         def lock_held(path):
             from .errors import reraise
             from .errors import LockHeld
-            from .functions import bestrelpath
             from .functions import ps
             from .fuser import fuser
             reraise(LockHeld(
@@ -276,8 +276,9 @@ class PgctlApp(object):
         logfiles = []
         for service in self.services:
             service.ensure_logs()
-            from .functions import bestrelpath
-            logfiles.append(bestrelpath(str(service.path.join('log'))))
+            logfile = service.path.join('log')
+            logfile = bestrelpath(str(logfile))
+            logfiles.append(logfile)
         exec_(tail + tuple(logfiles))  # never returns
 
     def debug(self):
