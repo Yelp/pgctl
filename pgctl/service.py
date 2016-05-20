@@ -161,21 +161,27 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     @contextmanager
     def flock(self):
         # if we already have the lock, from a parent process, use it.
+        parent_service = os.environ.pop('PGCTL_SERVICE', None)
         lock = os.environ.pop('PGCTL_SERVICE_LOCK', None)
-        debug('parentlock: %r', lock)
+        debug('parentlock: %r', parent_service)
         if lock:
             lock = int(lock)
-            debug('retrieved parent lock! %i', lock)
-            try:
-                yield lock
-            finally:
-                os.close(lock)
-        else:
-            with flock(self.path.strpath) as lock:
-                debug('LOCK: %i', lock)
-                self.ensure_directory_structure()
-                with self.path.as_cwd():
+            if parent_service == self.path:
+                debug('retrieved parent lock! %i', lock)
+                try:
                     yield lock
+                finally:
+                    os.close(lock)
+                return
+            else:
+                from .flock import release
+                release(lock)
+
+        with flock(self.path.strpath) as lock:
+            debug('LOCK: %i', lock)
+            self.ensure_directory_structure()
+            with self.path.as_cwd():
+                yield lock
 
     def background(self):
         """Run supervise(1), while ensuring it is properly symlinked."""

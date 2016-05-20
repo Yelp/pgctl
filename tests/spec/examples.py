@@ -577,3 +577,46 @@ pgctl-2015: error: {}
                 expected,
                 2,
             )
+
+
+class DescribeDependentServices(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'dependent'
+
+    def it_works(self, in_example_dir):
+        assert_command(
+            ('pgctl-2015', 'start', 'A'),
+            '',
+            '''\
+[pgctl] Starting: A
+[pgctl] Started: A
+''',
+            0,
+        )
+        wait_for(lambda: assert_command(
+            ('pgctl-2015', 'log', 'A'),
+            '''\
+==> playground/A/log <==
+{TIMESTAMP} [pgctl] Starting: B
+{TIMESTAMP} [pgctl] DEBUG: parentlock: '%s/playground/A'
+{TIMESTAMP} [pgctl] DEBUG: LOCK: ${LOCK}
+{TIMESTAMP} [pgctl] DEBUG: loop: check_time $TIME
+{TIMESTAMP} [pgctl] Started: B
+{TIMESTAMP} this is stdout
+{TIMESTAMP} this is stderr
+''' % in_example_dir,
+            '',
+            0,
+            norm=norm.pgctl,
+        ))
+        assert_command(
+            ('pgctl-2015', 'stop', 'A'),
+            '',
+            '''\
+[pgctl] Stopping: A
+[pgctl] Stopped: A
+''',
+            0,
+        )

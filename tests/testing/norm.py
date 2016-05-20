@@ -43,6 +43,8 @@ class pgctl(Normalized):
         (Regex(r' \(it took [\d.]+s to poll\)'), ''),
         (Regex(r'\B%s\b' % escape(prefix)), '${PREFIX}'),
         (Regex(r'/(pypy3?|python[23])(\.[0-9]+)? '), '/python '),
+        (Regex(r' LOCK: \d+\n'), ' LOCK: ${LOCK}\n'),
+        (Regex(r' loop: check_time [0-9.]+\n'), ' loop: check_time $TIME\n'),
     )
 
 
