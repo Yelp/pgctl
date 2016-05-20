@@ -72,7 +72,7 @@ def ps(pids):
         return ''
 
     from .subprocess import PIPE, Popen
-    cmd = ('ps', '--forest', '-wfj',) + pids
+    cmd = ('ps', '--forest', '-wwfj',) + pids
     process = Popen(cmd, stdout=PIPE, stderr=PIPE)
     stdout, _ = process.communicate()
     stdout = stdout.decode('UTF-8')
