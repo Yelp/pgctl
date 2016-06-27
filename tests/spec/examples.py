@@ -620,3 +620,22 @@ class DescribeDependentServices(object):
 ''',
             0,
         )
+
+
+class DescribeStartMessageSuccess(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'start-message'
+
+    def it_prints_a_start_message_on_successful_startup(self, in_example_dir):
+        assert_command(
+            ('pgctl-2015', 'start', 'start-message'),
+            '',
+            '''\
+[pgctl] Starting: start-message
+[pgctl] Started: start-message
+Service has started at localhost:9001
+''',
+            0
+        )
