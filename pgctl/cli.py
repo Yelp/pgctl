@@ -201,6 +201,7 @@ class PgctlApp(object):
                     # TODO: debug() takes a lambda
                     debug('loop: check_time %.3f', now() - check_time)
                     pgctl_print(state.strings.changed, service.name)
+                    service.service.message(state)
                     services.remove(service)
 
             time.sleep(self.poll)

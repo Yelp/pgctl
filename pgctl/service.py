@@ -24,6 +24,7 @@ from .functions import bestrelpath
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
+from .subprocess import check_call
 from .subprocess import Popen
 
 
@@ -69,6 +70,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                 result = result._replace(state='ready')
         trace('PARSED: %s', result)
         return result
+
+    def message(self, state):
+        script = self.path.join(state.__name__ + '-msg')
+        if script.exists():
+            check_call((script.strpath,))
 
     @cached_property
     def ready_script(self):
