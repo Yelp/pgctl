@@ -33,12 +33,12 @@ Directory Structure
         ├── stdout.log
         └── supervise -> ~/.run/pgctl/home/<user>/<project>/playground/service3/supervise
 
-There are a few points to note: logging, services, state, symlinking.  
+There are a few points to note: logging, services, state, symlinking.
 
 logging
 +++++++
-stdin and stdout will be captured from the supervised process and written to log files under 
-the service directory.  The user will be able to use the ``pgctl logs`` command to aggregate 
+stdin and stdout will be captured from the supervised process and written to log files under
+the service directory.  The user will be able to use the ``pgctl log`` command to aggregate
 these logs in a readable form.
 
 services
@@ -49,7 +49,7 @@ state
 +++++
 We are using s6 for process management and call the ``s6-supervise`` command directly.
 It was a design decision to not use ``svscan`` to automatically supervise all services.  This was due
-to inflexability with logging (by default stdout is only logged).  To ensure that every service 
+to inflexability with logging (by default stdout is only logged).  To ensure that every service
 is in a consistent state, a down file is added to each service directory (man supervise) if it does not
 already exist.
 
