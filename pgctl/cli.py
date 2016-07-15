@@ -228,6 +228,12 @@ class PgctlApp(object):
         if state == 'start':
             # we don't want services that failed to start to be 'up'
             failapp.stop()
+
+        pgctl_print()
+        pgctl_print('There might be useful information further up in the log; you can view it by running:')
+        for service in failapp.services:
+            pgctl_print('    less +G {}'.format(bestrelpath(service.path.join('log').strpath)))
+
         raise PgctlUserMessage('Some services failed to %s: %s' % (state, commafy(failed)))
 
     def start(self):
@@ -264,7 +270,7 @@ class PgctlApp(object):
         # TODO(p3): -n: send the value to tail -n
         # TODO(p3): -f: force iteractive behavior
         # TODO(p3): -F: force iteractive behavior off
-        tail = ('tail', '--verbose')  # show file headers
+        tail = ('tail', '-n', '30', '--verbose')  # show file headers
 
         if interactive is None:
             import sys

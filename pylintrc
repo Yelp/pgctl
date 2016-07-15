@@ -10,6 +10,7 @@ disable=
     redefined-variable-type,
     star-args,
     misplaced-comparison-constant,
+    wrong-import-order,
 
 [REPORTS]
 output-format=colorized

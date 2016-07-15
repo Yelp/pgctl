@@ -41,6 +41,9 @@ def it_is_disallowed():
 ==> playground/sweet/log <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/sweet/log
 [pgctl] ERROR: Some services failed to stop: sweet
 '''
     assert first_stdout == ''
