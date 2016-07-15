@@ -129,6 +129,9 @@ There are two ways you can fix this:
 ==> playground/sweet/log <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/sweet/log
 [pgctl] ERROR: Some services failed to stop: sweet
 ''',
             1,
@@ -161,6 +164,9 @@ There are two ways you can fix this:
 ==> playground/slow-startup/log <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
 {TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/slow-startup/log
 [pgctl] ERROR: Some services failed to stop: slow-startup
 ''',
             1,
@@ -193,6 +199,9 @@ class DescribeSlowShutdown(DirtyTest):
 ==> playground/sweet/log <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/sweet/log
 [pgctl] ERROR: Some services failed to stop: sweet
 ''',
             1,

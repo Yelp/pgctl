@@ -34,6 +34,9 @@ def it_times_out():
 ==> playground/slow-startup/log <==
 [pgctl] Stopping: slow-startup
 [pgctl] Stopped: slow-startup
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/slow-startup/log
 [pgctl] ERROR: Some services failed to start: slow-startup
 ''',
         1,
@@ -85,6 +88,26 @@ def it_restarts_on_unready():
         ('pgctl-2015', 'log'),
         '''\
 ==> playground/slow-startup/log <==
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
