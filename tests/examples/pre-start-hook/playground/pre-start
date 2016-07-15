@@ -1,0 +1,2 @@
+#!/bin/bash -eu
+echo 'hello, i am a pre-start script' >&2

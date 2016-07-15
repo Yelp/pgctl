@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import os
+import subprocess
 import time
 from time import time as now
 
@@ -59,7 +60,7 @@ class StateChange(object):
         self.name = service.name
 
 
-class start(StateChange):
+class Start(StateChange):
 
     def change(self):
         return self.service.start()
@@ -76,7 +77,7 @@ class start(StateChange):
         changed = 'Started:'
 
 
-class stop(StateChange):
+class Stop(StateChange):
 
     def change(self):
         return self.service.stop()
@@ -150,8 +151,12 @@ class PgctlApp(object):
 
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
+        # if we're starting a service, run the playground-wide "pre-start" hook (if it exists)
+        if state is Start:
+            self.run_pre_start_hook()
+
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
-        def lock_held(path):
+        def on_lock_held(path):
             from .errors import reraise
             from .errors import LockHeld
             from .functions import ps
@@ -170,7 +175,7 @@ class PgctlApp(object):
                 from .flock import flock
                 lock = context.enter_context(flock(
                     str(service.path.join('.pgctl.lock')),
-                    on_fail=lock_held,
+                    on_fail=on_lock_held,
                 ))
                 from .flock import set_fd_inheritable
                 set_fd_inheritable(lock, False)
@@ -208,6 +213,17 @@ class PgctlApp(object):
 
         return failed
 
+    def run_pre_start_hook(self):
+        """Run the playground-wide pre-start hook, if it exists."""
+        try:
+            path = self.pgdir.join('pre-start')
+            if path.exists():
+                subprocess.check_call((path.strpath))
+        except NoPlayground:
+            # services can exist without a playground;
+            # that's fine, but they can't have pre-start hooks
+            pass
+
     def with_services(self, services):
         """return a similar PgctlApp, but with a different set of services"""
         newconf = dict(self.pgconf)
@@ -238,12 +254,12 @@ class PgctlApp(object):
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(start)
+        failed = self.__change_state(Start)
         return self.__show_failure('start', failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(stop)
+        failed = self.__change_state(Stop)
         return self.__show_failure('stop', failed)
 
     def status(self):
