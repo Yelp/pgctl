@@ -654,6 +654,8 @@ class DescribePreStartHook(object):
             '',
             '''\
 hello, i am a pre-start script
+--> $PWD basename: pre-start-hook
+--> cwd basename: pre-start-hook
 [pgctl] Starting: sweet
 [pgctl] Started: sweet
 ''',

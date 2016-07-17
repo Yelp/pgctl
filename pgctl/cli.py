@@ -60,7 +60,7 @@ class StateChange(object):
         self.name = service.name
 
 
-class Start(StateChange):
+class start(StateChange):
 
     def change(self):
         return self.service.start()
@@ -77,7 +77,7 @@ class Start(StateChange):
         changed = 'Started:'
 
 
-class Stop(StateChange):
+class stop(StateChange):
 
     def change(self):
         return self.service.stop()
@@ -152,7 +152,7 @@ class PgctlApp(object):
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
         # if we're starting a service, run the playground-wide "pre-start" hook (if it exists)
-        if state is Start:
+        if state is start:
             self.run_pre_start_hook()
 
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
@@ -218,7 +218,10 @@ class PgctlApp(object):
         try:
             path = self.pgdir.join('pre-start')
             if path.exists():
-                subprocess.check_call((path.strpath))
+                subprocess.check_call(
+                    (path.strpath,),
+                    cwd=self.pgdir.dirname,
+                )
         except NoPlayground:
             # services can exist without a playground;
             # that's fine, but they can't have pre-start hooks
@@ -254,12 +257,12 @@ class PgctlApp(object):
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(Start)
+        failed = self.__change_state(start)
         return self.__show_failure('start', failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(Stop)
+        failed = self.__change_state(stop)
         return self.__show_failure('stop', failed)
 
     def status(self):

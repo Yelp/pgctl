@@ -72,7 +72,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         return result
 
     def message(self, state):
-        script = self.path.join(state.__name__.lower() + '-msg')
+        script = self.path.join(state.__name__ + '-msg')
         if script.exists():
             check_call((script.strpath,))
 
