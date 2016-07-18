@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 
 import argparse
 import os
+import subprocess
 import time
 from time import time as now
 
@@ -150,8 +151,12 @@ class PgctlApp(object):
 
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
+        # if we're starting a service, run the playground-wide "pre-start" hook (if it exists)
+        if state is start:
+            self.run_pre_start_hook()
+
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
-        def lock_held(path):
+        def on_lock_held(path):
             from .errors import reraise
             from .errors import LockHeld
             from .functions import ps
@@ -170,7 +175,7 @@ class PgctlApp(object):
                 from .flock import flock
                 lock = context.enter_context(flock(
                     str(service.path.join('.pgctl.lock')),
-                    on_fail=lock_held,
+                    on_fail=on_lock_held,
                 ))
                 from .flock import set_fd_inheritable
                 set_fd_inheritable(lock, False)
@@ -207,6 +212,20 @@ class PgctlApp(object):
             time.sleep(self.poll)
 
         return failed
+
+    def run_pre_start_hook(self):
+        """Run the playground-wide pre-start hook, if it exists."""
+        try:
+            path = self.pgdir.join('pre-start')
+            if path.exists():
+                subprocess.check_call(
+                    (path.strpath,),
+                    cwd=self.pgdir.dirname,
+                )
+        except NoPlayground:
+            # services can exist without a playground;
+            # that's fine, but they can't have pre-start hooks
+            pass
 
     def with_services(self, services):
         """return a similar PgctlApp, but with a different set of services"""

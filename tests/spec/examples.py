@@ -639,3 +639,26 @@ Service has started at localhost:9001
 ''',
             0
         )
+
+
+class DescribePreStartHook(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'pre-start-hook'
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_before_starting_a_service(self):
+        assert_command(
+            ('pgctl-2015', 'start'),
+            '',
+            '''\
+hello, i am a pre-start script
+--> $PWD basename: pre-start-hook
+--> cwd basename: pre-start-hook
+[pgctl] Starting: sweet
+[pgctl] Started: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
