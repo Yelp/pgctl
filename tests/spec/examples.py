@@ -27,7 +27,7 @@ class DescribePgctlLog(object):
 
     def it_is_empty_before_anything_starts(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'log'),
+            ('pgctl', 'log'),
             '''\
 ==> playground/ohhi/log <==
 
@@ -38,10 +38,10 @@ class DescribePgctlLog(object):
         )
 
     def it_shows_stdout_and_stderr(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sweet'))
+        check_call(('pgctl', 'start', 'sweet'))
 
         assert_command(
-            ('pgctl-2015', 'log'),
+            ('pgctl', 'log'),
             '''\
 ==> playground/ohhi/log <==
 
@@ -54,10 +54,10 @@ class DescribePgctlLog(object):
             norm=norm.pgctl,
         )
 
-        check_call(('pgctl-2015', 'restart', 'sweet'))
+        check_call(('pgctl', 'restart', 'sweet'))
 
         assert_command(
-            ('pgctl-2015', 'log'),
+            ('pgctl', 'log'),
             '''\
 ==> playground/ohhi/log <==
 
@@ -73,12 +73,12 @@ class DescribePgctlLog(object):
         )
 
     def it_logs_continuously_when_run_interactively(self, in_example_dir):
-        check_call(('pgctl-2015', 'start'))
+        check_call(('pgctl', 'start'))
 
         # this pty simulates running in a terminal
         read, write = os.openpty()
         pty.normalize_newlines(read)
-        p = Popen(('pgctl-2015', 'log'), stdout=write, stderr=write)
+        p = Popen(('pgctl', 'log'), stdout=write, stderr=write)
         os.close(write)
 
         import fcntl
@@ -168,14 +168,14 @@ class DescribeDateExample(object):
 
     def it_does_start(self, in_example_dir, scratch_dir):
         assert not scratch_dir.join('now.date').isfile()
-        check_call(('pgctl-2015', 'start', 'date'))
+        check_call(('pgctl', 'start', 'date'))
         wait_for(lambda: scratch_dir.join('now.date').isfile())
 
     def it_can_start_via_abspath_service(self, in_example_dir, scratch_dir, tmpdir):
         with tmpdir.ensure_dir('arbitrary').as_cwd():
             assert not scratch_dir.join('now.date').isfile()
             date_abspath = str(in_example_dir.join('playground/date'))
-            check_call(('pgctl-2015', 'start', date_abspath))
+            check_call(('pgctl', 'start', date_abspath))
             wait_for(lambda: scratch_dir.join('now.date').isfile())
 
     def it_can_start_via_abspath_pgdir(self, in_example_dir, scratch_dir, tmpdir):
@@ -183,7 +183,7 @@ class DescribeDateExample(object):
             assert not scratch_dir.join('now.date').isfile()
             env = os.environ.copy()
             env['PGCTL_PGDIR'] = str(in_example_dir.join('playground'))
-            check_call(('pgctl-2015', 'start', 'date'), env=env)
+            check_call(('pgctl', 'start', 'date'), env=env)
             wait_for(lambda: scratch_dir.join('now.date').isfile())
 
 
@@ -199,7 +199,7 @@ class DescribeTailExample(object):
             input.write(test_string)
         assert not os.path.isfile('output')
 
-        check_call(('pgctl-2015', 'start', 'tail'))
+        check_call(('pgctl', 'start', 'tail'))
         wait_for(lambda: os.path.isfile('output'))
         assert open('output').read() == test_string
 
@@ -208,7 +208,7 @@ class DescribeStart(object):
 
     def it_fails_given_unknown(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'start', 'unknown'),
+            ('pgctl', 'start', 'unknown'),
             '',
             '''\
 [pgctl] ERROR: No such service: 'playground/unknown'
@@ -217,13 +217,13 @@ class DescribeStart(object):
         )
 
     def it_is_idempotent(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sleep'))
-        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
 
     def it_should_work_in_a_subdirectory(self, in_example_dir):
         os.chdir(in_example_dir.join('playground').strpath)
         assert_command(
-            ('pgctl-2015', 'start', 'sleep'),
+            ('pgctl', 'start', 'sleep'),
             '',
             '''\
 [pgctl] Starting: sleep
@@ -236,17 +236,17 @@ class DescribeStart(object):
 class DescribeStop(object):
 
     def it_does_stop(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sleep'))
-        check_call(('pgctl-2015', 'stop', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
+        check_call(('pgctl', 'stop', 'sleep'))
 
         assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED)
 
     def it_is_successful_before_start(self, in_example_dir):
-        check_call(('pgctl-2015', 'stop', 'sleep'))
+        check_call(('pgctl', 'stop', 'sleep'))
 
     def it_fails_given_unknown(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'stop', 'unknown'),
+            ('pgctl', 'stop', 'unknown'),
             '',
             '''\
 [pgctl] ERROR: No such service: 'playground/unknown'
@@ -259,7 +259,7 @@ class DescribeRestart(object):
 
     def it_is_just_stop_then_start(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'restart', 'sleep'),
+            ('pgctl', 'restart', 'sleep'),
             '',
             '''\
 [pgctl] Stopping: sleep
@@ -272,7 +272,7 @@ class DescribeRestart(object):
         assert_svstat('playground/sleep', state='up')
 
     def it_also_works_when_up(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
         assert_svstat('playground/sleep', state='up')
 
         self.it_is_just_stop_then_start(in_example_dir)
@@ -285,30 +285,30 @@ class DescribeStartMultipleServices(object):
         yield 'multiple'
 
     def it_only_starts_the_indicated_services(self, in_example_dir, request):
-        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
 
         assert_svstat('playground/sleep', state='up')
         assert_svstat('playground/tail', state=SvStat.UNSUPERVISED)
 
     def it_starts_multiple_services(self, in_example_dir, request):
-        check_call(('pgctl-2015', 'start', 'sleep', 'tail'))
+        check_call(('pgctl', 'start', 'sleep', 'tail'))
 
         assert_svstat('playground/sleep', state='up')
         assert_svstat('playground/tail', state='up')
 
     def it_stops_multiple_services(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sleep', 'tail'))
+        check_call(('pgctl', 'start', 'sleep', 'tail'))
 
         assert_svstat('playground/sleep', state='up')
         assert_svstat('playground/tail', state='up')
 
-        check_call(('pgctl-2015', 'stop', 'sleep', 'tail'))
+        check_call(('pgctl', 'stop', 'sleep', 'tail'))
 
         assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED)
         assert_svstat('playground/tail', state=SvStat.UNSUPERVISED)
 
     def it_starts_everything_with_no_arguments_no_config(self, in_example_dir, request):
-        check_call(('pgctl-2015', 'start'))
+        check_call(('pgctl', 'start'))
 
         assert_svstat('playground/sleep', state='up')
         assert_svstat('playground/tail', state='up')
@@ -321,19 +321,19 @@ class DescribeStatus(object):
         yield 'multiple'
 
     def it_displays_correctly_when_the_service_is_down(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sleep'))
-        check_call(('pgctl-2015', 'stop', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
+        check_call(('pgctl', 'stop', 'sleep'))
         assert_command(
-            ('pgctl-2015', 'status', 'sleep'),
+            ('pgctl', 'status', 'sleep'),
             'sleep: down\n',
             '',
             0,
         )
 
     def it_displays_correctly_when_the_service_is_up(self, in_example_dir):
-        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
         assert_command(
-            ('pgctl-2015', 'status', 'sleep'),
+            ('pgctl', 'status', 'sleep'),
             'sleep: ready (pid {PID}) {TIME} seconds\n',
             '',
             0,
@@ -342,9 +342,9 @@ class DescribeStatus(object):
 
     def it_displays_the_status_of_multiple_services(self, in_example_dir):
         """Expect multiple services with status and PID"""
-        check_call(('pgctl-2015', 'start', 'sleep'))
+        check_call(('pgctl', 'start', 'sleep'))
         assert_command(
-            ('pgctl-2015', 'status', 'sleep', 'tail'),
+            ('pgctl', 'status', 'sleep', 'tail'),
             '''\
 sleep: ready (pid {PID}) {TIME} seconds
 tail: down
@@ -356,9 +356,9 @@ tail: down
 
     def it_displays_the_status_of_all_services(self, in_example_dir):
         """Expect all services to provide status when no service is specified"""
-        check_call(('pgctl-2015', 'start', 'tail'))
+        check_call(('pgctl', 'start', 'tail'))
         assert_command(
-            ('pgctl-2015', 'status'),
+            ('pgctl', 'status'),
             '''\
 sleep: down
 tail: ready (pid {PID}) {TIME} seconds
@@ -370,7 +370,7 @@ tail: ready (pid {PID}) {TIME} seconds
 
     def it_displays_status_for_unknown_services(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'status', 'garbage'),
+            ('pgctl', 'status', 'garbage'),
             '',
             '''\
 [pgctl] ERROR: No such service: 'playground/garbage'
@@ -381,7 +381,7 @@ tail: ready (pid {PID}) {TIME} seconds
     def it_can_recover_from_a_git_clean(self, in_example_dir, service_name):
         def assert_status():
             assert_command(
-                ('pgctl-2015', 'status'),
+                ('pgctl', 'status'),
                 '''\
 sleep: down
 tail: ready (pid {PID}) {TIME} seconds
@@ -391,7 +391,7 @@ tail: ready (pid {PID}) {TIME} seconds
                 norm=norm.pgctl,
             )
 
-        check_call(('pgctl-2015', 'start', 'tail'))
+        check_call(('pgctl', 'start', 'tail'))
         assert_status()
 
         # simulate a git-clean: blow everything away, create a fresh copy
@@ -408,7 +408,7 @@ class DescribeReload(object):
 
     def it_is_unimplemented(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'reload'),
+            ('pgctl', 'reload'),
             '',
             '''\
 [pgctl] reload: sleep
@@ -426,7 +426,7 @@ class DescribeAliases(object):
 
     def it_can_expand_properly(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'start', 'a'),
+            ('pgctl', 'start', 'a'),
             '',
             '''\
 [pgctl] Starting: ohhi, sweet
@@ -438,7 +438,7 @@ class DescribeAliases(object):
 
     def it_can_detect_cycles(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'start', 'b'),
+            ('pgctl', 'start', 'b'),
             '',
             "[pgctl] ERROR: Circular aliases! Visited twice during alias expansion: 'b'\n",
             1,
@@ -446,7 +446,7 @@ class DescribeAliases(object):
 
     def it_can_start_when_default_is_not_defined_explicitly(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'start'),
+            ('pgctl', 'start'),
             '',
             '''\
 [pgctl] Starting: ohhi, sweet
@@ -464,10 +464,10 @@ class DescribeEnvironment(object):
         yield 'environment'
 
     def it_can_accept_different_environment_variables(self, in_example_dir):
-        check_call(('sh', '-c', 'MYVAR=ohhi pgctl-2015 start'))
+        check_call(('sh', '-c', 'MYVAR=ohhi pgctl start'))
 
         assert_command(
-            ('pgctl-2015', 'log'),
+            ('pgctl', 'log'),
             '''\
 ==> playground/environment/log <==
 {TIMESTAMP} ohhi
@@ -477,10 +477,10 @@ class DescribeEnvironment(object):
             norm=norm.pgctl,
         )
 
-        check_call(('sh', '-c', 'MYVAR=bye pgctl-2015 restart'))
+        check_call(('sh', '-c', 'MYVAR=bye pgctl restart'))
 
         assert_command(
-            ('pgctl-2015', 'log'),
+            ('pgctl', 'log'),
             '''\
 ==> playground/environment/log <==
 {TIMESTAMP} ohhi
@@ -501,7 +501,7 @@ class DescribePgdirMissing(object):
     def it_shows_an_error(self, command, tmpdir):
         with tmpdir.as_cwd():
             assert_command(
-                ('pgctl-2015', command),
+                ('pgctl', command),
                 '',
                 "[pgctl] ERROR: could not find any directory named 'playground'\n",
                 1,
@@ -528,7 +528,7 @@ class DescribePgdirMissing(object):
 
         with tmpdir.as_cwd():
             assert_command(
-                ('pgctl-2015', 'config'),
+                ('pgctl', 'config'),
                 expected_output,
                 '',
                 0,
@@ -538,11 +538,11 @@ class DescribePgdirMissing(object):
     def it_can_still_show_help(self, tmpdir):
         with tmpdir.as_cwd():
             assert_command(
-                ('pgctl-2015', '--help'),
+                ('pgctl', '--help'),
                 '''\
-usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
-                  {start,stop,status,restart,reload,log,debug,config}
-                  [services [services ...]]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+             {start,stop,status,restart,reload,log,debug,config}
+             [services [services ...]]
 
 positional arguments:
   {start,stop,status,restart,reload,log,debug,config}
@@ -561,10 +561,10 @@ optional arguments:
 
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
-usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
-                  {{start,stop,status,restart,reload,log,debug,config}}
-                  [services [services ...]]
-pgctl-2015: error: {}
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+             {{start,stop,status,restart,reload,log,debug,config}}
+             [services [services ...]]
+pgctl: error: {}
 '''.format(
             'too few arguments'
             if six.PY2 else
@@ -572,7 +572,7 @@ pgctl-2015: error: {}
         )
         with tmpdir.as_cwd():
             assert_command(
-                ('pgctl-2015'),
+                ('pgctl'),
                 '',
                 expected,
                 2,
@@ -587,7 +587,7 @@ class DescribeDependentServices(object):
 
     def it_works(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'start', 'A'),
+            ('pgctl', 'start', 'A'),
             '',
             '''\
 [pgctl] Starting: A
@@ -596,7 +596,7 @@ class DescribeDependentServices(object):
             0,
         )
         wait_for(lambda: assert_command(
-            ('pgctl-2015', 'log', 'A'),
+            ('pgctl', 'log', 'A'),
             '''\
 ==> playground/A/log <==
 {TIMESTAMP} [pgctl] Starting: B
@@ -612,7 +612,7 @@ class DescribeDependentServices(object):
             norm=norm.pgctl,
         ))
         assert_command(
-            ('pgctl-2015', 'stop', 'A'),
+            ('pgctl', 'stop', 'A'),
             '',
             '''\
 [pgctl] Stopping: A
@@ -630,7 +630,7 @@ class DescribeStartMessageSuccess(object):
 
     def it_prints_a_start_message_on_successful_startup(self, in_example_dir):
         assert_command(
-            ('pgctl-2015', 'start', 'start-message'),
+            ('pgctl', 'start', 'start-message'),
             '',
             '''\
 [pgctl] Starting: start-message
@@ -650,7 +650,7 @@ class DescribePreStartHook(object):
     @pytest.mark.usefixtures('in_example_dir')
     def it_runs_before_starting_a_service(self):
         assert_command(
-            ('pgctl-2015', 'start'),
+            ('pgctl', 'start'),
             '',
             '''\
 hello, i am a pre-start script

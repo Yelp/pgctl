@@ -23,7 +23,7 @@ def it_fails_twice_but_doesnt_restart():
         assert_svstat('playground/unreliable', state='ready')
 
     assert_command(
-        ('pgctl-2015', 'start'),
+        ('pgctl', 'start'),
         '',
         '[pgctl] Starting: unreliable\n[pgctl] Started: unreliable\n',
         0
@@ -31,7 +31,7 @@ def it_fails_twice_but_doesnt_restart():
     wait_for(it_is_ready)
 
     assert_command(
-        ('pgctl-2015', 'log'),
+        ('pgctl', 'log'),
         '''\
 ==> playground/unreliable/log <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded

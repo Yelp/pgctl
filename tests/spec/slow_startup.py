@@ -25,7 +25,7 @@ def service_name():
 
 def it_times_out():
     assert_command(
-        ('pgctl-2015', 'start'),
+        ('pgctl', 'start'),
         '''\
 ''',
         '''\
@@ -45,7 +45,7 @@ def it_times_out():
     assert_svstat('playground/slow-startup', state=SvStat.UNSUPERVISED)
 
     assert_command(
-        ('pgctl-2015', 'log'),
+        ('pgctl', 'log'),
         '''\
 ==> playground/slow-startup/log <==
 {TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
@@ -60,7 +60,7 @@ def it_can_succeed():
     from mock import patch, ANY
     with patch.dict(os.environ, [('PGCTL_TIMEOUT', str(SLOW_STARTUP_TIME))]):
         assert_command(
-            ('pgctl-2015', 'start'),
+            ('pgctl', 'start'),
             '',
             #'[pgctl] Starting: slow-startup\n[pgctl] Started: slow-startup\n',
             ANY,
@@ -85,7 +85,7 @@ def it_restarts_on_unready():
     wait_for(it_is_ready)
 
     assert_command(
-        ('pgctl-2015', 'log'),
+        ('pgctl', 'log'),
         '''\
 ==> playground/slow-startup/log <==
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)

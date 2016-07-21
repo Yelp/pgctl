@@ -79,7 +79,7 @@ class DescribeOrphanSubprocess(DirtyTest):
 
     def it_starts_up_fine(self):
         assert_command(
-            ('pgctl-2015', 'start'),
+            ('pgctl', 'start'),
             '',
             '''\
 [pgctl] Starting: slow-startup, sweet
@@ -89,7 +89,7 @@ class DescribeOrphanSubprocess(DirtyTest):
             0,
         )
         assert_command(
-            ('pgctl-2015', 'log'),
+            ('pgctl', 'log'),
             '''\
 ==> playground/slow-startup/log <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
@@ -105,7 +105,7 @@ class DescribeOrphanSubprocess(DirtyTest):
 
     def it_shows_error_on_stop_for_sweet(self):
         assert_command(
-            ('pgctl-2015', 'start', 'sweet'),
+            ('pgctl', 'start', 'sweet'),
             '',
             '''\
 [pgctl] Starting: sweet
@@ -114,7 +114,7 @@ class DescribeOrphanSubprocess(DirtyTest):
             0,
         )
         assert_command(
-            ('pgctl-2015', 'restart', 'sweet'),
+            ('pgctl', 'restart', 'sweet'),
             '',
             '''\
 [pgctl] Stopping: sweet
@@ -140,7 +140,7 @@ There are two ways you can fix this:
 
     def it_shows_error_on_stop_for_slow_start(self):
         assert_command(
-            ('pgctl-2015', 'start', 'slow-startup'),
+            ('pgctl', 'start', 'slow-startup'),
             '',
             '''\
 [pgctl] Starting: slow-startup
@@ -149,7 +149,7 @@ There are two ways you can fix this:
             0,
         )
         assert_command(
-            ('pgctl-2015', 'restart', 'slow-startup'),
+            ('pgctl', 'restart', 'slow-startup'),
             '',
             '''\
 [pgctl] Stopping: slow-startup
@@ -188,10 +188,10 @@ class DescribeSlowShutdown(DirtyTest):
         del os.environ['PGCTL_TIMEOUT']
 
     def it_fails_by_default(self):
-        check_call(('pgctl-2015', 'start'))
+        check_call(('pgctl', 'start'))
         assert_svstat('playground/sweet', state='up')
         assert_command(
-            ('pgctl-2015', 'stop'),
+            ('pgctl', 'stop'),
             '',
             '''\
 [pgctl] Stopping: sweet
@@ -213,11 +213,11 @@ class DescribeSlowShutdown(DirtyTest):
         with open('playground/sweet/timeout-stop', 'w') as timeout:
             timeout.write('3')
 
-        check_call(('pgctl-2015', 'start'))
+        check_call(('pgctl', 'start'))
         assert_svstat('playground/sweet', state='up')
 
-        check_call(('pgctl-2015', 'restart'))
+        check_call(('pgctl', 'restart'))
         assert_svstat('playground/sweet', state='up')
 
-        check_call(('pgctl-2015', 'stop'))
+        check_call(('pgctl', 'stop'))
         assert_svstat('playground/sweet', state=SvStat.UNSUPERVISED)

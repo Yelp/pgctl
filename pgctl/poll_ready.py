@@ -69,7 +69,7 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             print_stderr(
                 'pgctl-poll-ready: failed for more than {0:.2f} seconds -- we are restarting this service for you'.format(timeout)
             )
-            exec_(('pgctl-2015', 'restart', service))  # doesn't return
+            exec_(('pgctl', 'restart', service))  # doesn't return
 
 
 def main():
