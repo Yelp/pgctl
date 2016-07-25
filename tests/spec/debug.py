@@ -36,7 +36,7 @@ def assert_works_interactively():
     read, write = os.openpty()
     pty.normalize_newlines(read)
     # setsid: this simulates the shell's job-control behavior
-    proc = Popen(('setsid', 'pgctl-2015', 'debug', 'greeter'), stdin=PIPE, stdout=write)
+    proc = Popen(('setsid', 'pgctl', 'debug', 'greeter'), stdin=PIPE, stdout=write)
     os.close(write)
 
     try:
@@ -58,7 +58,7 @@ def it_works_with_nothing_running():
 @greeter_service
 def it_fails_with_multiple_services():
     assert_command(
-        ('pgctl-2015', 'debug', 'abc', 'def'),
+        ('pgctl', 'debug', 'abc', 'def'),
         '',
         '[pgctl] ERROR: Must debug exactly one service, not: abc, def\n',
         1,
@@ -67,7 +67,7 @@ def it_fails_with_multiple_services():
 
 @greeter_service
 def it_first_stops_the_background_service_if_running():
-    check_call(('pgctl-2015', 'start', 'greeter'))
+    check_call(('pgctl', 'start', 'greeter'))
     assert_svstat('playground/greeter', state='up')
 
     assert_works_interactively()
@@ -76,7 +76,7 @@ def it_first_stops_the_background_service_if_running():
 @unreliable_service
 def it_disables_polling():
     stderr = open('stderr', 'w')
-    proc = Popen(('pgctl-2015', 'debug', 'unreliable'), stdin=open(os.devnull), stdout=PIPE, stderr=stderr)
+    proc = Popen(('pgctl', 'debug', 'unreliable'), stdin=open(os.devnull), stdout=PIPE, stderr=stderr)
 
     def check_file_contents():
         expected = '''\

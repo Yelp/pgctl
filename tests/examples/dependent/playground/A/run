@@ -1,6 +1,6 @@
 #!/bin/sh
 
-PGCTL_VERBOSE=1 pgctl-2015 start B
+PGCTL_VERBOSE=1 pgctl start B
 
 echo this is stdout >&1
 echo this is stderr >&2

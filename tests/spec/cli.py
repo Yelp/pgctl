@@ -49,7 +49,7 @@ class DescribeCli(object):
 '''.format(pghome=expected_pghome)
 
         assert_command(
-            ('pgctl-2015', 'config'),
+            ('pgctl', 'config'),
             expected_output,
             '',
             0,
@@ -71,13 +71,13 @@ class DescribeCli(object):
 
     def it_shows_help_with_no_arguments(self):
         assert_command(
-            ('pgctl-2015',),
+            ('pgctl',),
             '',
             '''\
-usage: pgctl-2015 [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
-                  {{start,stop,status,restart,reload,log,debug,config}}
-                  [services [services ...]]
-pgctl-2015: error: {}
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+             {{start,stop,status,restart,reload,log,debug,config}}
+             [services [services ...]]
+pgctl: error: {}
 '''.format(
                 'too few arguments'
                 if six.PY2 else
@@ -89,7 +89,7 @@ pgctl-2015: error: {}
     def it_shows_version(self):
         version_s = __version__ + '\n'
         assert_command(
-            ('pgctl-2015', '--version'),
+            ('pgctl', '--version'),
             # argparse changes where `version` goes in py3
             '' if six.PY2 else version_s,
             version_s if six.PY2 else '',

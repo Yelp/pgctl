@@ -38,15 +38,15 @@ that ensures our `now.date` file always has the current date.
    $ cat playground/date/run
    date > now.date
 
-   $ pgctl-2015 start
-   $ pgctl-2015 status
+   $ pgctl start
+   $ pgctl status
    date -- up (0 seconds)
 
    $ cat now.date
    Fri Jun 26 15:21:26 PDT 2015
 
-   $ pgctl-2015 stop
-   $ pgctl-2015 status
+   $ pgctl stop
+   $ pgctl status
    date -- down (0 seconds)
 
 
