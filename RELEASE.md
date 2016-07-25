@@ -1,8 +1,9 @@
 **NOTE:** This guide is only useful for the owners of the pgctl project.
 
-1. `git checkout upstream/master -b {{branch}}`
+1. `git fetch`
+1. `git checkout upstream/master -b release-v{{version}}`
 1. bump `pgctl/__init__.py`
-1. `git commit -m "{{version}}"`
+1. `git commit -am "This is v{{version}}"`
 1. Create a pull request
 1. Wait for review / merge
 1. go to https://github.com/Yelp/pgctl/releases and add a tag
