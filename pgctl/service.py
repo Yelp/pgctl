@@ -209,10 +209,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def foreground(self):
         with self.flock() as lock:
-            exec_(
-                (str(self.path.join('run')),),
+            service = Popen(
+                ('s6-supervise', self.path.strpath),
                 env=self.supervise_env(lock, debug=True),
-            )  # never returns
+            )
+        return service.wait()
 
     @cached_property
     def name(self):
