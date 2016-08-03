@@ -110,13 +110,13 @@ def timeout(service_name, error, action_name, start_time, timeout_length, check_
     # assertion can take a long time. we timeout as close to the limit_time as we can.
     if abs(curr_time - limit_time) < abs(next_time - limit_time):
         actual_timeout_length = curr_time - start_time
-        error_message = "ERROR: service '%s' failed to %s after %.2g seconds" % (
+        error_message = "ERROR: service '{}' failed to {} after {:.2f} seconds".format(
             service_name,
             action_name,
             actual_timeout_length,
         )
-        if format(timeout_length, '.2g') != format(actual_timeout_length, '.2g'):
-            error_message += ' (it took %.2gs to poll)' % (
+        if actual_timeout_length - timeout_length > 0.1:
+            error_message += ' (it took {}s to poll)'.format(
                 check_length,
             )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
         error_message += ', ' + str(error)
