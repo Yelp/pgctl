@@ -27,7 +27,6 @@ from .functions import bestrelpath
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
-from .functions import uniq
 from .service import Service
 from pgctl import __version__
 
@@ -60,7 +59,7 @@ class StateChange(object):
         self.name = service.name
 
 
-class start(StateChange):
+class Start(StateChange):
 
     def change(self):
         return self.service.start()
@@ -77,7 +76,7 @@ class start(StateChange):
         changed = 'Started:'
 
 
-class stop(StateChange):
+class Stop(StateChange):
 
     def change(self):
         return self.service.stop()
@@ -152,7 +151,7 @@ class PgctlApp(object):
     def __change_state(self, state):
         """Changes the state of a supervised service using the svc command"""
         # if we're starting a service, run the playground-wide "pre-start" hook (if it exists)
-        if state is start:
+        if state is Start:
             self.run_pre_start_hook()
 
         # we lock the whole playground; only one pgctl can change the state at a time, reliably
@@ -174,7 +173,7 @@ class PgctlApp(object):
                 # This lock represents a pgctl cli interacting with the service.
                 from .flock import flock
                 lock = context.enter_context(flock(
-                    str(service.path.join('.pgctl.lock')),
+                    service.path.join('.pgctl.lock').strpath,
                     on_fail=on_lock_held,
                 ))
                 from .flock import set_fd_inheritable
@@ -209,7 +208,7 @@ class PgctlApp(object):
                     service.service.message(state)
                     services.remove(service)
 
-            time.sleep(self.poll)
+            time.sleep(float(self.pgconf['poll']))
 
         return failed
 
@@ -257,12 +256,12 @@ class PgctlApp(object):
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(start)
+        failed = self.__change_state(Start)
         return self.__show_failure('start', failed)
 
     def stop(self):
         """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(stop)
+        failed = self.__change_state(Stop)
         return self.__show_failure('stop', failed)
 
     def status(self):
@@ -347,7 +346,7 @@ class PgctlApp(object):
             for alias in self.pgconf['services']
             for service_name in self._expand_aliases(alias)
         ]
-        return uniq(services)
+        return tuple(sorted(set(services)))
 
     def _expand_aliases(self, name):
         aliases = self.pgconf['aliases']
@@ -371,10 +370,6 @@ class PgctlApp(object):
         return result
 
     @cached_property
-    def poll(self):
-        return float(self.pgconf['poll'])
-
-    @cached_property
     def all_service_names(self):
         """Return a tuple of all of the Services.
 
@@ -382,11 +377,11 @@ class PgctlApp(object):
         """
         pgdir = self.pgdir.listdir(sort=True)
 
-        return tuple([
+        return tuple(
             service_path.basename
             for service_path in pgdir
             if service_path.check(dir=True)
-        ])
+        )
 
     @cached_property
     def service_names(self):

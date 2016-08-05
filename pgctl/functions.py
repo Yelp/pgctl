@@ -27,21 +27,6 @@ def exec_(argv, env=None):  # never returns
     os.execvpe(argv[0], argv, env)
 
 
-def uniq(iterable):
-    """remove duplicates while preserving ordering -- first one wins"""
-    return tuple(_uniq(iterable))
-
-
-def _uniq(iterable):
-    seen = set()
-    for i in iterable:
-        if i in seen:
-            pass
-        else:
-            yield i
-            seen.add(i)
-
-
 class JSONEncoder(json.JSONEncoder):
     """knows that frozendict is like dict"""
 

@@ -13,18 +13,6 @@ from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
 from pgctl.functions import show_runaway_processes
-from pgctl.functions import uniq
-
-
-class DescribeUniq(object):
-
-    def it_does_not_have_duplicates(self):
-        data = ['b', 'b', 'b']
-        assert list(uniq(data)) == ['b']
-
-    def it_removes_duplicates_with_first_one_wins_mentality(self):
-        data = ['a', 'b', 'c', 'b', 'd', 'a']
-        assert list(uniq(data)) == ['a', 'b', 'c', 'd']
 
 
 class DescribeJSONEncoder(object):
