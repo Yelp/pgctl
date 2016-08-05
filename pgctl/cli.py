@@ -421,7 +421,16 @@ def parser():
     parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
     parser.add_argument('--pghome', help='directory to keep user-level playground state', default=argparse.SUPPRESS)
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
-    parser.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        '--all', '-a',
+        action='store_const', const=(ALL_SERVICES,),
+        dest='services',
+        help='act upon all services',
+        default=argparse.SUPPRESS,
+    )
+    group.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
 
     return parser
 

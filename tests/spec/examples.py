@@ -540,7 +540,7 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl', '--help'),
                 '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -554,6 +554,7 @@ optional arguments:
   --version             show program's version number and exit
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
+  --all, -a             act upon all services
 ''',
                 '',
                 0,
@@ -561,7 +562,7 @@ optional arguments:
 
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}
