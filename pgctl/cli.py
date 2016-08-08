@@ -27,6 +27,7 @@ from .functions import bestrelpath
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
+from .functions import unique
 from .service import Service
 from pgctl import __version__
 
@@ -346,7 +347,7 @@ class PgctlApp(object):
             for alias in self.pgconf['services']
             for service_name in self._expand_aliases(alias)
         ]
-        return tuple(sorted(set(services)))
+        return unique(services)
 
     def _expand_aliases(self, name):
         aliases = self.pgconf['aliases']
