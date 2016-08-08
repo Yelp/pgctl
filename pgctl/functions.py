@@ -27,12 +27,12 @@ def exec_(argv, env=None):  # never returns
     os.execvpe(argv[0], argv, env)
 
 
-def uniq(iterable):
+def unique(iterable):
     """remove duplicates while preserving ordering -- first one wins"""
-    return tuple(_uniq(iterable))
+    return tuple(_unique(iterable))
 
 
-def _uniq(iterable):
+def _unique(iterable):
     seen = set()
     for i in iterable:
         if i in seen:
