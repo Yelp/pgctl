@@ -456,6 +456,29 @@ class DescribeAliases(object):
             0,
         )
 
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_shows_all_services_with_dash_a(self):
+        assert_command(
+            ('pgctl', 'status'),
+            '''\
+ohhi: down
+sweet: down
+''',
+            '',
+            0,
+        )
+
+        assert_command(
+            ('pgctl', 'status', '-a'),
+            '''\
+ohhi: down
+sleep: down
+sweet: down
+''',
+            '',
+            0,
+        )
+
 
 class DescribeEnvironment(object):
 
