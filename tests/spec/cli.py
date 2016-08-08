@@ -74,7 +74,7 @@ class DescribeCli(object):
             ('pgctl',),
             '',
             '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}

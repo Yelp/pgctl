@@ -456,6 +456,29 @@ class DescribeAliases(object):
             0,
         )
 
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_shows_all_services_with_dash_a(self):
+        assert_command(
+            ('pgctl', 'status'),
+            '''\
+ohhi: down
+sweet: down
+''',
+            '',
+            0,
+        )
+
+        assert_command(
+            ('pgctl', 'status', '-a'),
+            '''\
+ohhi: down
+sleep: down
+sweet: down
+''',
+            '',
+            0,
+        )
+
 
 class DescribeEnvironment(object):
 
@@ -540,7 +563,7 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl', '--help'),
                 '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -554,6 +577,7 @@ optional arguments:
   --version             show program's version number and exit
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
+  --all, -a             act upon all services
 ''',
                 '',
                 0,
@@ -561,7 +585,7 @@ optional arguments:
 
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}
