@@ -11,6 +11,7 @@ disable=
     star-args,
     misplaced-comparison-constant,
     wrong-import-order,
+    useless-else-on-loop,
 
 [REPORTS]
 output-format=colorized

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -7,6 +8,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import time
 from time import time as now
 
@@ -52,6 +54,23 @@ PGCTL_DEFAULTS = frozendict({
     }),
 })
 CHANNEL = '[pgctl]'
+
+
+class TermStyle(object):
+
+    BOLD = '\033[1m'
+    ENDC = '\033[0m'
+
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+
+    @classmethod
+    def wrap(cls, text, style):
+        if sys.stdout.isatty():
+            return '{}{}{}'.format(style, text, cls.ENDC)
+        else:
+            return text
 
 
 class StateChange(object):
@@ -268,33 +287,51 @@ class PgctlApp(object):
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
-        if self.pgconf['json']:
-            # TODO: We want to use this same dict for the non-JSON version, but
-            # we don't want to duplicate the repr logic of SvStat quite yet.
-            status = {}
-            for service in self.services:
-                svstat = service.svstat()
-                state = {
-                    key: getattr(svstat, key)
-                    for key in svstat._fields
-                }
-                if state['state'] == SvStat.UNSUPERVISED:
-                    # this is the expected state for down services.
-                    state['state'] = 'down'
-                status[service.name] = state
+        status = {}
+        for service in self.services:
+            svstat = service.svstat()
+            state = {
+                key: getattr(svstat, key)
+                for key in svstat._fields
+            }
+            if state['state'] == SvStat.UNSUPERVISED:
+                # this is the expected state for down services.
+                state['state'] = 'down'
+            status[service.name] = state
 
+        if self.pgconf['json']:
             print(json.dumps(
                 status,
                 sort_keys=True,
                 indent=4,
             ))
         else:
-            for service in self.services:
-                status = service.svstat()
-                if status.state == SvStat.UNSUPERVISED:
-                    # this is the expected state for down services.
-                    status = status._replace(state='down')
-                print('%s: %s' % (service.name, status))
+            for service_name, state in sorted(status.items()):
+                color = {
+                    'ready': TermStyle.GREEN,
+                    'up': TermStyle.YELLOW,
+                    'down': TermStyle.RED,
+                }[state['state']]
+
+                print(' {} {}: {}'.format(
+                    TermStyle.wrap('●', color),
+                    TermStyle.wrap(service_name, TermStyle.BOLD),
+                    TermStyle.wrap(state['state'], TermStyle.BOLD + color),
+                ))
+
+                # state, pid/exit code
+                components = []
+                if state['pid'] is not None:
+                    components.append('pid: {}'.format(state['pid']))
+                if state['exitcode'] is not None:
+                    components.append('exitcode: {}'.format(state['exitcode']))
+                if state['seconds'] is not None:
+                    components.append('{}'.format(_humanize_seconds(state['seconds'])))
+                if state['process'] is not None:
+                    components.append(state['process'])
+
+                if components:
+                    print('   └─ {}'.format(', '.join(components)))
 
     def restart(self):
         """Starts and stops a service"""
@@ -314,7 +351,6 @@ class PgctlApp(object):
         tail = ('tail', '-n', '30', '--verbose')  # show file headers
 
         if interactive is None:
-            import sys
             interactive = sys.stdout.isatty()
         if interactive:
             # we're interactive; give a continuous log
@@ -455,6 +491,22 @@ def parser():
     group.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
 
     return parser
+
+
+def _humanize_seconds(seconds):
+    for period_name, period_length in (
+            ('days', 24 * 60 * 60),
+            ('hours', 60 * 60),
+            ('minutes', 60),
+    ):
+        if seconds > period_length:
+            num_periods = round(seconds / period_length, 1)
+            return '{:.1f} {}'.format(
+                num_periods,
+                period_name,
+            )
+    else:
+        return '{} seconds'.format(seconds)
 
 
 def main(argv=None):
