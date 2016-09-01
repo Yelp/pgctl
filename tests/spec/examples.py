@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import json
 import os
 
 import pytest
@@ -13,10 +14,17 @@ from testing.assertions import assert_svstat
 from testing.assertions import wait_for
 from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
+from testing.subprocess import run
 
 from pgctl.daemontools import SvStat
 from pgctl.subprocess import check_call
 from pgctl.subprocess import Popen
+
+
+class ANY_INTEGER(object):
+
+    def __eq__(self, other):
+        return isinstance(other, int)
 
 
 class DescribePgctlLog(object):
@@ -330,6 +338,24 @@ class DescribeStatus(object):
             0,
         )
 
+    def it_displays_correctly_when_the_service_is_down_json(self, in_example_dir):
+        check_call(('pgctl', 'start', 'sleep'))
+        check_call(('pgctl', 'stop', 'sleep'))
+        stdout, stderr, returncode = run(
+            ('pgctl', '--json', 'status', 'sleep'),
+        )
+        assert returncode == 0
+        assert json.loads(stdout) == {
+            'sleep': {
+                'exitcode': None,
+                'pid': None,
+                'process': None,
+                'seconds': None,
+                'state': 'down',
+            },
+        }
+        assert stderr == b''
+
     def it_displays_correctly_when_the_service_is_up(self, in_example_dir):
         check_call(('pgctl', 'start', 'sleep'))
         assert_command(
@@ -339,6 +365,23 @@ class DescribeStatus(object):
             0,
             norm=norm.pgctl,
         )
+
+    def it_displays_correctly_when_the_service_is_up_json(self, in_example_dir):
+        check_call(('pgctl', 'start', 'sleep'))
+        stdout, stderr, returncode = run(
+            ('pgctl', '--json', 'status', 'sleep'),
+        )
+        assert returncode == 0
+        assert json.loads(stdout) == {
+            'sleep': {
+                'exitcode': None,
+                'pid': ANY_INTEGER(),
+                'process': None,
+                'seconds': ANY_INTEGER(),
+                'state': 'ready',
+            },
+        }
+        assert stderr == b''
 
     def it_displays_the_status_of_multiple_services(self, in_example_dir):
         """Expect multiple services with status and PID"""
@@ -353,6 +396,31 @@ tail: down
             0,
             norm=norm.pgctl,
         )
+
+    def it_displays_the_status_of_multiple_services_json(self, in_example_dir):
+        """Expect multiple services with status and PID"""
+        check_call(('pgctl', 'start', 'sleep'))
+        stdout, stderr, returncode = run(
+            ('pgctl', '--json', 'status', 'sleep', 'tail'),
+        )
+        assert returncode == 0
+        assert json.loads(stdout) == {
+            'sleep': {
+                'exitcode': None,
+                'pid': ANY_INTEGER(),
+                'process': None,
+                'seconds': ANY_INTEGER(),
+                'state': 'ready',
+            },
+            'tail': {
+                'exitcode': None,
+                'pid': None,
+                'process': None,
+                'seconds': None,
+                'state': 'down',
+            }
+        }
+        assert stderr == b''
 
     def it_displays_the_status_of_all_services(self, in_example_dir):
         """Expect all services to provide status when no service is specified"""
@@ -539,6 +607,7 @@ class DescribePgdirMissing(object):
         ]
     },
     "command": "config",
+    "json": false,
     "pgdir": "playground",
     "pghome": "~/.run/pgctl",
     "poll": ".01",
@@ -563,7 +632,8 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl', '--help'),
                 '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
+             [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -577,6 +647,7 @@ optional arguments:
   --version             show program's version number and exit
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
+  --json                output in JSON (only supported by some commands)
   --all, -a             act upon all services
 ''',
                 '',
@@ -585,7 +656,8 @@ optional arguments:
 
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--all]
+usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
+             [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}
