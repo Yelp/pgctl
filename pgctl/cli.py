@@ -4,6 +4,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import json
 import os
 import subprocess
 import time
@@ -267,12 +268,33 @@ class PgctlApp(object):
 
     def status(self):
         """Retrieve the PID and state of a service or group of services"""
-        for service in self.services:
-            status = service.svstat()
-            if status.state == SvStat.UNSUPERVISED:
-                # this is the expected state for down services.
-                status = status._replace(state='down')
-            print('%s: %s' % (service.name, status))
+        if self.pgconf['json']:
+            # TODO: We want to use this same dict for the non-JSON version, but
+            # we don't want to duplicate the repr logic of SvStat quite yet.
+            status = {}
+            for service in self.services:
+                svstat = service.svstat()
+                state = {
+                    key: getattr(svstat, key)
+                    for key in svstat._fields
+                }
+                if state['state'] == SvStat.UNSUPERVISED:
+                    # this is the expected state for down services.
+                    state['state'] = 'down'
+                status[service.name] = state
+
+            print(json.dumps(
+                status,
+                sort_keys=True,
+                indent=4,
+            ))
+        else:
+            for service in self.services:
+                status = service.svstat()
+                if status.state == SvStat.UNSUPERVISED:
+                    # this is the expected state for down services.
+                    status = status._replace(state='down')
+                print('%s: %s' % (service.name, status))
 
     def restart(self):
         """Starts and stops a service"""
@@ -416,6 +438,10 @@ def parser():
     parser.add_argument('--version', action='version', version=__version__)
     parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
     parser.add_argument('--pghome', help='directory to keep user-level playground state', default=argparse.SUPPRESS)
+    parser.add_argument(
+        '--json', action='store_true', default=False,
+        help='output in JSON (only supported by some commands)',
+    )
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
 
     group = parser.add_mutually_exclusive_group()
