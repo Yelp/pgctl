@@ -52,6 +52,8 @@ PGCTL_DEFAULTS = frozendict({
     'aliases': frozendict({
         'default': (ALL_SERVICES,)
     }),
+    # output as json?
+    'json': False,
 })
 CHANNEL = '[pgctl]'
 
@@ -114,11 +116,19 @@ class Stop(StateChange):
         changed = 'Stopped:'
 
 
+def unbuf_print(*args, **kwargs):
+    """Print unbuffered in utf8."""
+    kwargs.setdefault('file', sys.stdout)
+
+    buff = getattr(kwargs['file'], 'buffer', kwargs['file'])
+    buff.write(' '.join(args).encode('UTF-8') + b'\n')
+    buff.flush()
+
+
 def pgctl_print(*print_args, **print_kwargs):
-    from sys import stderr
-    print_kwargs.setdefault('file', stderr)
-    print(CHANNEL, *print_args, **print_kwargs)
-    stderr.flush()
+    """Print to stderr with [pgctl] prepended."""
+    print_kwargs.setdefault('file', sys.stderr)
+    unbuf_print(CHANNEL, *print_args, **print_kwargs)
 
 
 def timeout(service_name, error, action_name, start_time, timeout_length, check_time):
@@ -313,7 +323,7 @@ class PgctlApp(object):
                     'down': TermStyle.RED,
                 }[state['state']]
 
-                print(' {} {}: {}'.format(
+                unbuf_print(' {} {}: {}'.format(
                     TermStyle.wrap('●', color),
                     TermStyle.wrap(service_name, TermStyle.BOLD),
                     TermStyle.wrap(state['state'], TermStyle.BOLD + color),
@@ -331,7 +341,7 @@ class PgctlApp(object):
                     components.append(state['process'])
 
                 if components:
-                    print('   └─ {}'.format(', '.join(components)))
+                    unbuf_print('   └─ {}'.format(', '.join(components)))
 
     def restart(self):
         """Starts and stops a service"""
@@ -499,10 +509,9 @@ def _humanize_seconds(seconds):
             ('hours', 60 * 60),
             ('minutes', 60),
     ):
-        if seconds > period_length:
-            num_periods = round(seconds / period_length, 1)
+        if seconds >= period_length:
             return '{:.1f} {}'.format(
-                num_periods,
+                seconds / period_length,
                 period_name,
             )
     else:

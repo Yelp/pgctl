@@ -12,6 +12,7 @@ disable=
     misplaced-comparison-constant,
     wrong-import-order,
     useless-else-on-loop,
+    unbalanced-tuple-unpacking,
 
 [REPORTS]
 output-format=colorized

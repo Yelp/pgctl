@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # pylint:disable=no-self-use, unused-argument
 from __future__ import absolute_import
 from __future__ import print_function
@@ -333,7 +334,7 @@ class DescribeStatus(object):
         check_call(('pgctl', 'stop', 'sleep'))
         assert_command(
             ('pgctl', 'status', 'sleep'),
-            'sleep: down\n',
+            ' ● sleep: down\n',
             '',
             0,
         )
@@ -360,7 +361,8 @@ class DescribeStatus(object):
         check_call(('pgctl', 'start', 'sleep'))
         assert_command(
             ('pgctl', 'status', 'sleep'),
-            'sleep: ready (pid {PID}) {TIME} seconds\n',
+            ' ● sleep: ready\n'
+            '   └─ pid: {PID}, {TIME} seconds\n',
             '',
             0,
             norm=norm.pgctl,
@@ -389,8 +391,9 @@ class DescribeStatus(object):
         assert_command(
             ('pgctl', 'status', 'sleep', 'tail'),
             '''\
-sleep: ready (pid {PID}) {TIME} seconds
-tail: down
+ ● sleep: ready
+   └─ pid: {PID}, {TIME} seconds
+ ● tail: down
 ''',
             '',
             0,
@@ -428,8 +431,9 @@ tail: down
         assert_command(
             ('pgctl', 'status'),
             '''\
-sleep: down
-tail: ready (pid {PID}) {TIME} seconds
+ ● sleep: down
+ ● tail: ready
+   └─ pid: {PID}, {TIME} seconds
 ''',
             '',
             0,
@@ -451,8 +455,9 @@ tail: ready (pid {PID}) {TIME} seconds
             assert_command(
                 ('pgctl', 'status'),
                 '''\
-sleep: down
-tail: ready (pid {PID}) {TIME} seconds
+ ● sleep: down
+ ● tail: ready
+   └─ pid: {PID}, {TIME} seconds
 ''',
                 '',
                 0,
@@ -529,8 +534,8 @@ class DescribeAliases(object):
         assert_command(
             ('pgctl', 'status'),
             '''\
-ohhi: down
-sweet: down
+ ● ohhi: down
+ ● sweet: down
 ''',
             '',
             0,
@@ -539,9 +544,9 @@ sweet: down
         assert_command(
             ('pgctl', 'status', '-a'),
             '''\
-ohhi: down
-sleep: down
-sweet: down
+ ● ohhi: down
+ ● sleep: down
+ ● sweet: down
 ''',
             '',
             0,
