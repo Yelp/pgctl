@@ -8,8 +8,10 @@ from re import compile as Regex
 from re import escape
 from sys import prefix
 
+import six
 
-class Normalized(str):
+
+class Normalized(six.text_type):
     rules = ()
 
     def __new__(cls, value):
@@ -30,6 +32,7 @@ class pgctl(Normalized):
     """normalize pgctl's output"""
     rules = timestamp.rules + (
         (Regex(r'\(pid \d+\)'), '(pid {PID})'),
+        (Regex(r'\pid: \d+'), 'pid: {PID}'),
         (Regex(r' [\d.]+ seconds'), ' {TIME} seconds'),
         (
             Regex(r'(?m)^UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD'),
