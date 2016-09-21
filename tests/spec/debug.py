@@ -80,8 +80,7 @@ def it_disables_polling():
 
     def check_file_contents():
         expected = '''\
-[pgctl] Stopping: unreliable
-[pgctl] Stopped: unreliable
+[pgctl] Already stopped: unreliable
 pgctl-poll-ready: disabled during debug -- quitting
 '''
         with open('stderr') as fd:
