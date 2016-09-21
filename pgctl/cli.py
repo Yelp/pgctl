@@ -5,6 +5,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import contextlib
 import json
 import os
 import subprocess
@@ -12,6 +13,7 @@ import sys
 import time
 from time import time as now
 
+import contextlib2
 import six
 from cached_property import cached_property
 from frozendict import frozendict
@@ -23,14 +25,18 @@ from .daemontools import SvStat
 from .debug import debug
 from .debug import trace
 from .errors import CircularAliases
+from .errors import LockHeld
 from .errors import NoPlayground
 from .errors import PgctlUserMessage
+from .errors import reraise
 from .errors import Unsupervised
 from .functions import bestrelpath
 from .functions import commafy
 from .functions import exec_
 from .functions import JSONEncoder
+from .functions import ps
 from .functions import unique
+from .fuser import fuser
 from .service import Service
 from pgctl import __version__
 
@@ -179,25 +185,16 @@ class PgctlApp(object):
         else:
             return result
 
-    def __change_state(self, state):
-        """Changes the state of a supervised service using the svc command"""
-        # if we're starting a service, run the playground-wide "pre-start" hook (if it exists)
-        if state is Start:
-            self.run_pre_start_hook()
-
-        # we lock the whole playground; only one pgctl can change the state at a time, reliably
+    @contextlib.contextmanager
+    def playground_locked(self):
+        """Lock the entire playground."""
         def on_lock_held(path):
-            from .errors import reraise
-            from .errors import LockHeld
-            from .functions import ps
-            from .fuser import fuser
             reraise(LockHeld(
                 'another pgctl command is currently managing this service: (%s)\n%s' %
                 (bestrelpath(path), ps(fuser(path)))
             ))
 
-        from contextlib2 import ExitStack
-        with ExitStack() as context:
+        with contextlib2.ExitStack() as context:
             for service in self.services:
                 service.ensure_exists()
 
@@ -210,6 +207,30 @@ class PgctlApp(object):
                 from .flock import set_fd_inheritable
                 set_fd_inheritable(lock, False)
 
+            yield
+
+    def __change_state(self, state):
+        """Changes the state of a supervised service using the svc command"""
+        with self.playground_locked():
+            for service in self.services:
+                try:
+                    state(service).assert_()
+                except PgctlUserMessage:
+                    break
+            else:
+                # Short-circuit, everything is in the correct state.
+                pgctl_print('Already {} {}'.format(
+                    state.strings.changed.lower(),
+                    commafy(self.service_names)),
+                )
+                return
+
+        # If we're starting a service, run the playground-wide "pre-start" hook (if it exists).
+        # This is intentionally done without holding a lock, since this might be very slow.
+        if state is Start:
+            self.run_pre_start_hook()
+
+        with self.playground_locked():
             return self.__locked_change_state(state)
 
     def __locked_change_state(self, state):

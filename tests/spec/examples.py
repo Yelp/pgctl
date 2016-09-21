@@ -271,8 +271,7 @@ class DescribeRestart(object):
             ('pgctl', 'restart', 'sleep'),
             '',
             '''\
-[pgctl] Stopping: sleep
-[pgctl] Stopped: sleep
+[pgctl] Already stopped: sleep
 [pgctl] Starting: sleep
 [pgctl] Started: sleep
 ''',
@@ -284,7 +283,18 @@ class DescribeRestart(object):
         check_call(('pgctl', 'start', 'sleep'))
         assert_svstat('playground/sleep', state='up')
 
-        self.it_is_just_stop_then_start(in_example_dir)
+        assert_command(
+            ('pgctl', 'restart', 'sleep'),
+            '',
+            '''\
+[pgctl] Stopping: sleep
+[pgctl] Stopped: sleep
+[pgctl] Starting: sleep
+[pgctl] Started: sleep
+''',
+            0,
+        )
+        assert_svstat('playground/sleep', state='up')
 
 
 class DescribeStartMultipleServices(object):
@@ -759,6 +769,17 @@ hello, i am a pre-start script
 --> cwd basename: pre-start-hook
 [pgctl] Starting: sweet
 [pgctl] Started: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        # starting when already up doesn't trigger pre-start to run again
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Already started: sweet
 ''',
             0,
             norm=norm.pgctl,
