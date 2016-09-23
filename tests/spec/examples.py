@@ -139,6 +139,16 @@ class DescribePgctlLog(object):
 
         assert p.wait() == -15
 
+    def it_fails_for_nonexistent_services(self, in_example_dir):
+        assert_command(
+            ('pgctl', 'log', 'i-dont-exist'),
+            '',
+            '''\
+[pgctl] ERROR: No such service: 'playground/i-dont-exist'
+''',
+            1,
+        )
+
     def it_is_line_buffered(self):
         """
         Show that the interleaved output of ohhi becomes separated per-line.

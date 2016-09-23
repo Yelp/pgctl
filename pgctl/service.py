@@ -139,6 +139,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.__exists = True
 
     def ensure_logs(self):
+        self.ensure_exists()
         self.path.ensure('log')
 
     def ensure_directory_structure(self):
