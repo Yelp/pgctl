@@ -40,7 +40,7 @@ def assert_command(cmd, stdout, stderr, returncode, norm=None, **popen_args):
     message = 'TEST: assert_command()\t%s\n' % quote(cmd)
     show_both(message, message)
     _banner('actual')
-    actual_out, actual_err, returncode = run(cmd, **popen_args)
+    actual_out, actual_err, actual_returncode = run(cmd, **popen_args)
     if norm:
         actual_out = norm(actual_out)
         actual_err = norm(actual_err)
@@ -49,7 +49,7 @@ def assert_command(cmd, stdout, stderr, returncode, norm=None, **popen_args):
     # in order of most-informative error first.
     assert stderr == actual_err
     assert stdout == actual_out
-    assert returncode == returncode
+    assert returncode == actual_returncode
 
 
 def ctrl_c(process):
