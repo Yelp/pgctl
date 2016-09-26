@@ -85,7 +85,7 @@ Aliases
 
 With no arguments, ``pgctl start`` is equivalent to ``pgctl start default``.
 By default, ``default`` maps to a list of all services.
-You can configure what ``default`` means via ``playground/config.yaml``:
+You can configure what ``default`` means via ``pgctl.yaml``:
 
 .. note that yaml has really bad/no styling in pygments
 
