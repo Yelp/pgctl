@@ -61,7 +61,7 @@ class Config(object):
             return result
         elif filename.endswith(('.yaml', '.yml')):
             return yaml_load(open(filename))
-        elif filename.endswith(('.json')):
+        elif filename.endswith('.json'):
             return json.load(open(filename))
         else:
             raise UnrecognizedConfig('Unknown config type: %s' % filename)
