@@ -83,5 +83,6 @@ def flock(file_or_dir, **acquire_args):
     finally:
         os.close(fd)
 
+
 # handy alias =X
 flock.Locked = Locked

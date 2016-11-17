@@ -10,11 +10,12 @@ venv: setup.py requirements.d/*.txt Makefile tox.ini
 
 .PHONY: tests test
 tests: test
-test: .tox/py27
+test: .tox/py27 install-hooks
 	tox -e py27 -- $(ARGS)
 
-lint:
-	git diff --name-only | xargs pre-commit run --files
+.PHONY: install-hooks
+install-hooks: venv
+	venv/bin/pre-commit install -f --install-hooks
 
 .PHONY: spec unit
 spec:

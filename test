@@ -46,8 +46,7 @@ if [ -z "$*" ]; then
 
     # don't measure coverage during linting
     COVERAGE_PROCESS_START= pre-commit run --all-files
-else
-    COVERAGE_PROCESS_START= make lint
 fi
+
 py.test "$@"
 combine
