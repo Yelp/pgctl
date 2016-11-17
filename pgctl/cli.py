@@ -233,11 +233,10 @@ class PgctlApp(object):
         with self.playground_locked():
             failures = self.__locked_change_state(state)
             if state is Stop:
-                for service in self.all_services:
-                    if service.state['state'] != 'down':
-                        break
-                else:
-                    run_post_stop_hook = True
+                run_post_stop_hook = all(
+                    service.state['state'] == 'down'
+                    for service in self.all_services
+                )
 
         # If the playground is in a fully stopped state, run the playground wide
         # post-stop hook. As with pre-start, this is done without holding a lock.
