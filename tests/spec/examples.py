@@ -794,3 +794,68 @@ hello, i am a pre-start script
             0,
             norm=norm.pgctl,
         )
+
+
+class DescribePostStopHook(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'post-stop-hook'
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_after_all_services_have_stopped(self):
+        assert_command(
+            ('pgctl', 'start', 'A'),
+            '',
+            '''\
+[pgctl] Starting: A
+[pgctl] Started: A
+''',
+            0,
+            norm=norm.pgctl,
+        )
+        assert_command(
+            ('pgctl', 'start', 'B'),
+            '',
+            '''\
+[pgctl] Starting: B
+[pgctl] Started: B
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        assert_command(
+            ('pgctl', 'stop', 'A'),
+            '',
+            '''\
+[pgctl] Stopping: A
+[pgctl] Stopped: A
+''',
+            0,
+            norm=norm.pgctl,
+        )
+        assert_command(
+            ('pgctl', 'stop', 'B'),
+            '',
+            '''\
+[pgctl] Stopping: B
+[pgctl] Stopped: B
+hello, i am a post-stop script
+--> $PWD basename: post-stop-hook
+--> cwd basename: post-stop-hook
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        # stopping when already down doesn't trigger post-stop to run again
+        assert_command(
+            ('pgctl', 'stop', 'A'),
+            '',
+            '''\
+[pgctl] Already stopped: A
+''',
+            0,
+            norm=norm.pgctl,
+        )

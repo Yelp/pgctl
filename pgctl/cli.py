@@ -228,10 +228,21 @@ class PgctlApp(object):
         # If we're starting a service, run the playground-wide "pre-start" hook (if it exists).
         # This is intentionally done without holding a lock, since this might be very slow.
         if state is Start:
-            self.run_pre_start_hook()
+            self._run_playground_wide_hook('pre-start')
 
         with self.playground_locked():
-            return self.__locked_change_state(state)
+            failures = self.__locked_change_state(state)
+
+        # If the playground is in a fully stopped state, run the playground wide
+        # post-stop hook. As with pre-start, this is done without holdinga lock.
+        if state is Stop:
+            for service in self.all_services:
+                if self._get_service_state(service)['state'] != 'down':
+                    break
+            else:
+                self._run_playground_wide_hook('post-stop')
+
+        return failures
 
     def __locked_change_state(self, state):
         """the critical section of __change_state"""
@@ -264,10 +275,10 @@ class PgctlApp(object):
 
         return failed
 
-    def run_pre_start_hook(self):
-        """Run the playground-wide pre-start hook, if it exists."""
+    def _run_playground_wide_hook(self, hook_name):
+        """Runs the given playground-wide hook, if it exists."""
         try:
-            path = self.pgdir.join('pre-start')
+            path = self.pgdir.join(hook_name)
             if path.exists():
                 subprocess.check_call(
                     (path.strpath,),
@@ -320,15 +331,7 @@ class PgctlApp(object):
         """Retrieve the PID and state of a service or group of services"""
         status = {}
         for service in self.services:
-            svstat = service.svstat()
-            state = {
-                key: getattr(svstat, key)
-                for key in svstat._fields
-            }
-            if state['state'] == SvStat.UNSUPERVISED:
-                # this is the expected state for down services.
-                state['state'] = 'down'
-            status[service.name] = state
+            status[service.name] = self._get_service_state(service)
 
         if self.pgconf['json']:
             print(json.dumps(
@@ -363,6 +366,18 @@ class PgctlApp(object):
 
                 if components:
                     unbuf_print('   └─ {}'.format(', '.join(components)))
+
+    @staticmethod
+    def _get_service_state(service):
+        svstat = service.svstat()
+        state = {
+            key: getattr(svstat, key)
+            for key in svstat._fields
+        }
+        if state['state'] == SvStat.UNSUPERVISED:
+            # this is the expected state for down services.
+            state['state'] = 'down'
+        return state
 
     def restart(self):
         """Starts and stops a service"""
