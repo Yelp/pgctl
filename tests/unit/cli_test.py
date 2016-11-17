@@ -12,6 +12,7 @@ from pgctl.cli import _humanize_seconds
 from pgctl.cli import PgctlApp
 from pgctl.cli import TermStyle
 from pgctl.daemontools import SvStat
+from pgctl.service import Service
 
 
 @pytest.mark.parametrize(('seconds', 'expected'), [
@@ -41,9 +42,11 @@ def fake_statuses(statuses):
     app = PgctlApp()
     app.services = []
     for name, status in statuses:
-        m = mock.Mock(**{'svstat.return_value': status})
-        m.name = name
-        app.services.append(m)
+        service = Service('/dev/null', '/dev/null', 100)
+        service.svstat = mock.Mock(spec=service.svstat)
+        service.svstat.return_value = status
+        service.name = name
+        app.services.append(service)
     return app
 
 
