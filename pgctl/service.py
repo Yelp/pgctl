@@ -71,6 +71,18 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         trace('PARSED: %s', result)
         return result
 
+    @property
+    def state(self):
+        svstat = self.svstat()
+        state = {
+            key: getattr(svstat, key)
+            for key in svstat._fields
+        }
+        if state['state'] == SvStat.UNSUPERVISED:
+            # this is the expected state for down services.
+            state['state'] = 'down'
+        return state
+
     def message(self, state):
         script = self.path.join(state.strings.change + '-msg')
         if script.exists():

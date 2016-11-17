@@ -21,7 +21,6 @@ from py._path.local import LocalPath as Path
 
 from .config import Config
 from .configsearch import search_parent_directories
-from .daemontools import SvStat
 from .debug import debug
 from .debug import trace
 from .errors import CircularAliases
@@ -228,10 +227,23 @@ class PgctlApp(object):
         # If we're starting a service, run the playground-wide "pre-start" hook (if it exists).
         # This is intentionally done without holding a lock, since this might be very slow.
         if state is Start:
-            self.run_pre_start_hook()
+            self._run_playground_wide_hook('pre-start')
 
+        run_post_stop_hook = False
         with self.playground_locked():
-            return self.__locked_change_state(state)
+            failures = self.__locked_change_state(state)
+            if state is Stop:
+                run_post_stop_hook = all(
+                    service.state['state'] == 'down'
+                    for service in self.all_services
+                )
+
+        # If the playground is in a fully stopped state, run the playground wide
+        # post-stop hook. As with pre-start, this is done without holding a lock.
+        if run_post_stop_hook:
+            self._run_playground_wide_hook('post-stop')
+
+        return failures
 
     def __locked_change_state(self, state):
         """the critical section of __change_state"""
@@ -264,10 +276,10 @@ class PgctlApp(object):
 
         return failed
 
-    def run_pre_start_hook(self):
-        """Run the playground-wide pre-start hook, if it exists."""
+    def _run_playground_wide_hook(self, hook_name):
+        """Runs the given playground-wide hook, if it exists."""
         try:
-            path = self.pgdir.join('pre-start')
+            path = self.pgdir.join(hook_name)
             if path.exists():
                 subprocess.check_call(
                     (path.strpath,),
@@ -320,15 +332,7 @@ class PgctlApp(object):
         """Retrieve the PID and state of a service or group of services"""
         status = {}
         for service in self.services:
-            svstat = service.svstat()
-            state = {
-                key: getattr(svstat, key)
-                for key in svstat._fields
-            }
-            if state['state'] == SvStat.UNSUPERVISED:
-                # this is the expected state for down services.
-                state['state'] = 'down'
-            status[service.name] = state
+            status[service.name] = service.state
 
         if self.pgconf['json']:
             print(json.dumps(
@@ -447,7 +451,7 @@ class PgctlApp(object):
         while stack:
             name = stack.pop()
             if name == ALL_SERVICES:
-                result.extend(self.all_service_names)
+                result.extend([service.name for service in self.all_services])
             elif name in visited:
                 raise CircularAliases("Circular aliases! Visited twice during alias expansion: '%s'" % name)
             else:
@@ -460,15 +464,16 @@ class PgctlApp(object):
         return result
 
     @cached_property
-    def all_service_names(self):
-        """Return a tuple of all of the Services.
+    def all_services(self):
+        """Return a list of all services.
 
-        :return: tuple of strings -- the service names
+        :return: list of Service objects
+        :rtype: list
         """
         pgdir = self.pgdir.listdir(sort=True)
 
         return tuple(
-            service_path.basename
+            self.service_by_name(service_path.basename)
             for service_path in pgdir
             if service_path.check(dir=True)
         )
