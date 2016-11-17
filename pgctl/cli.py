@@ -447,7 +447,7 @@ class PgctlApp(object):
         while stack:
             name = stack.pop()
             if name == ALL_SERVICES:
-                result.extend(self.all_service_names)
+                result.extend([str(service) for service in self.all_services])
             elif name in visited:
                 raise CircularAliases("Circular aliases! Visited twice during alias expansion: '%s'" % name)
             else:
@@ -460,18 +460,19 @@ class PgctlApp(object):
         return result
 
     @cached_property
-    def all_service_names(self):
-        """Return a tuple of all of the Services.
+    def all_services(self):
+        """Return a list of all services.
 
-        :return: tuple of strings -- the service names
+        :return: list of Service objects
+        :rtype: list
         """
         pgdir = self.pgdir.listdir(sort=True)
 
-        return tuple(
-            service_path.basename
+        return [
+            self.service_by_name(service_path.basename)
             for service_path in pgdir
             if service_path.check(dir=True)
-        )
+        ]
 
     @cached_property
     def service_names(self):
