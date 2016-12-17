@@ -55,7 +55,7 @@ Feature Support
   
   -  User-friendly Command Line Interface
   -  Simple Configuration
-  -  Python 2.6—3.4
+  -  Python 2.7—3.5
 
 
 User Guide
