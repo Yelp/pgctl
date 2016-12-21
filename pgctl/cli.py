@@ -238,6 +238,11 @@ class PgctlApp(object):
                     for service in self.all_services
                 )
 
+            # Run the playground-wide "post-start" hook (if it exists) upon every `pgctl start'
+            if state is Start:
+                if all(service.state['state'] == 'ready' for service in self.services):
+                    self._run_playground_wide_hook('post-start')
+
         # If the playground is in a fully stopped state, run the playground wide
         # post-stop hook. As with pre-start, this is done without holding a lock.
         if run_post_stop_hook:
