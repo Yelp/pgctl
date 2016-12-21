@@ -35,10 +35,10 @@ def it_fails_twice_but_doesnt_restart():
         '''\
 ==> playground/unreliable/log <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
-{TIMESTAMP} pgctl-poll-ready: failed (restarting in 2.00 seconds)
-{TIMESTAMP} pgctl-poll-ready: failed (restarting in 1.99 seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
+{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 ''',
         '',
         0,
-        norm=norm.timestamp,
+        norm=norm.pgctl,
     )
