@@ -1,0 +1,3 @@
+#!/bin/bash
+touch readyfile
+exec sleep infinity
