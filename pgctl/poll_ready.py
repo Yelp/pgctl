@@ -10,10 +10,14 @@ from __future__ import unicode_literals
 
 import os
 import os.path
+import select
 import time
 
 from .functions import exec_
 from .functions import print_stderr
+
+
+DOWN_FIFO_PATH = os.path.join('event', 'ftrig1' + 'poll_ready'.ljust(43, '_'))
 
 
 def floatfile(filename):
@@ -38,10 +42,31 @@ def check_ready():
     return call('./ready')
 
 
-def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
-    from time import sleep
+def wait_for_down_signal(down_fifo, seconds):
+    """Waits at most "seconds" for down_fifo to have data on it, and returns
+    True if the first byte from the FIFO is 'd'. Returns False if there is no
+    data on the FIFO or the first byte is not a 'd'.
+
+    :param seconds: time to wait for the fifo to have data on it. Zero specifies
+    a poll and never blocks.
+    :type seconds: float
+    :rtype: bool
+    :return: if a 'd' was available on the FIFO before the timeout expired.
+    """
+    rlist, _, _ = select.select([down_fifo], [], [], seconds)
+    if rlist:
+        fifo_data = os.read(down_fifo, 1)
+        if fifo_data == 'd':
+            return True
+
+    return False
+
+
+def pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down, check_ready=check_ready):
+
+    is_service_down = wait_for_down_signal(down_fifo, 0)
     while True:  # waiting for the service to come up.
-        if down_event.poll() is not None:
+        if is_service_down:
             print_stderr('pgctl-poll-ready: service is stopping -- quitting the poll')
             return
         elif check_ready() == 0:
@@ -49,22 +74,22 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
             os.write(notification_fd, b'ready\n')
             break
         else:
-            sleep(poll_ready)
+            is_service_down = wait_for_down_signal(down_fifo, poll_ready)
 
+    is_service_down = wait_for_down_signal(down_fifo, 0)
     start = time.time()
     while True:  # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
         elapsed = time.time() - start
-        if down_event.poll() is not None:
+        if is_service_down:
             print_stderr('pgctl-poll-ready: service is stopping -- quitting the poll')
             return
         elif check_ready() == 0:
             start = time.time()
-            sleep(poll_down)
+            is_service_down = wait_for_down_signal(down_fifo, poll_down)
         elif elapsed < timeout:
             print_stderr('pgctl-poll-ready: failed (restarting in {0:.2f} seconds)'.format(timeout - elapsed))
-            sleep(poll_down)
+            is_service_down = wait_for_down_signal(down_fifo, poll_down)
         else:
-            down_event.terminate()
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
             print_stderr(
@@ -88,14 +113,22 @@ def main():
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
-        # this subprocess listens for the s6 down event: http://skarnet.org/software/s6/s6-supervise.html
-        from .subprocess import Popen
-        down_event = Popen(
-            ('s6-ftrig-wait', 'event', 'd'),
-            stdout=open(os.devnull, 'w'),  # this prints 'd' otherwise
-        )
 
-        return pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down)
+        # Don't reuse an old FIFO
+        if os.path.exists(DOWN_FIFO_PATH):
+            os.remove(DOWN_FIFO_PATH)
+
+        # FIFO listens for the s6 down event
+        #
+        # Even though the FIFO is effectively RO, it is opened as RW because
+        # opening as RO blocks until the other side of the FIFO is opened.
+        os.mkfifo(DOWN_FIFO_PATH)
+        down_fifo = os.open(DOWN_FIFO_PATH, os.O_RDWR)
+
+        pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down)
+
+        os.close(down_fifo)
+        os.remove(DOWN_FIFO_PATH)
 
 
 if __name__ == '__main__':
