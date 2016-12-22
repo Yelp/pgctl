@@ -10,6 +10,7 @@ from __future__ import unicode_literals
 
 import os
 import os.path
+import time
 
 from .functions import exec_
 from .functions import print_stderr
@@ -50,18 +51,18 @@ def pgctl_poll_ready(down_event, notification_fd, timeout, poll_ready, poll_down
         else:
             sleep(poll_ready)
 
-    timeout_unready = timeout
+    start = time.time()
     while True:  # heartbeat, continue to check if the service is up. if it becomes down, terminate it.
+        elapsed = time.time() - start
         if down_event.poll() is not None:
             print_stderr('pgctl-poll-ready: service is stopping -- quitting the poll')
             return
         elif check_ready() == 0:
-            timeout_unready = timeout
+            start = time.time()
             sleep(poll_down)
-        elif timeout_unready > 0:
-            print_stderr('pgctl-poll-ready: failed (restarting in {0:.2f} seconds)'.format(timeout_unready))
+        elif elapsed < timeout:
+            print_stderr('pgctl-poll-ready: failed (restarting in {0:.2f} seconds)'.format(timeout - elapsed))
             sleep(poll_down)
-            timeout_unready -= poll_down
         else:
             down_event.terminate()
             service = os.path.basename(os.getcwd())
