@@ -17,6 +17,9 @@ from .functions import exec_
 from .functions import print_stderr
 
 
+# The name of the FIFO created in S6's FIFO dir must comply with certain
+# naming conventions. See the link below for more information.
+# https://github.com/skarnet/s6/blob/v2.2.2.0/src/libs6/ftrigw_notifyb_nosig.c#L29,L30
 DOWN_FIFO_PATH = os.path.join('event', 'ftrig1' + 'poll_ready'.ljust(43, '_'))
 
 
@@ -114,9 +117,12 @@ def main():
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
 
-        # Don't reuse an old FIFO
-        if os.path.exists(DOWN_FIFO_PATH):
+        try:
+            # Don't reuse an old FIFO
             os.remove(DOWN_FIFO_PATH)
+        except OSError:
+            # If it doesn't exist that's fine
+            pass
 
         # FIFO listens for the s6 down event
         #
@@ -125,10 +131,11 @@ def main():
         os.mkfifo(DOWN_FIFO_PATH)
         down_fifo = os.open(DOWN_FIFO_PATH, os.O_RDWR)
 
-        pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down)
-
-        os.close(down_fifo)
-        os.remove(DOWN_FIFO_PATH)
+        try:
+            pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down)
+        finally:
+            os.close(down_fifo)
+            os.remove(DOWN_FIFO_PATH)
 
 
 if __name__ == '__main__':
