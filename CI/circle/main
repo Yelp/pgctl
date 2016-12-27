@@ -14,9 +14,6 @@ set -x
 lsb_release -a
 test $CIRCLE_NODE_TOTAL -eq 4
 
-timestamp
-sudo apt-get install python2.7-dev python3.4-dev
-
 ### per-node actions
 timestamp
 case $CIRCLE_NODE_INDEX in
