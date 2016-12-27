@@ -3,7 +3,7 @@ set -eu
 
 ### definitions
 source CI/env
-PATH=$PWD/CI/circle:$PATH
+PATH=$PWD/CI/circle:~/python/bin:$PATH
 trap timestamp EXIT
 
 ### main

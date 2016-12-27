@@ -14,5 +14,4 @@ if ! [ -d $CACHE/$PYTHON ]; then
     fi
 fi
 
-ln -sf $CACHE/$PYTHON/bin/* ./bin/
-rm -f ./bin/virtualenv* ./bin/pip*
+ln -sfn $CACHE/$PYTHON ~/python
