@@ -375,7 +375,7 @@ class DescribeStatus(object):
                 'state': 'down',
             },
         }
-        assert stderr == b''
+        assert stderr == ''
 
     def it_displays_correctly_when_the_service_is_up(self, in_example_dir):
         check_call(('pgctl', 'start', 'sleep'))
@@ -403,7 +403,7 @@ class DescribeStatus(object):
                 'state': 'ready',
             },
         }
-        assert stderr == b''
+        assert stderr == ''
 
     def it_displays_the_status_of_multiple_services(self, in_example_dir):
         """Expect multiple services with status and PID"""
@@ -443,7 +443,7 @@ class DescribeStatus(object):
                 'state': 'down',
             }
         }
-        assert stderr == b''
+        assert stderr == ''
 
     def it_displays_the_status_of_all_services(self, in_example_dir):
         """Expect all services to provide status when no service is specified"""
