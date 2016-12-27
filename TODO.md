@@ -5,3 +5,7 @@ These are small tasks that I'd like to get done, but not today:
     * colorize/prefix stderr lines?
     * add timestamps?
  * colorize pgctl output
+
+BUGS
+ * removing 'ready' leaves notification-fd behind, very confusing
+ * an instantly-failing service is detected as ready

@@ -1,0 +1,36 @@
+#!/bin/bash
+set -eu
+
+### definitions
+source CI/env
+PATH=$PWD/CI/circle:$PATH
+trap timestamp EXIT
+
+### main
+set -x
+: $TOX_TESTENV_PASSENV
+
+### machine
+lsb_release -a
+test $CIRCLE_NODE_TOTAL -eq 4
+
+timestamp
+sudo apt-get install python2.7-dev python3.4-dev
+
+### per-node actions
+timestamp
+case $CIRCLE_NODE_INDEX in
+0)
+    ./CI/circle/install-python 2.7.10
+    PYTHON=python2.7 runtest
+    ;;
+1)
+    ./CI/circle/install-python 3.5.0
+    PYTHON=python3.5 runtest
+    ;;
+2)
+    ./CI/circle/install-python pypy-4.0.1
+    PYTHON=pypy runtest
+    ;;
+esac
+timestamp

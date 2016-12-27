@@ -1,21 +1,24 @@
+export PATH := $(PWD)/bin:$(PWD)/venv/bin:$(PATH)
+export PYTHON?=python2.7
+export REQUIREMENTS?=requirements.d/dev.txt
+
 .PHONY: all
-all: venv test
+all: test
 
 venv: setup.py requirements.d/*.txt Makefile tox.ini
 	# it's simpler to not try to make tox do this.
 	rm -rf venv
-	virtualenv --prompt='(pgctl)' --python=python2.7 venv
-	venv/bin/pip install --upgrade pip setuptools wheel
-	venv/bin/pip install --upgrade -r requirements.d/dev.txt
+	virtualenv --prompt='(pgctl)' --python=$(PYTHON) venv
+	pip install --upgrade pip setuptools wheel
+	pip install --upgrade -r $(REQUIREMENTS)
 
-.PHONY: tests test
-tests: test
-test: .tox/py27 install-hooks
-	tox -e py27 -- $(ARGS)
+.PHONY: test tests
+test tests: venv
+	./test $(ARGS)
 
 .PHONY: install-hooks
 install-hooks: venv
-	venv/bin/pre-commit install -f --install-hooks
+	pre-commit install -f --install-hooks
 
 .PHONY: spec unit
 spec:
@@ -29,25 +32,12 @@ coverage-server:
 	cd coverage-html && python -m SimpleHTTPServer 0
 
 .PHONY: docs
-docs: .tox/docs
+docs:
 	tox -e docs
-
-# start the tox from scratch if any of these files change
-.tox/%: setup.py requirements.d/*.txt Makefile tox.ini
-	rm -rf .tox/$*
 
 .PHONY: clean
 clean:
-	find -name '*.pyc' -print0 | xargs -0r rm
-	find -name '__pycache__' -print0 | xargs -0r rm -r
-	rm -rf dist
-	rm -rf docs/build
-	rm -f .coverage.*
-	rm -f .coverage
-
-.PHONY: realclean
-realclean: clean
-	rm -rf .tox
+	git clean -fdXf
 
 .PHONY: release
 release:
@@ -55,10 +45,6 @@ release:
 	twine upload --skip-existing dist/*
 	fetch-python-package pgctl
 
-# disable default implicit rules
+# standard Makefile housekeeping
 .SUFFIXES:
-%: %,v
-%: RCS/%,v
-%: RCS/%
-%: s.%
-%: SCCS/s.%
+MAKEFLAGS += --no-builtin-rules
