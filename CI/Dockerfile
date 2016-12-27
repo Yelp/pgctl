@@ -9,6 +9,7 @@ RUN apt-get update \
         git \
         gcc \
         libc6-dev \
+        language-pack-en \
     && apt-get clean
 
 RUN virtualenv /opt/virtualenv
@@ -27,9 +28,10 @@ RUN CI/install/main
 # know thy user
 USER nobody
 ENV USER=nobody
-ENV EMAIL=nobody
-ENV GIT_COMMITTER_NAME=nobody
 ENV HOME=/tmp
+RUN git config --global user.name nobody \
+    && git config --global user.email nobody
+ENV LANG=en_US.UTF-8
 
 # run the tests
 ENV TOXENV=python
