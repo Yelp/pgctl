@@ -24,7 +24,6 @@ from .functions import bestrelpath
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
-from .subprocess import check_call
 from .subprocess import Popen
 
 
@@ -82,11 +81,6 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             # this is the expected state for down services.
             state['state'] = 'down'
         return state
-
-    def message(self, state):
-        script = self.path.join(state.strings.change + '-msg')
-        if script.exists():
-            check_call((script.strpath,))
 
     @cached_property
     def ready_script(self):
