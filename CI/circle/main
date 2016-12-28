@@ -16,18 +16,19 @@ test $CIRCLE_NODE_TOTAL -eq 4
 
 ### per-node actions
 timestamp
+./CI/install/main
+timestamp
 case $CIRCLE_NODE_INDEX in
 0)
-    ./CI/circle/install-python 2.7.10
+    install-python 2.7.10
     PYTHON=python2.7 runtest
     ;;
 1)
-    ./CI/circle/install-python 3.5.0
+    install-python 3.5.0
     PYTHON=python3.5 runtest
     ;;
 2)
-    ./CI/circle/install-python pypy-4.0.1
+    install-python pypy-5.1
     PYTHON=pypy runtest
     ;;
 esac
-timestamp

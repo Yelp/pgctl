@@ -5,6 +5,6 @@ umask 022
 chmod -R g-w .
 
 pip install --upgrade pip
-pip install -r CI/install/requirements.txt
+pip install --upgrade -r CI/install/requirements.txt
 
 # TODO: pre-install the pre-commit hooks
