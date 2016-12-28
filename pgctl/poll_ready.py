@@ -59,7 +59,7 @@ def wait_for_down_signal(down_fifo, seconds):
     rlist, _, _ = select.select([down_fifo], [], [], seconds)
     if rlist:
         fifo_data = os.read(down_fifo, 1)
-        if fifo_data == 'd':
+        if fifo_data == b'd':
             return True
 
     return False
