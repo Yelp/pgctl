@@ -1,8 +1,6 @@
 dependencies:
     # the cache will only save files created during this stage
-    cache_directories:
-        - ~/.pre-commit
-        - ~/.cache
+    cache_directories: []
     override:
         - true dun need no stinkin deps
 
