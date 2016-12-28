@@ -39,6 +39,10 @@ docs:
 clean:
 	git clean -fdXf
 
+.PHONY: clean-pyc
+clean-pyc:
+	find -name '*.pyc' | xargs rm
+
 .PHONY: release
 release:
 	python setup.py sdist bdist_wheel

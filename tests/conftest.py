@@ -89,3 +89,29 @@ def wait4(tmpdir):
         fusers = ps(fusers)
         if fusers:
             raise AssertionError("there's a subprocess that's still running:\n%s" % ps(fusers))
+
+
+def standard_env():
+    """this is the environment of all tests"""
+    from sys import executable
+    from testing import TOP
+    return {
+        # standard $PATH, with our current venv active:
+        'PATH': ':'.join((
+            os.path.dirname(executable),
+            os.defpath,
+        )),
+        # these two are used to coordinate coverge reporting:
+        'TOP': TOP,
+        'COVERAGE_PROCESS_START': os.path.join(TOP, '.coveragerc'),
+    }
+
+
+@fixture(autouse=True)
+def clean_environ():
+    old_environ = os.environ.copy()
+    os.environ.clear()
+    os.environ.update(standard_env())
+    yield
+    os.environ.clear()
+    os.environ.update(old_environ)

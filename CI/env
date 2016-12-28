@@ -1,5 +1,4 @@
 #!/not/executable/bash
-export TOX_TESTENV_PASSENV="CI $(env | grep -Po '^(CIRCLE|TRAVIS)[^=]*')"
 export PATH=$PWD/bin:$PATH
 export PYTHON
 

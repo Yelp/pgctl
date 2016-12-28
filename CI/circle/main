@@ -8,7 +8,6 @@ trap timestamp EXIT
 
 ### main
 set -x
-: $TOX_TESTENV_PASSENV
 
 ### machine
 lsb_release -a

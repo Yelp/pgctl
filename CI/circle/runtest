@@ -9,4 +9,5 @@ export PYTEST_OPTIONS="
     --junit-prefix=$CIRCLE_NODE_INDEX:
 "
 export REQUIREMENTS=requirements.d/CI.txt
-exec make test
+make test
+coveralls
