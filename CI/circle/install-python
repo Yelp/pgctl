@@ -15,3 +15,7 @@ if ! [ -d $CACHE/$PYTHON ]; then
 fi
 
 ln -sfn $CACHE/$PYTHON ~/python
+
+# some of these come with ancient, broken virtualenvs installed
+# we'll just use the system one
+~/python/bin/pip uninstall --yes virtualenv || true
