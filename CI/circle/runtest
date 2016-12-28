@@ -8,5 +8,5 @@ export PYTEST_OPTIONS="
     --junit-xml=$CIRCLE_TEST_REPORTS/pytest/$CIRCLE_NODE_INDEX.xml
     --junit-prefix=$CIRCLE_NODE_INDEX:
 "
-export REQUIREMENTS=requirements.d/test.txt
+export REQUIREMENTS=requirements.d/CI.txt
 exec make test

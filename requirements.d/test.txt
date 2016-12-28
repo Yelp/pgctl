@@ -1,4 +1,4 @@
-# packages installed during test
+# packages used by the test suite, in dev and CI
 
 coverage
 coverage-enable-subprocess

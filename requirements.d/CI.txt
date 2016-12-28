@@ -1,1 +1,5 @@
-../CI/install/requirements.txt
+# packages installed by tox/travis before running tests
+# in this case we want a "non-editable" install
+
+-r test.txt
+.
