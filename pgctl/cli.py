@@ -235,27 +235,31 @@ class PgctlApp(object):
         if state is Start:
             self._run_playground_wide_hook('pre-start')
 
+        run_post_start_hook = False
+        run_post_stop_hook = False
         with self.playground_locked():
             failures = self.__locked_change_state(state)
+            try:
+                if state is Start:
+                    run_post_start_hook = all(
+                        service.state['state'] == 'ready'
+                        for service in self.all_services
+                    )
+                else:  # Stop
+                    run_post_stop_hook = all(
+                        service.state['state'] == 'down'
+                        for service in self.all_services
+                    )
+            except NoPlayground:
+                # services can exist without a playground (and hence no hooks)
+                # in this case, accessing `self.all_services` leads to NoPlayground
+                pass
 
-        # Run the playground wide post-start/post-stop hook
-        # conditioning on the playground is in a fully started/stopped state
-        if state is Start:
-            self._run_playground_wide_hook(
-                'post-start',
-                condition_function=lambda: all(
-                    service.state['state'] == 'ready'
-                    for service in self.all_services
-                )
-            )
-        if state is Stop:
-            self._run_playground_wide_hook(
-                'post-stop',
-                condition_function=lambda: all(
-                    service.state['state'] == 'down'
-                    for service in self.all_services
-                )
-            )
+        # Run the playground wide post-start/post-stop hook upon fully started/stopped
+        if run_post_start_hook:
+            self._run_playground_wide_hook('post-start')
+        if run_post_stop_hook:
+            self._run_playground_wide_hook('post-stop')
 
         return failures
 
@@ -290,19 +294,18 @@ class PgctlApp(object):
 
         return failed
 
-    def _run_playground_wide_hook(self, hook_name, condition_function=lambda: True):
+    def _run_playground_wide_hook(self, hook_name):
         """Runs the given playground-wide hook, if it exists."""
         try:
-            if condition_function():
-                path = self.pgdir.join(hook_name)
-                if path.exists():
-                    subprocess.check_call(
-                        (path.strpath,),
-                        cwd=self.pgdir.dirname,
-                    )
+            path = self.pgdir.join(hook_name)
+            if path.exists():
+                subprocess.check_call(
+                    (path.strpath,),
+                    cwd=self.pgdir.dirname,
+                )
         except NoPlayground:
             # services can exist without a playground;
-            # that's fine, but they can't have pre-start/post-start/post-stop hooks
+            # that's fine, but they can't have playground-wide hooks
             pass
 
     def with_services(self, services):
