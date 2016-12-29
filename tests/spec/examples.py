@@ -777,6 +777,50 @@ hello, i am a pre-start script
         )
 
 
+class DescribePostStartHook(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'post-start-hook'
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_after_all_services_have_started(self):
+        assert_command(
+            ('pgctl', 'start', 'A'),
+            '',
+            '''\
+[pgctl] Starting: A
+[pgctl] Started: A
+''',
+            0,
+            norm=norm.pgctl,
+        )
+        assert_command(
+            ('pgctl', 'start', 'B'),
+            '',
+            '''\
+[pgctl] Starting: B
+[pgctl] Started: B
+hello, i am a post-start script
+--> $PWD basename: post-start-hook
+--> cwd basename: post-start-hook
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        # starting when already ready doesn't trigger post-start to run again
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Already started: A, B
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+
 class DescribePostStopHook(object):
 
     @pytest.yield_fixture

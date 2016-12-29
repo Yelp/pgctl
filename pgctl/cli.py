@@ -235,19 +235,27 @@ class PgctlApp(object):
         if state is Start:
             self._run_playground_wide_hook('pre-start')
 
-        run_post_stop_hook = False
         with self.playground_locked():
             failures = self.__locked_change_state(state)
-            if state is Stop:
-                run_post_stop_hook = all(
+
+        # Run the playground wide post-start/post-stop hook
+        # conditioning on the playground is in a fully started/stopped state
+        if state is Start:
+            self._run_playground_wide_hook(
+                'post-start',
+                condition_function=lambda: all(
+                    service.state['state'] == 'ready'
+                    for service in self.all_services
+                )
+            )
+        if state is Stop:
+            self._run_playground_wide_hook(
+                'post-stop',
+                condition_function=lambda: all(
                     service.state['state'] == 'down'
                     for service in self.all_services
                 )
-
-        # If the playground is in a fully stopped state, run the playground wide
-        # post-stop hook. As with pre-start, this is done without holding a lock.
-        if run_post_stop_hook:
-            self._run_playground_wide_hook('post-stop')
+            )
 
         return failures
 
@@ -282,18 +290,19 @@ class PgctlApp(object):
 
         return failed
 
-    def _run_playground_wide_hook(self, hook_name):
+    def _run_playground_wide_hook(self, hook_name, condition_function=lambda: True):
         """Runs the given playground-wide hook, if it exists."""
         try:
-            path = self.pgdir.join(hook_name)
-            if path.exists():
-                subprocess.check_call(
-                    (path.strpath,),
-                    cwd=self.pgdir.dirname,
-                )
+            if condition_function():
+                path = self.pgdir.join(hook_name)
+                if path.exists():
+                    subprocess.check_call(
+                        (path.strpath,),
+                        cwd=self.pgdir.dirname,
+                    )
         except NoPlayground:
             # services can exist without a playground;
-            # that's fine, but they can't have pre-start hooks
+            # that's fine, but they can't have pre-start/post-start/post-stop hooks
             pass
 
     def with_services(self, services):
