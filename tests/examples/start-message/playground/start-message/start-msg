@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Not actually, but to demonstrate
+echo "Service has started at localhost:9001" 1>& 2
