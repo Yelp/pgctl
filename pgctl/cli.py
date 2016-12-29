@@ -237,26 +237,17 @@ class PgctlApp(object):
 
         with self.playground_locked():
             failures = self.__locked_change_state(state)
-            try:
-                run_post_start_hook = (state is Start) and all(
-                    service.state['state'] == 'ready'
-                    for service in self.all_services
-                )
-                run_post_stop_hook = (state is Stop) and all(
-                    service.state['state'] == 'down'
-                    for service in self.all_services
-                )
-            except NoPlayground:
-                # NoPlayground is raised from `self.all_services` when no playground
-                # Hence, no hooks
-                run_post_start_hook = False
-                run_post_stop_hook = False
 
         # Run the playground wide post-start/post-stop hook upon fully started/stopped
-        if run_post_start_hook:
-            self._run_playground_wide_hook('post-start')
-        if run_post_stop_hook:
-            self._run_playground_wide_hook('post-stop')
+        try:
+            if state is Start and self.pg_started:
+                self._run_playground_wide_hook('post-start')
+            elif state is Stop and self.pg_stopped:
+                self._run_playground_wide_hook('post-stop')
+        except NoPlayground:
+            # NoPlayground is raised from self.pg_started/pg_stopped when no playground
+            # Hence, no hooks
+            pass
 
         return failures
 
@@ -515,6 +506,14 @@ class PgctlApp(object):
         By default, this is "$XDG_RUNTIME_DIR/pgctl".
         """
         return Path(self.pgconf['pghome'], expanduser=True)
+
+    @property
+    def pg_started(self):
+        return all(srv.state['state'] == 'ready' for srv in self.all_services)
+
+    @property
+    def pg_stopped(self):
+        return all(srv.state['state'] == 'down' for srv in self.all_services)
 
     commands = (start, stop, status, restart, reload, log, debug, config)
 
