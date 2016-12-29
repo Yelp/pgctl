@@ -95,6 +95,9 @@ class Start(StateChange):
     def assert_(self):
         return self.service.assert_ready()
 
+    def changed(self):
+        return self.service.run_hook('post-start')
+
     def get_timeout(self):
         return self.service.timeout_ready
 
@@ -111,6 +114,9 @@ class Stop(StateChange):
 
     def assert_(self):
         return self.service.assert_stopped()
+
+    def changed(self):
+        return self.service.run_hook('post-stop')
 
     def get_timeout(self):
         return self.service.timeout_stop
@@ -269,6 +275,7 @@ class PgctlApp(object):
                     # TODO: debug() takes a lambda
                     debug('loop: check_time %.3f', now() - check_time)
                     pgctl_print(state.strings.changed, service.name)
+                    service.changed()
                     services.remove(service)
 
             time.sleep(float(self.pgconf['poll']))

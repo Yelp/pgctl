@@ -840,3 +840,117 @@ hello, i am a post-stop script
             0,
             norm=norm.pgctl,
         )
+
+
+class DescribePostStartServiceHook(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'post-start-service-hook'
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_after_every_service_has_started(self):
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Starting: A, B
+[pgctl] Started: A
+hello, i am a post-start script for A
+--> $PWD basename: post-start-service-hook
+--> cwd basename: post-start-service-hook
+[pgctl] Started: B
+hello, i am a post-start script for B
+--> $PWD basename: post-start-service-hook
+--> cwd basename: post-start-service-hook
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_as_long_as_some_services_need_be_brought_up(self):
+        assert_command(
+            ('pgctl', 'start', 'A'),
+
+            '',
+            '''\
+[pgctl] Starting: A
+[pgctl] Started: A
+hello, i am a post-start script for A
+--> $PWD basename: post-start-service-hook
+--> cwd basename: post-start-service-hook
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        # B is not up, and hence `pgctl start` would run through all services
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Starting: A, B
+[pgctl] Started: A
+hello, i am a post-start script for A
+--> $PWD basename: post-start-service-hook
+--> cwd basename: post-start-service-hook
+[pgctl] Started: B
+hello, i am a post-start script for B
+--> $PWD basename: post-start-service-hook
+--> cwd basename: post-start-service-hook
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        # All services are up
+        # `pgctl start` returns immediately and hence no post-start
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Already started: A, B
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+
+class DescribePostStopServiceHook(object):
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'post-stop-service-hook'
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_after_every_service_has_stopped(self):
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Starting: A, B
+[pgctl] Started: A
+[pgctl] Started: B
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        assert_command(
+            ('pgctl', 'stop'),
+            '',
+            '''\
+[pgctl] Stopping: A, B
+[pgctl] Stopped: A
+hello, i am a post-stop script for A
+--> $PWD basename: post-stop-service-hook
+--> cwd basename: post-stop-service-hook
+[pgctl] Stopped: B
+hello, i am a post-stop script for B
+--> $PWD basename: post-stop-service-hook
+--> cwd basename: post-stop-service-hook
+''',
+            0,
+            norm=norm.pgctl,
+        )

@@ -24,6 +24,7 @@ from .functions import bestrelpath
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
+from .subprocess import check_call
 from .subprocess import Popen
 
 
@@ -99,6 +100,12 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         """Idempotent stop of a service or group of services"""
         self.ensure_exists()
         svc(('-dx', self.path.strpath))
+
+    def run_hook(self, hook_name):
+        """Runs the hook residing in the service path, if it exists."""
+        script = self.path.join(hook_name)
+        if script.exists():
+            check_call((script.strpath,))
 
     def __get_timeout(self, name, default):
         timeout = self.path.join(name, abs=1)
