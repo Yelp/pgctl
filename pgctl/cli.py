@@ -235,25 +235,22 @@ class PgctlApp(object):
         if state is Start:
             self._run_playground_wide_hook('pre-start')
 
-        run_post_start_hook = False
-        run_post_stop_hook = False
         with self.playground_locked():
             failures = self.__locked_change_state(state)
             try:
-                if state is Start:
-                    run_post_start_hook = all(
-                        service.state['state'] == 'ready'
-                        for service in self.all_services
-                    )
-                else:  # Stop
-                    run_post_stop_hook = all(
-                        service.state['state'] == 'down'
-                        for service in self.all_services
-                    )
+                run_post_start_hook = (state is Start) and all(
+                    service.state['state'] == 'ready'
+                    for service in self.all_services
+                )
+                run_post_stop_hook = (state is Stop) and all(
+                    service.state['state'] == 'down'
+                    for service in self.all_services
+                )
             except NoPlayground:
-                # services can exist without a playground (and hence no hooks)
-                # in this case, accessing `self.all_services` leads to NoPlayground
-                pass
+                # NoPlayground is raised from `self.all_services` when no playground
+                # Hence, no hooks
+                run_post_start_hook = False
+                run_post_stop_hook = False
 
         # Run the playground wide post-start/post-stop hook upon fully started/stopped
         if run_post_start_hook:
