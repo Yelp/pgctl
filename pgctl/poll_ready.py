@@ -12,8 +12,8 @@ import os
 import os.path
 import select
 import time
+from sys import argv
 
-import pgctl.subprocess
 from .functions import exec_
 from .functions import print_stderr
 
@@ -103,12 +103,13 @@ def pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down,
 
 
 def main():
+    if os.environ.get('PGCTL_DEBUG'):
+        print_stderr('pgctl-poll-ready: disabled during debug -- quitting')
+        exec_(argv[1:])  # never returns
+
     # TODO-TEST: fail if notification-fd doesn't exist
     # TODO-TEST: echo 4 > notification-fd
     notification_fd = int(floatfile('notification-fd'))
-
-    # Make sure the notification fifodir exists
-    pgctl.subprocess.check_call(('s6-mkfifodir', 'event'))
 
     # Don't reuse an old FIFO
     try:
@@ -127,10 +128,7 @@ def main():
     if os.fork():  # parent
         os.close(down_fifo)  # we don't need this in the parent
         # run the wrapped command in the main process
-        from sys import argv
         exec_(argv[1:])  # never returns
-    elif os.environ.get('PGCTL_DEBUG'):
-        print_stderr('pgctl-poll-ready: disabled during debug -- quitting')
     else:  # child
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
