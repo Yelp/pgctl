@@ -13,6 +13,7 @@ import os.path
 import select
 import time
 
+import pgctl.subprocess
 from .functions import exec_
 from .functions import print_stderr
 
@@ -106,7 +107,25 @@ def main():
     # TODO-TEST: echo 4 > notification-fd
     notification_fd = int(floatfile('notification-fd'))
 
+    # Make sure the notification fifodir exists
+    pgctl.subprocess.check_call(('s6-mkfifodir', 'event'))
+
+    # Don't reuse an old FIFO
+    try:
+        os.remove(DOWN_FIFO_PATH)
+    except OSError:
+        # If it doesn't exist that's fine
+        pass
+
+    # Create a FIFO to listen for the s6 down event
+    #
+    # Even though the FIFO is effectively RO, it is opened as RW because
+    # opening as RO blocks until the other side of the FIFO is opened.
+    os.mkfifo(DOWN_FIFO_PATH)
+    down_fifo = os.open(DOWN_FIFO_PATH, os.O_RDWR)
+
     if os.fork():  # parent
+        os.close(down_fifo)  # we don't need this in the parent
         # run the wrapped command in the main process
         from sys import argv
         exec_(argv[1:])  # never returns
@@ -116,20 +135,6 @@ def main():
         timeout = getval('timeout-ready', 'PGCTL_TIMEOUT', '2.0')
         poll_ready = getval('poll-ready', 'PGCTL_POLL', '0.15')
         poll_down = getval('poll-down', 'PGCTL_POLL', '10.0')
-
-        try:
-            # Don't reuse an old FIFO
-            os.remove(DOWN_FIFO_PATH)
-        except OSError:
-            # If it doesn't exist that's fine
-            pass
-
-        # FIFO listens for the s6 down event
-        #
-        # Even though the FIFO is effectively RO, it is opened as RW because
-        # opening as RO blocks until the other side of the FIFO is opened.
-        os.mkfifo(DOWN_FIFO_PATH)
-        down_fifo = os.open(DOWN_FIFO_PATH, os.O_RDWR)
 
         try:
             pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down)
