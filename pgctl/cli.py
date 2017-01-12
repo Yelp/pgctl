@@ -411,7 +411,12 @@ class PgctlApp(object):
             )
 
         self.stop()
-        service.foreground()  # never returns
+        try:
+            result = service.foreground()
+        except KeyboardInterrupt:
+            result = 1
+        self.restart()
+        return result
 
     def config(self):
         """Print the configuration for a service"""
