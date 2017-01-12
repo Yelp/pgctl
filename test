@@ -42,7 +42,7 @@ if [ -z "$*" ]; then
         NCPU=$((NCPU > 5? NCPU/5 : 1))
     fi
     n=$((NCPU > 5? NCPU/5 : 1))
-    set -- -n $n $TOP/tests $($TOP/tests/testing/get_modulefile.py $PROJECT)
+    set -- -n 0 $TOP/tests $($TOP/tests/testing/get_modulefile.py $PROJECT)
 
     # don't measure coverage during linting
     COVERAGE_PROCESS_START= pre-commit run --all-files

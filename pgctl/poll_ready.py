@@ -104,7 +104,6 @@ def pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down,
 
 def main():
     if os.environ.get('PGCTL_DEBUG'):
-        print_stderr(1 / 0)
         print_stderr('pgctl-poll-ready: disabled during debug -- quitting')
         exec_(argv[1:])  # never returns
 
