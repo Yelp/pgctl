@@ -798,36 +798,11 @@ hello, i am a pre-start script in stderr
         )
 
     @pytest.mark.usefixtures('in_example_dir')
-    def it_runs_before_debugging_a_stopped_service(self):
+    def it_runs_before_debugging_a_service(self):
         proc = Popen(('setsid', 'pgctl', 'debug', 'sweet'), stdin=PIPE, stdout=PIPE)
         proc.stdin.close()
         try:
             assert proc.stdout.readline() == 'hello, i am a pre-start script in stdout\n'
-        finally:
-            ctrl_c(proc)
-            proc.wait()
-
-    @pytest.mark.usefixtures('in_example_dir')
-    def it_doesnt_run_before_debugging_a_running_service(self):
-        assert_command(
-            ('pgctl', 'start'),
-            'hello, i am a pre-start script in stdout\n',
-            '''\
-hello, i am a pre-start script in stderr
---> $PWD basename: pre-start-hook
---> cwd basename: pre-start-hook
-[pgctl] Starting: sweet
-[pgctl] Started: sweet
-''',
-            0,
-            norm=norm.pgctl,
-        )
-
-        # debugging when already up doesn't trigger pre-start to run again
-        proc = Popen(('setsid', 'pgctl', 'debug', 'sweet'), stdin=PIPE, stdout=PIPE)
-        proc.stdin.close()
-        try:
-            assert proc.stdout.readline() == 'sweet\n'
         finally:
             ctrl_c(proc)
             proc.wait()
@@ -896,24 +871,3 @@ hello, i am a post-stop script
             0,
             norm=norm.pgctl,
         )
-
-    @pytest.mark.usefixtures('in_example_dir')
-    def it_doesnt_run_when_calling_debug(self):
-        assert_command(
-            ('pgctl', 'start', 'A'),
-            '',
-            '''\
-[pgctl] Starting: A
-[pgctl] Started: A
-''',
-            0,
-            norm=norm.pgctl,
-        )
-
-        proc = Popen(('setsid', 'pgctl', 'debug', 'A'), stdin=PIPE, stdout=PIPE)
-        proc.stdin.close()
-        try:
-            assert proc.stdout.readline() == 'A\n'
-        finally:
-            ctrl_c(proc)
-            proc.wait()
