@@ -166,6 +166,7 @@ class PgctlApp(object):
 
     def __init__(self, config=PGCTL_DEFAULTS):
         self.pgconf = frozendict(config)
+        self._entering_debug = False
 
     def __call__(self):
         """Run the app."""
@@ -237,6 +238,10 @@ class PgctlApp(object):
                     service.state['state'] == 'down'
                     for service in self.all_services
                 )
+
+        if self._entering_debug:
+            # Do not post-stop when we are about to start a debug session
+            run_post_stop_hook = False
 
         # If the playground is in a fully stopped state, run the playground wide
         # post-stop hook. As with pre-start, this is done without holding a lock.
@@ -410,8 +415,12 @@ class PgctlApp(object):
                 'Must debug exactly one service, not: ' + commafy(self.service_names),
             )
 
-        self.stop()
-        service.foreground()  # never returns
+        try:
+            self._entering_debug = True
+            self.stop()
+            service.foreground()  # never returns
+        finally:
+            self._entering_debug = False
 
     def config(self):
         """Print the configuration for a service"""

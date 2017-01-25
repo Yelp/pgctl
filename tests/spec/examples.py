@@ -15,10 +15,12 @@ from testing.assertions import assert_svstat
 from testing.assertions import wait_for
 from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
+from testing.subprocess import ctrl_c
 from testing.subprocess import run
 
 from pgctl.daemontools import SvStat
 from pgctl.subprocess import check_call
+from pgctl.subprocess import PIPE
 from pgctl.subprocess import Popen
 
 
@@ -859,3 +861,24 @@ hello, i am a post-stop script
             0,
             norm=norm.pgctl,
         )
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_doesnt_run_when_calling_debug(self):
+        assert_command(
+            ('pgctl', 'start', 'A'),
+            '',
+            '''\
+[pgctl] Starting: A
+[pgctl] Started: A
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        proc = Popen(('setsid', 'pgctl', 'debug', 'A'), stdin=PIPE, stdout=PIPE)
+        proc.stdin.close()
+        try:
+            assert proc.stdout.readline() == 'A\n'
+        finally:
+            ctrl_c(proc)
+            proc.wait()
