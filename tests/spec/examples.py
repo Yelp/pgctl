@@ -774,9 +774,9 @@ class DescribePreStartHook(object):
     def it_runs_before_starting_a_service(self):
         assert_command(
             ('pgctl', 'start'),
-            '',
+            'hello, i am a pre-start script in stdout\n',
             '''\
-hello, i am a pre-start script
+hello, i am a pre-start script in stderr
 --> $PWD basename: pre-start-hook
 --> cwd basename: pre-start-hook
 [pgctl] Starting: sweet
@@ -796,6 +796,41 @@ hello, i am a pre-start script
             0,
             norm=norm.pgctl,
         )
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_before_debugging_a_stopped_service(self):
+        proc = Popen(('setsid', 'pgctl', 'debug', 'sweet'), stdin=PIPE, stdout=PIPE)
+        proc.stdin.close()
+        try:
+            assert proc.stdout.readline() == 'hello, i am a pre-start script in stdout\n'
+        finally:
+            ctrl_c(proc)
+            proc.wait()
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_doesnt_run_before_debugging_a_running_service(self):
+        assert_command(
+            ('pgctl', 'start'),
+            'hello, i am a pre-start script in stdout\n',
+            '''\
+hello, i am a pre-start script in stderr
+--> $PWD basename: pre-start-hook
+--> cwd basename: pre-start-hook
+[pgctl] Starting: sweet
+[pgctl] Started: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+        # debugging when already up doesn't trigger pre-start to run again
+        proc = Popen(('setsid', 'pgctl', 'debug', 'sweet'), stdin=PIPE, stdout=PIPE)
+        proc.stdin.close()
+        try:
+            assert proc.stdout.readline() == 'sweet\n'
+        finally:
+            ctrl_c(proc)
+            proc.wait()
 
 
 class DescribePostStopHook(object):

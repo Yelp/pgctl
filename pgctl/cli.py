@@ -417,7 +417,11 @@ class PgctlApp(object):
 
         try:
             self._entering_debug = True
-            self.stop()
+            if service.state['state'] != 'down':
+                self.stop()
+            else:
+                # If we were not previously running, then also run pre-start
+                self._run_playground_wide_hook('pre-start')
             service.foreground()  # never returns
         finally:
             self._entering_debug = False
