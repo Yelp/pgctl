@@ -410,7 +410,10 @@ class PgctlApp(object):
                 'Must debug exactly one service, not: ' + commafy(self.service_names),
             )
 
-        self.stop()
+        if service.state['state'] != 'down':
+            self.stop()
+
+        self._run_playground_wide_hook('pre-start')
         service.foreground()  # never returns
 
     def config(self):

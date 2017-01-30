@@ -15,10 +15,12 @@ from testing.assertions import assert_svstat
 from testing.assertions import wait_for
 from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
+from testing.subprocess import ctrl_c
 from testing.subprocess import run
 
 from pgctl.daemontools import SvStat
 from pgctl.subprocess import check_call
+from pgctl.subprocess import PIPE
 from pgctl.subprocess import Popen
 
 
@@ -772,9 +774,9 @@ class DescribePreStartHook(object):
     def it_runs_before_starting_a_service(self):
         assert_command(
             ('pgctl', 'start'),
-            '',
+            'hello, i am a pre-start script in stdout\n',
             '''\
-hello, i am a pre-start script
+hello, i am a pre-start script in stderr
 --> $PWD basename: pre-start-hook
 --> cwd basename: pre-start-hook
 [pgctl] Starting: sweet
@@ -794,6 +796,16 @@ hello, i am a pre-start script
             0,
             norm=norm.pgctl,
         )
+
+    @pytest.mark.usefixtures('in_example_dir')
+    def it_runs_before_debugging_a_service(self):
+        proc = Popen(('setsid', 'pgctl', 'debug', 'sweet'), stdin=PIPE, stdout=PIPE)
+        proc.stdin.close()
+        try:
+            assert proc.stdout.readline() == 'hello, i am a pre-start script in stdout\n'
+        finally:
+            ctrl_c(proc)
+            proc.wait()
 
 
 class DescribePostStopHook(object):
