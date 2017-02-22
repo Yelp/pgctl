@@ -59,6 +59,8 @@ PGCTL_DEFAULTS = frozendict({
     }),
     # output as json?
     'json': False,
+    # kill bad service processes?
+    'force': False,
 })
 CHANNEL = '[pgctl]'
 
@@ -430,6 +432,7 @@ class PgctlApp(object):
             path,
             self.pghome.join(path.relto(str('/')), abs=1),
             self.pgconf['timeout'],
+            self.pgconf['force'],
         )
 
     @cached_property
@@ -516,6 +519,10 @@ def parser():
     parser.add_argument(
         '--json', action='store_true', default=False,
         help='output in JSON (only supported by some commands)',
+    )
+    parser.add_argument(
+        '--force', action='store_true', default=False,
+        help='forcefully terminate zombie processes that prevent services from starting/stopping',
     )
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
 

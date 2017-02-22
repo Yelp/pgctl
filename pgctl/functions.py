@@ -101,6 +101,15 @@ There are two ways you can fix this:
         pass
 
 
+def terminate_runaway_processes(path):
+    """forcefully kill processes holding the lock to `path`"""
+    from .fuser import fuser
+    pids = tuple([str(pid) for pid in fuser(path)])
+    if pids:
+        from .subprocess import call
+        call(('kill', '-9',) + pids)
+
+
 def commafy(items):
     return ', '.join(str(x) for x in items)
 
