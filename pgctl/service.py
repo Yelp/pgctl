@@ -83,11 +83,6 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             state['state'] = 'down'
         return state
 
-    def message(self, state):
-        script = self.path.join(state.strings.change + '-msg')
-        if script.exists():
-            check_call((script.strpath,))
-
     @cached_property
     def ready_script(self):
         return self.path.join('ready')
@@ -105,6 +100,12 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         """Idempotent stop of a service or group of services"""
         self.ensure_exists()
         svc(('-dx', self.path.strpath))
+
+    def run_hook(self, hook_name):
+        """Runs the hook residing in the service path, if it exists."""
+        script = self.path.join(hook_name)
+        if script.exists():
+            check_call((script.strpath,))
 
     def __get_timeout(self, name, default):
         timeout = self.path.join(name, abs=1)

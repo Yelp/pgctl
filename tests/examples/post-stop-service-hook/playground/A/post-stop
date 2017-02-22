@@ -1,0 +1,4 @@
+#!/bin/bash -eu
+echo 'hello, i am a post-stop script for A' >&2
+echo "--> \$PWD basename: $(basename "$PWD")" >&2
+echo "--> cwd basename: $(basename "$(pwd)")" >&2

@@ -95,6 +95,9 @@ class Start(StateChange):
     def assert_(self):
         return self.service.assert_ready()
 
+    def changed(self):
+        return self.service.run_hook('post-start')
+
     def get_timeout(self):
         return self.service.timeout_ready
 
@@ -111,6 +114,9 @@ class Stop(StateChange):
 
     def assert_(self):
         return self.service.assert_stopped()
+
+    def changed(self):
+        return self.service.run_hook('post-stop')
 
     def get_timeout(self):
         return self.service.timeout_stop
@@ -229,19 +235,19 @@ class PgctlApp(object):
         if state is Start:
             self._run_playground_wide_hook('pre-start')
 
-        run_post_stop_hook = False
         with self.playground_locked():
             failures = self.__locked_change_state(state)
-            if state is Stop:
-                run_post_stop_hook = all(
-                    service.state['state'] == 'down'
-                    for service in self.all_services
-                )
 
-        # If the playground is in a fully stopped state, run the playground wide
-        # post-stop hook. As with pre-start, this is done without holding a lock.
-        if run_post_stop_hook:
-            self._run_playground_wide_hook('post-stop')
+        # Run the playground wide post-start/post-stop hook upon fully started/stopped
+        try:
+            if state is Start and self.pg_started:
+                self._run_playground_wide_hook('post-start')
+            elif state is Stop and self.pg_stopped:
+                self._run_playground_wide_hook('post-stop')
+        except NoPlayground:
+            # NoPlayground is raised from self.pg_started/pg_stopped when no playground
+            # Hence, no hooks
+            pass
 
         return failures
 
@@ -269,7 +275,7 @@ class PgctlApp(object):
                     # TODO: debug() takes a lambda
                     debug('loop: check_time %.3f', now() - check_time)
                     pgctl_print(state.strings.changed, service.name)
-                    service.service.message(state)
+                    service.changed()
                     services.remove(service)
 
             time.sleep(float(self.pgconf['poll']))
@@ -287,7 +293,7 @@ class PgctlApp(object):
                 )
         except NoPlayground:
             # services can exist without a playground;
-            # that's fine, but they can't have pre-start hooks
+            # that's fine, but they can't have playground-wide hooks
             pass
 
     def with_services(self, services):
@@ -503,6 +509,14 @@ class PgctlApp(object):
         By default, this is "$XDG_RUNTIME_DIR/pgctl".
         """
         return Path(self.pgconf['pghome'], expanduser=True)
+
+    @property
+    def pg_started(self):
+        return all(srv.state['state'] == 'ready' for srv in self.all_services)
+
+    @property
+    def pg_stopped(self):
+        return all(srv.state['state'] == 'down' for srv in self.all_services)
 
     commands = (start, stop, status, restart, reload, log, debug, config)
 
