@@ -50,7 +50,7 @@ UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
 \\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
 
 There are two ways you can fix this:
-  \\* temporarily: lsof -t playground/{service} | xargs kill -9
+  \\* temporarily: pgctl-fuser playground/{service} | xargs kill -9
   \\* permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 {log}\\[pgctl\\] ERROR: Some services failed to stop: {service}
@@ -123,7 +123,7 @@ class DescribeOrphanSubprocess(DirtyTest):
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: lsof -t playground/sweet | xargs kill -9
+  * temporarily: pgctl-fuser playground/sweet | xargs kill -9
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/log <==
@@ -158,7 +158,7 @@ There are two ways you can fix this:
 {PS-STATS} sleep 987654
 
 There are two ways you can fix this:
-  * temporarily: lsof -t playground/slow-startup | xargs kill -9
+  * temporarily: pgctl-fuser playground/slow-startup | xargs kill -9
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/slow-startup/log <==

@@ -93,7 +93,7 @@ def show_runaway_processes(path):
 these runaway processes did not stop:
 %s
 There are two ways you can fix this:
-  * temporarily: lsof -t %s | xargs kill -9
+  * temporarily: pgctl-fuser %s | xargs kill -9
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 ''' % (processes, bestrelpath(path))
         )
