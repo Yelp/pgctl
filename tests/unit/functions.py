@@ -4,15 +4,21 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
+
+import mock
+import pytest
 import six
 from frozendict import frozendict
 from testfixtures import ShouldRaise
 from testing.norm import norm_trailing_whitespace_json
 
+import pgctl.subprocess
 from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
 from pgctl.functions import show_runaway_processes
+from pgctl.functions import terminate_runaway_processes
 from pgctl.functions import unique
 
 
@@ -78,3 +84,28 @@ class DescribeShowRunawayProcesses(object):
 
     def it_passes_when_there_are_no_locks(self, tmpdir):
         assert show_runaway_processes(tmpdir.strpath) is None
+
+
+class DescribeTerminateRunawayProcesses(object):
+
+    @pytest.yield_fixture
+    def mock_subprocess_call(self):
+        with mock.patch.object(pgctl.subprocess, 'call', autospec=True) as mock_call:
+            yield mock_call
+
+    def it_kills_processes_holding_the_lock(self, tmpdir, mock_subprocess_call):
+        lockfile = tmpdir.ensure('lock')
+        lock = lockfile.open()
+
+        terminate_runaway_processes(lockfile.strpath)
+        mock_subprocess_call.assert_called_once_with(
+            ('kill', '-9', '{}'.format(os.getpid()),)
+        )
+
+        lock.close()
+
+    def it_passes_when_there_are_no_locks(self, tmpdir, mock_subprocess_call):
+        lockfile = tmpdir.ensure('lock')
+
+        terminate_runaway_processes(lockfile.strpath)
+        assert not mock_subprocess_call.called
