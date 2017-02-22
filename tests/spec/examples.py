@@ -634,6 +634,7 @@ class DescribePgdirMissing(object):
         ]
     },
     "command": "config",
+    "force": false,
     "json": false,
     "pgdir": "playground",
     "pghome": "~/.run/pgctl",
@@ -660,7 +661,7 @@ class DescribePgdirMissing(object):
                 ('pgctl', '--help'),
                 '''\
 usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--all]
+             [--force] [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -675,6 +676,8 @@ optional arguments:
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
   --json                output in JSON (only supported by some commands)
+  --force               forcefully terminate zombie processes that prevent
+                        services from starting/stopping
   --all, -a             act upon all services
 ''',
                 '',
@@ -684,7 +687,7 @@ optional arguments:
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
 usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--all]
+             [--force] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}
