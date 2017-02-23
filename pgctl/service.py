@@ -22,9 +22,8 @@ from .errors import NotReady
 from .errors import reraise
 from .functions import bestrelpath
 from .functions import exec_
-from .functions import show_runaway_processes
+from .functions import handle_runaway_processes
 from .functions import symlink_if_necessary
-from .functions import terminate_runaway_processes
 from .subprocess import check_call
 from .subprocess import Popen
 
@@ -32,9 +31,7 @@ from .subprocess import Popen
 def flock(path, force_release=False):
     """attempt to show the user a better message on failure, and handle the race condition"""
     def handle_race(path):
-        if force_release:
-            terminate_runaway_processes(path)
-        show_runaway_processes(path)
+        handle_runaway_processes(path, force_release)
         if handle_race.limit > 0:
             handle_race.limit -= 1
         else:

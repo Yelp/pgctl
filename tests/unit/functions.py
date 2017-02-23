@@ -15,10 +15,10 @@ from testing.norm import norm_trailing_whitespace_json
 
 import pgctl.subprocess
 from pgctl.errors import LockHeld
+from pgctl.functions import _show_runaway_processes
+from pgctl.functions import _terminate_runaway_processes
 from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
-from pgctl.functions import show_runaway_processes
-from pgctl.functions import terminate_runaway_processes
 from pgctl.functions import unique
 
 
@@ -76,14 +76,14 @@ class DescribeShowRunawayProcesses(object):
         lock = lockfile.open()
 
         with ShouldRaise(LockHeld):
-            show_runaway_processes(lockfile.strpath)
+            _show_runaway_processes(lockfile.strpath)
 
         lock.close()
 
-        show_runaway_processes(lockfile.strpath)
+        _show_runaway_processes(lockfile.strpath)
 
     def it_passes_when_there_are_no_locks(self, tmpdir):
-        assert show_runaway_processes(tmpdir.strpath) is None
+        assert _show_runaway_processes(tmpdir.strpath) is None
 
 
 class DescribeTerminateRunawayProcesses(object):
@@ -97,7 +97,7 @@ class DescribeTerminateRunawayProcesses(object):
         lockfile = tmpdir.ensure('lock')
         lock = lockfile.open()
 
-        terminate_runaway_processes(lockfile.strpath)
+        _terminate_runaway_processes(lockfile.strpath)
         mock_subprocess_call.assert_called_once_with(
             ('kill', '-9', '{}'.format(os.getpid()),)
         )
@@ -107,5 +107,5 @@ class DescribeTerminateRunawayProcesses(object):
     def it_passes_when_there_are_no_locks(self, tmpdir, mock_subprocess_call):
         lockfile = tmpdir.ensure('lock')
 
-        terminate_runaway_processes(lockfile.strpath)
+        _terminate_runaway_processes(lockfile.strpath)
         assert not mock_subprocess_call.called

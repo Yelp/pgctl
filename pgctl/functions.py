@@ -84,7 +84,7 @@ def ps(pids):
         return ''  # pragma: no cover, we don't expect to hit this
 
 
-def show_runaway_processes(path):
+def _show_runaway_processes(path):
     from .fuser import fuser
     processes = ps(fuser(path))
     if processes:
@@ -101,13 +101,24 @@ There are two ways you can fix this:
         pass
 
 
-def terminate_runaway_processes(path):
+def _terminate_runaway_processes(path):
     """forcefully kill processes holding the lock to `path`"""
     from .fuser import fuser
     pids = tuple([str(pid) for pid in fuser(path)])
     if pids:
         from .subprocess import call
         call(('kill', '-9',) + pids)
+        # TODO(yalinh): some warning msg
+
+
+def handle_runaway_processes(path, force_terminate):
+    """Try to terminate runaway processes if `force_terminate`
+    If there is any leftover runaway process, raise an Expcetion to users
+    """
+    if force_terminate:
+        _terminate_runaway_processes(path)
+
+    _show_runaway_processes(path)
 
 
 def commafy(items):

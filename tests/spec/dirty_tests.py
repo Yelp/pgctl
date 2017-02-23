@@ -13,7 +13,7 @@ from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
 from pgctl.errors import LockHeld
-from pgctl.functions import show_runaway_processes
+from pgctl.functions import _show_runaway_processes
 from pgctl.fuser import fuser
 from pgctl.subprocess import check_call
 
@@ -24,7 +24,7 @@ def clean_service(service_path):
     while limit > 0:  # pragma: no branch: we don't expect to ever hit the limit
         assert os.path.isdir(service_path), service_path
         try:
-            show_runaway_processes(service_path)
+            _show_runaway_processes(service_path)
             print('lock released -- done.')
             break
         except LockHeld:
