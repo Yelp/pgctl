@@ -676,7 +676,7 @@ optional arguments:
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
   --json                output in JSON (only supported by some commands)
-  --force               forcefully terminate zombie processes that prevent
+  --force               forcefully terminate runaway processes that prevent
                         services from starting/stopping
   --all, -a             act upon all services
 ''',

@@ -522,7 +522,7 @@ def parser():
     )
     parser.add_argument(
         '--force', action='store_true', default=False,
-        help='forcefully terminate zombie processes that prevent services from starting/stopping',
+        help='forcefully terminate runaway processes that prevent services from starting/stopping',
     )
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
 
