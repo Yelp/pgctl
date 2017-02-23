@@ -173,6 +173,29 @@ There are two ways you can fix this:
             norm=norm.pgctl,
         )
 
+    def it_restarts_fine_with_force_flag(self):
+        assert_command(
+            ('pgctl', 'start', 'sweet'),
+            '',
+            '''\
+[pgctl] Starting: sweet
+[pgctl] Started: sweet
+''',
+            0,
+        )
+        assert_command(
+            ('pgctl', 'restart', 'sweet', '--force'),
+            '',
+            '''\
+[pgctl] Stopping: sweet
+[pgctl] Stopped: sweet
+[pgctl] Starting: sweet
+[pgctl] Started: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
 
 class DescribeSlowShutdown(DirtyTest):
     """This test case takes three seconds to shut down"""
