@@ -173,7 +173,7 @@ There are two ways you can fix this:
             norm=norm.pgctl,
         )
 
-    def it_restarts_fine_with_force_flag(self):
+    def it_warns_on_forcelly_stop_for_sweet(self):
         assert_command(
             ('pgctl', 'start', 'sweet'),
             '',
@@ -188,9 +188,44 @@ There are two ways you can fix this:
             '',
             '''\
 [pgctl] Stopping: sweet
+[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+{PS-HEADER}
+{PS-STATS} sleep infinity
+
+Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
 [pgctl] Stopped: sweet
 [pgctl] Starting: sweet
 [pgctl] Started: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+    def it_warns_on_forcelly_stop_for_slow_start(self):
+        assert_command(
+            ('pgctl', 'start', 'slow-startup'),
+            '',
+            '''\
+[pgctl] Starting: slow-startup
+[pgctl] Started: slow-startup
+''',
+            0,
+        )
+        assert_command(
+            ('pgctl', 'restart', 'slow-startup', '--force'),
+            '',
+            '''\
+[pgctl] Stopping: slow-startup
+[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+{PS-HEADER}
+{PS-STATS} sleep 987654
+
+Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+[pgctl] Stopped: slow-startup
+[pgctl] Starting: slow-startup
+[pgctl] Started: slow-startup
 ''',
             0,
             norm=norm.pgctl,
@@ -210,11 +245,11 @@ class DescribeSlowShutdown(DirtyTest):
         yield
         del os.environ['PGCTL_TIMEOUT']
 
-    def it_fails_by_default(self):
+    def assert_it_fails_on_stop(self, stop_command):
         check_call(('pgctl', 'start'))
         assert_svstat('playground/sweet', state='up')
         assert_command(
-            ('pgctl', 'stop'),
+            stop_command,
             '',
             '''\
 [pgctl] Stopping: sweet
@@ -230,6 +265,12 @@ class DescribeSlowShutdown(DirtyTest):
             1,
             norm=norm.pgctl,
         )
+
+    def it_fails_by_default(self):
+        self.assert_it_fails_on_stop(('pgctl', 'stop'))
+
+    def it_fails_with_force_flag(self):
+        self.assert_it_fails_on_stop(('pgctl', 'stop', '--force'))
 
     def it_can_shut_down_successfully(self):
         # if we configure it to wait a bit longer, it works fine

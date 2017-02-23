@@ -104,11 +104,17 @@ There are two ways you can fix this:
 def _terminate_runaway_processes(path):
     """forcefully kill processes holding the lock to `path`"""
     from .fuser import fuser
-    pids = tuple([str(pid) for pid in fuser(path)])
-    if pids:
+    pids = list(fuser(path))
+    processes = ps(pids)
+    if processes:
+        print_stderr('''[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+{}
+Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''.format(processes)
+        )
+
         from .subprocess import call
-        call(('kill', '-9',) + pids)
-        # TODO(yalinh): some warning msg
+        call(('kill', '-9',) + tuple([str(pid) for pid in pids]))
 
 
 def handle_runaway_processes(path, force_terminate):
