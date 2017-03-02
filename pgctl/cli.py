@@ -138,29 +138,29 @@ def pgctl_print(*print_args, **print_kwargs):
     unbuf_print(CHANNEL, *print_args, **print_kwargs)
 
 
-def timeout(service_name, error, action_name, start_time, timeout_length, check_time):
-    curr_time = now()
-    check_length = curr_time - check_time
-    next_time = curr_time + check_length
-    limit_time = start_time + timeout_length
+def error_message_on_timeout(service, error, action_name, actual_timeout_length, check_length):
+    error_message = "ERROR: service '{}' failed to {} after {:.2f} seconds".format(
+        service.name,
+        action_name,
+        actual_timeout_length,
+    )
+    if actual_timeout_length - service.get_timeout() > 0.1:
+        error_message += ' (it took {}s to poll)'.format(
+            check_length,
+        )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
+    error_message += ', ' + str(error)
+    pgctl_print(error_message)
+
+
+def timeout(service, start_time, check_time, curr_time):
+    limit_time = start_time + service.get_timeout()
+    next_time = curr_time + (curr_time - check_time)
 
     # assertion can take a long time. we timeout as close to the limit_time as we can.
     if abs(curr_time - limit_time) < abs(next_time - limit_time):
-        actual_timeout_length = curr_time - start_time
-        error_message = "ERROR: service '{}' failed to {} after {:.2f} seconds".format(
-            service_name,
-            action_name,
-            actual_timeout_length,
-        )
-        if actual_timeout_length - timeout_length > 0.1:
-            error_message += ' (it took {}s to poll)'.format(
-                check_length,
-            )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
-        error_message += ', ' + str(error)
-        pgctl_print(error_message)
         return True
     else:
-        trace('service %s still waiting: %.1f seconds.', service_name, limit_time - curr_time)
+        trace('service %s still waiting: %.1f seconds.', service.name, limit_time - curr_time)
         return False
 
 
@@ -264,7 +264,16 @@ class PgctlApp(object):
                 try:
                     service.assert_()
                 except PgctlUserMessage as error:
-                    if timeout(service.name, error, state.strings.change, start_time, service.get_timeout(), check_time):
+                    curr_time = now()
+                    if timeout(service, start_time, check_time, curr_time):
+                        error_message_on_timeout(
+                            service,
+                            error,
+                            state.strings.change,
+                            actual_timeout_length=curr_time - start_time,
+                            check_length=curr_time - check_time,
+                        )
+
                         services.remove(service)
                         failed.append(service.name)
                 else:
