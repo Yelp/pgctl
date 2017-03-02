@@ -8,8 +8,8 @@ slowterm() {
 
     # worst case behavior: really slow stop
     # during this test case, we've set the PGCTL_WAIT_PERIOD to 1.5 seconds
-    sleep 0.75 &
-    sleep 2.25
+    sleep $BACKGROUND_SLEEP &
+    sleep $FOREGROUND_SLEEP
 
     # the usual exit code (128 + 15 means SIGTERM)
     exit 143

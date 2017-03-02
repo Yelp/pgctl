@@ -9,6 +9,7 @@ import signal
 import pytest
 from testing import norm
 from testing.assertions import assert_svstat
+from testing.service_context import set_slow_shutdown_sleeptime
 from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
@@ -232,7 +233,7 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
         )
 
 
-class DescribeSlowShutdown(DirtyTest):
+class DescribeSlowShutdownOnForeground(DirtyTest):
     """This test case takes three seconds to shut down"""
 
     @pytest.yield_fixture()
@@ -244,6 +245,11 @@ class DescribeSlowShutdown(DirtyTest):
         os.environ['PGCTL_TIMEOUT'] = '1.5'
         yield
         del os.environ['PGCTL_TIMEOUT']
+
+    @pytest.yield_fixture(autouse=True)
+    def configure_sleeptime(self):
+        with set_slow_shutdown_sleeptime(0.75, 2.25):
+            yield
 
     def assert_it_fails_on_stop(self, stop_command):
         check_call(('pgctl', 'start'))
