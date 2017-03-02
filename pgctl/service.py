@@ -22,16 +22,16 @@ from .errors import NotReady
 from .errors import reraise
 from .functions import bestrelpath
 from .functions import exec_
-from .functions import handle_runaway_processes
+from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
 from .subprocess import check_call
 from .subprocess import Popen
 
 
-def flock(path, force_release=False):
+def flock(path):
     """attempt to show the user a better message on failure, and handle the race condition"""
     def handle_race(path):
-        handle_runaway_processes(path, force_release)
+        show_runaway_processes(path)
         if handle_race.limit > 0:
             handle_race.limit -= 1
         else:
@@ -42,7 +42,7 @@ def flock(path, force_release=False):
     return flock(path, on_fail=handle_race)
 
 
-class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', 'lock_force_release'])):
+class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
     # TODO-TEST: regression: these cached-properties are actually cached
     __exists = False
 
@@ -196,7 +196,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', '
                 from .flock import release
                 release(lock)
 
-        with flock(self.path.strpath, self.lock_force_release) as lock:
+        with flock(self.path.strpath) as lock:
             debug('LOCK: %i', lock)
             self.ensure_directory_structure()
             with self.path.as_cwd():

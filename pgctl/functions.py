@@ -84,7 +84,7 @@ def ps(pids):
         return ''  # pragma: no cover, we don't expect to hit this
 
 
-def _show_runaway_processes(path):
+def show_runaway_processes(path):
     from .fuser import fuser
     processes = ps(fuser(path))
     if processes:
@@ -101,7 +101,7 @@ There are two ways you can fix this:
         pass
 
 
-def _terminate_runaway_processes(path):
+def terminate_runaway_processes(path):
     """forcefully kill processes holding the lock to `path`"""
     from .fuser import fuser
     pids = list(fuser(path))
@@ -115,16 +115,6 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
 
         from .subprocess import call
         call(('kill', '-9',) + tuple([str(pid) for pid in pids]))
-
-
-def handle_runaway_processes(path, force_terminate):
-    """Try to terminate runaway processes if `force_terminate`
-    If there is any leftover runaway process, raise an Expcetion to users
-    """
-    if force_terminate:
-        _terminate_runaway_processes(path)
-
-    _show_runaway_processes(path)
 
 
 def commafy(items):

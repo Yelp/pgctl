@@ -42,7 +42,7 @@ def fake_statuses(statuses):
     app = PgctlApp()
     app.services = []
     for name, status in statuses:
-        service = Service('/dev/null', '/dev/null', 100, False)
+        service = Service('/dev/null', '/dev/null', 100)
         service.svstat = mock.Mock(spec=service.svstat)
         service.svstat.return_value = status
         service.name = name

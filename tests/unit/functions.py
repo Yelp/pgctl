@@ -14,10 +14,10 @@ from testing.assertions import wait_for
 from testing.norm import norm_trailing_whitespace_json
 
 from pgctl.errors import LockHeld
-from pgctl.functions import _show_runaway_processes
-from pgctl.functions import _terminate_runaway_processes
 from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
+from pgctl.functions import show_runaway_processes
+from pgctl.functions import terminate_runaway_processes
 from pgctl.functions import unique
 from pgctl.fuser import fuser
 from pgctl.subprocess import Popen
@@ -77,14 +77,14 @@ class DescribeShowRunawayProcesses(object):
         lock = lockfile.open()
 
         with ShouldRaise(LockHeld):
-            _show_runaway_processes(lockfile.strpath)
+            show_runaway_processes(lockfile.strpath)
 
         lock.close()
 
-        _show_runaway_processes(lockfile.strpath)
+        show_runaway_processes(lockfile.strpath)
 
     def it_passes_when_there_are_no_locks(self, tmpdir):
-        assert _show_runaway_processes(tmpdir.strpath) is None
+        assert show_runaway_processes(tmpdir.strpath) is None
 
 
 class DescribeTerminateRunawayProcesses(object):
@@ -99,7 +99,7 @@ class DescribeTerminateRunawayProcesses(object):
         assert list(fuser(lockfile.strpath)) == [process.pid]
 
         with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
-            _terminate_runaway_processes(lockfile.strpath)
+            terminate_runaway_processes(lockfile.strpath)
 
         assert 'WARNING: Killing these runaway ' in mock_stderr.getvalue()
         wait_for(lambda: process.poll() == -9)
@@ -108,5 +108,5 @@ class DescribeTerminateRunawayProcesses(object):
         lockfile = tmpdir.ensure('lock')
 
         with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
-            _terminate_runaway_processes(lockfile.strpath)
+            terminate_runaway_processes(lockfile.strpath)
         assert mock_stderr.getvalue() == ''

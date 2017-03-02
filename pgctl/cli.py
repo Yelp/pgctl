@@ -441,7 +441,6 @@ class PgctlApp(object):
             path,
             self.pghome.join(path.relto(str('/')), abs=1),
             self.pgconf['timeout'],
-            self.pgconf['force'],
         )
 
     @cached_property
