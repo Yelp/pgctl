@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 
 import os
 import signal
+import subprocess
+import time
 
 import pytest
 from testing import norm
@@ -291,3 +293,88 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
 
         check_call(('pgctl', 'stop'))
         assert_svstat('playground/sweet', state=SvStat.UNSUPERVISED)
+
+
+class DescribeSlowShutdownOnBackground(DirtyTest):
+
+    @pytest.yield_fixture()
+    def service_name(self):
+        yield 'slow-shutdown'
+
+    @pytest.yield_fixture(autouse=True)
+    def environment(self):
+        os.environ['PGCTL_TIMEOUT'] = '1.5'
+        yield
+        del os.environ['PGCTL_TIMEOUT']
+
+    @pytest.yield_fixture(autouse=True)
+    def configure_sleeptime(self):
+        with set_slow_shutdown_sleeptime(2.25, 0.75):
+            yield
+
+    def it_fails_by_leaking_runaway_process_on_stop(self):
+        check_call(('pgctl', 'start'))
+        assert_svstat('playground/sweet', state='up')
+
+        assert_command(
+            ('pgctl', 'stop'),
+            '',
+            '''\
+[pgctl] Stopping: sweet
+[pgctl] ERROR: service 'sweet' failed to stop after {TIME} seconds, these runaway processes did not stop:
+{PS-HEADER}
+{PS-STATS} sleep 2.25
+
+There are two ways you can fix this:
+  * temporarily: pgctl-fuser playground/sweet | xargs kill -9
+  * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+==> playground/sweet/log <==
+{TIMESTAMP} sweet
+{TIMESTAMP} sweet_error
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/sweet/log
+[pgctl] ERROR: Some services failed to stop: sweet
+''',
+            1,
+            norm=norm.pgctl,
+        )
+
+    def it_succeeds_on_second_stop_after_some_delay(self):
+        check_call(('pgctl', 'start'))
+        assert_svstat('playground/sweet', state='up')
+
+        with pytest.raises(subprocess.CalledProcessError):
+            check_call(('pgctl', 'stop'))
+
+        time.sleep(3)
+        assert_command(
+            ('pgctl', 'stop'),
+            '',
+            '''\
+[pgctl] Already stopped: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+    def it_succeeds_on_forceful_stop(self):
+        check_call(('pgctl', 'start'))
+        assert_svstat('playground/sweet', state='up')
+        assert_command(
+            ('pgctl', 'stop', '--force'),
+            '',
+            '''\
+[pgctl] Stopping: sweet
+[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+{PS-HEADER}
+{PS-STATS} sleep 2.25
+
+Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+[pgctl] Stopped: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
