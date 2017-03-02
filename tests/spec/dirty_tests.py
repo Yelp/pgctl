@@ -253,11 +253,11 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
         with set_slow_shutdown_sleeptime(0.75, 2.25):
             yield
 
-    def assert_it_fails_on_stop(self, stop_command):
+    def it_fails_by_default(self):
         check_call(('pgctl', 'start'))
         assert_svstat('playground/sweet', state='up')
         assert_command(
-            stop_command,
+            (('pgctl', 'stop')),
             '',
             '''\
 [pgctl] Stopping: sweet
@@ -274,13 +274,27 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
             norm=norm.pgctl,
         )
 
-    def it_fails_by_default(self):
-        self.assert_it_fails_on_stop(('pgctl', 'stop'))
+    def it_succeeds_on_forceful_stop(self):
+        check_call(('pgctl', 'start'))
+        assert_svstat('playground/sweet', state='up')
+        assert_command(
+            ('pgctl', 'stop', '--force'),
+            '',
+            '''\
+[pgctl] Stopping: sweet
+[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+{PS-HEADER}
+{PS-STATS} sleep 2.25
 
-    def it_fails_with_force_flag(self):
-        self.assert_it_fails_on_stop(('pgctl', 'stop', '--force'))
+Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
-    def it_can_shut_down_successfully(self):
+[pgctl] Stopped: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+    def it_can_shut_down_successfully_with_longer_timeout(self):
         # if we configure it to wait a bit longer, it works fine
         with open('playground/sweet/timeout-stop', 'w') as timeout:
             timeout.write('3')
