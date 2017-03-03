@@ -253,7 +253,7 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
 
     @pytest.yield_fixture(autouse=True)
     def configure_sleeptime(self):
-        with set_slow_shutdown_sleeptime(0.75, 2.25):
+        with set_slow_shutdown_sleeptime(0.75, 2.5):
             yield
 
     def it_fails_by_default(self):
@@ -289,7 +289,7 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
 {PS-HEADER}
 {PS-STATS} {S6-PROCESS}
 {PS-STATS} \\_ /bin/bash ./run
-{PS-STATS} \\_ sleep 2.25
+{PS-STATS} \\_ sleep 2.5
 
 Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
@@ -328,7 +328,7 @@ class DescribeSlowShutdownOnBackground(DirtyTest):
 
     @pytest.yield_fixture(autouse=True)
     def configure_sleeptime(self):
-        with set_slow_shutdown_sleeptime(2.25, 0.75):
+        with set_slow_shutdown_sleeptime(2.5, 0.75):
             yield
 
     def it_fails_by_leaking_runaway_process_on_stop(self):
@@ -342,7 +342,7 @@ class DescribeSlowShutdownOnBackground(DirtyTest):
 [pgctl] Stopping: sweet
 [pgctl] ERROR: service 'sweet' failed to stop after {TIME} seconds, these runaway processes did not stop:
 {PS-HEADER}
-{PS-STATS} sleep 2.25
+{PS-STATS} sleep 2.5
 
 There are two ways you can fix this:
   * temporarily: pgctl-fuser playground/sweet | xargs kill -9
@@ -388,7 +388,7 @@ There are two ways you can fix this:
 [pgctl] Stopping: sweet
 [pgctl] WARNING: Killing these runaway processes at user's request (--force):
 {PS-HEADER}
-{PS-STATS} sleep 2.25
+{PS-STATS} sleep 2.5
 
 Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
