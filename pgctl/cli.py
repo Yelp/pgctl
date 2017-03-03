@@ -117,6 +117,9 @@ class Stop(StateChange):
     def get_timeout(self):
         return self.service.timeout_stop
 
+    def fail(self):
+        return self.service.force_cleanup()
+
     class strings(object):
         change = 'stop'
         changing = 'Stopping:'
@@ -266,16 +269,18 @@ class PgctlApp(object):
                 except PgctlUserMessage as error:
                     curr_time = now()
                     if timeout(service, start_time, check_time, curr_time):
-                        error_message_on_timeout(
-                            service,
-                            error,
-                            state.strings.change,
-                            actual_timeout_length=curr_time - start_time,
-                            check_length=curr_time - check_time,
-                        )
-
-                        services.remove(service)
-                        failed.append(service.name)
+                        if state is Stop and self.pgconf['force']:
+                            service.fail()
+                        else:
+                            error_message_on_timeout(
+                                service,
+                                error,
+                                state.strings.change,
+                                actual_timeout_length=curr_time - start_time,
+                                check_length=curr_time - check_time,
+                            )
+                            failed.append(service.name)
+                            services.remove(service)
                 else:
                     # TODO: debug() takes a lambda
                     debug('loop: check_time %.3f', now() - check_time)

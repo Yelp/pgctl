@@ -107,15 +107,7 @@ class DescribeOrphanSubprocess(DirtyTest):
         )
 
     def it_shows_error_on_stop_for_sweet(self):
-        assert_command(
-            ('pgctl', 'start', 'sweet'),
-            '',
-            '''\
-[pgctl] Starting: sweet
-[pgctl] Started: sweet
-''',
-            0,
-        )
+        check_call(('pgctl', 'start', 'sweet'))
         assert_command(
             ('pgctl', 'restart', 'sweet'),
             '',
@@ -142,15 +134,7 @@ There are two ways you can fix this:
         )
 
     def it_shows_error_on_stop_for_slow_start(self):
-        assert_command(
-            ('pgctl', 'start', 'slow-startup'),
-            '',
-            '''\
-[pgctl] Starting: slow-startup
-[pgctl] Started: slow-startup
-''',
-            0,
-        )
+        check_call(('pgctl', 'start', 'slow-startup'))
         assert_command(
             ('pgctl', 'restart', 'slow-startup'),
             '',
@@ -177,15 +161,7 @@ There are two ways you can fix this:
         )
 
     def it_warns_on_forcelly_stop_for_sweet(self):
-        assert_command(
-            ('pgctl', 'start', 'sweet'),
-            '',
-            '''\
-[pgctl] Starting: sweet
-[pgctl] Started: sweet
-''',
-            0,
-        )
+        check_call(('pgctl', 'start', 'sweet'))
         assert_command(
             ('pgctl', 'restart', 'sweet', '--force'),
             '',
@@ -206,15 +182,7 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
         )
 
     def it_warns_on_forcelly_stop_for_slow_start(self):
-        assert_command(
-            ('pgctl', 'start', 'slow-startup'),
-            '',
-            '''\
-[pgctl] Starting: slow-startup
-[pgctl] Started: slow-startup
-''',
-            0,
-        )
+        check_call(('pgctl', 'start', 'slow-startup'))
         assert_command(
             ('pgctl', 'restart', 'slow-startup', '--force'),
             '',
@@ -231,6 +199,41 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
 [pgctl] Started: slow-startup
 ''',
             0,
+            norm=norm.pgctl,
+        )
+
+    def it_ignores_force_flag_upon_normal_start(self):
+        assert_command(
+            ('pgctl', 'start', 'sweet', '--force'),
+            '',
+            '''\
+[pgctl] Starting: sweet
+[pgctl] Started: sweet
+''',
+            0,
+        )
+
+    def it_ignores_force_flag_upon_dirty_start(self):
+        check_call(('pgctl', 'start', 'sweet'))
+
+        with pytest.raises(subprocess.CalledProcessError):
+            check_call(('pgctl', 'stop', 'sweet'))
+
+        assert_command(
+            ('pgctl', 'start', 'sweet', '--force'),
+            '',
+            '''\
+[pgctl] Starting: sweet
+[pgctl] ERROR: these runaway processes did not stop:
+{PS-HEADER}
+{PS-STATS} sleep infinity
+
+There are two ways you can fix this:
+  * temporarily: pgctl-fuser playground/sweet | xargs kill -9
+  * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+''',
+            1,
             norm=norm.pgctl,
         )
 
@@ -284,7 +287,9 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
 [pgctl] Stopping: sweet
 [pgctl] WARNING: Killing these runaway processes at user's request (--force):
 {PS-HEADER}
-{PS-STATS} sleep 2.25
+{PS-STATS} {S6-PROCESS}
+{PS-STATS} \\_ /bin/bash ./run
+{PS-STATS} \\_ sleep 2.25
 
 Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
