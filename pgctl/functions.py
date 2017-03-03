@@ -114,7 +114,10 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
         )
 
         from .subprocess import call
-        call(('kill', '-9',) + tuple([str(pid) for pid in pids]))
+        call(
+            ('kill', '-9',) + tuple([str(pid) for pid in pids]),
+            stderr=open(os.devnull, 'w'),
+        )
 
 
 def commafy(items):
