@@ -144,6 +144,18 @@ def pgctl_print(*print_args, **print_kwargs):
     unbuf_print(CHANNEL, *print_args, **print_kwargs)
 
 
+def timeout(service, start_time, check_time, curr_time):
+    limit_time = start_time + service.get_timeout()
+    next_time = curr_time + (curr_time - check_time)
+
+    # assertion can take a long time. we timeout as close to the limit_time as we can.
+    if abs(curr_time - limit_time) < abs(next_time - limit_time):
+        return True
+    else:
+        trace('service %s still waiting: %.1f seconds.', service.name, limit_time - curr_time)
+        return False
+
+
 def error_message_on_timeout(service, error, action_name, actual_timeout_length, check_length):
     error_message = "ERROR: service '{}' failed to {} after {:.2f} seconds".format(
         service.name,
@@ -156,18 +168,6 @@ def error_message_on_timeout(service, error, action_name, actual_timeout_length,
         )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
     error_message += ', ' + str(error)
     pgctl_print(error_message)
-
-
-def timeout(service, start_time, check_time, curr_time):
-    limit_time = start_time + service.get_timeout()
-    next_time = curr_time + (curr_time - check_time)
-
-    # assertion can take a long time. we timeout as close to the limit_time as we can.
-    if abs(curr_time - limit_time) < abs(next_time - limit_time):
-        return True
-    else:
-        trace('service %s still waiting: %.1f seconds.', service.name, limit_time - curr_time)
-        return False
 
 
 class PgctlApp(object):
