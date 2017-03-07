@@ -53,7 +53,7 @@ UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
 \\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
 
 There are two ways you can fix this:
-  \\* temporarily: pgctl-fuser playground/{service} | xargs kill -9
+  \\* temporarily: pgctl stop --force playground/{service}
   \\* permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 {log}\\[pgctl\\] ERROR: Some services failed to stop: {service}
@@ -118,7 +118,7 @@ class DescribeOrphanSubprocess(DirtyTest):
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: pgctl-fuser playground/sweet | xargs kill -9
+  * temporarily: pgctl stop --force playground/sweet
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/log <==
@@ -145,7 +145,7 @@ There are two ways you can fix this:
 {PS-STATS} sleep 987654
 
 There are two ways you can fix this:
-  * temporarily: pgctl-fuser playground/slow-startup | xargs kill -9
+  * temporarily: pgctl stop --force playground/slow-startup
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/slow-startup/log <==
@@ -229,7 +229,7 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: pgctl-fuser playground/sweet | xargs kill -9
+  * temporarily: pgctl stop --force playground/sweet
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ''',
@@ -345,7 +345,7 @@ class DescribeSlowShutdownOnBackground(DirtyTest):
 {PS-STATS} sleep 2.5
 
 There are two ways you can fix this:
-  * temporarily: pgctl-fuser playground/sweet | xargs kill -9
+  * temporarily: pgctl stop --force playground/sweet
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/log <==
