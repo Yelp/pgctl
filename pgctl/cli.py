@@ -100,6 +100,9 @@ class Start(StateChange):
     def get_timeout(self):
         return self.service.timeout_ready
 
+    def fail(self):
+        raise NotImplementedError
+
     class strings(object):
         change = 'start'
         changing = 'Starting:'
