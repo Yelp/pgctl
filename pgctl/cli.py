@@ -536,6 +536,12 @@ def parser():
         '--json', action='store_true', default=False,
         help='output in JSON (only supported by some commands)',
     )
+    # `--force` takes effect only upon `pgctl stop`, not `pgctl start`.
+    # `--force` implies that pgctl would try whatever it can to accomplish a task.
+    # This would not apply to `pgctl start` under many cases.
+    # For example, if a service takes 30 minutes to warm itself up before ready,
+    # pgctl cannot force it to start up within a short period of time. Instead,
+    # users should take the responsibility to adjust the timeout value.
     parser.add_argument(
         '--force', action='store_true', default=False,
         help='forcefully terminate runaway processes that prevent services from starting/stopping',
