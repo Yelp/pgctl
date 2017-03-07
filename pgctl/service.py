@@ -44,6 +44,8 @@ def flock(path):
 
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
+    # pylint: disable=too-many-public-methods
+
     # TODO-TEST: regression: these cached-properties are actually cached
     __exists = False
 
