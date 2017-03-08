@@ -24,6 +24,7 @@ from .functions import bestrelpath
 from .functions import exec_
 from .functions import show_runaway_processes
 from .functions import symlink_if_necessary
+from .functions import terminate_runaway_processes
 from .subprocess import check_call
 from .subprocess import Popen
 
@@ -43,6 +44,8 @@ def flock(path):
 
 
 class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
+    # pylint: disable=too-many-public-methods
+
     # TODO-TEST: regression: these cached-properties are actually cached
     __exists = False
 
@@ -105,6 +108,10 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         """Idempotent stop of a service or group of services"""
         self.ensure_exists()
         svc(('-dx', self.path.strpath))
+
+    def force_cleanup(self):
+        """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""
+        terminate_runaway_processes(self.path.strpath)
 
     def __get_timeout(self, name, default):
         timeout = self.path.join(name, abs=1)

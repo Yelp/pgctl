@@ -4,16 +4,23 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import StringIO
+
+import mock
 import six
 from frozendict import frozendict
 from testfixtures import ShouldRaise
+from testing.assertions import wait_for
 from testing.norm import norm_trailing_whitespace_json
 
 from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
 from pgctl.functions import show_runaway_processes
+from pgctl.functions import terminate_runaway_processes
 from pgctl.functions import unique
+from pgctl.fuser import fuser
+from pgctl.subprocess import Popen
 
 
 class DescribeUnique(object):
@@ -78,3 +85,28 @@ class DescribeShowRunawayProcesses(object):
 
     def it_passes_when_there_are_no_locks(self, tmpdir):
         assert show_runaway_processes(tmpdir.strpath) is None
+
+
+class DescribeTerminateRunawayProcesses(object):
+
+    def it_kills_processes_holding_the_lock(self, tmpdir):
+        lockfile = tmpdir.ensure('lock')
+        lock = lockfile.open()
+        process = Popen(('sleep', 'infinity'))
+        lock.close()
+
+        # assert `process` has `lock`
+        assert list(fuser(lockfile.strpath)) == [process.pid]
+
+        with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
+            terminate_runaway_processes(lockfile.strpath)
+
+        assert 'WARNING: Killing these runaway ' in mock_stderr.getvalue()
+        wait_for(lambda: process.poll() == -9)
+
+    def it_passes_when_there_are_no_locks(self, tmpdir):
+        lockfile = tmpdir.ensure('lock')
+
+        with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
+            terminate_runaway_processes(lockfile.strpath)
+        assert mock_stderr.getvalue() == ''

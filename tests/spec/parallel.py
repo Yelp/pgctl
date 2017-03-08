@@ -5,11 +5,18 @@ from time import sleep
 
 import pytest
 from testing import norm
+from testing.service_context import set_slow_shutdown_sleeptime
 from testing.subprocess import assert_command
 from testing.subprocess import show_both
 
 from pgctl.subprocess import PIPE
 from pgctl.subprocess import Popen
+
+
+@pytest.yield_fixture(autouse=True)
+def sleep_short_background_long_foreground():
+    with set_slow_shutdown_sleeptime(0.75, 2.25):
+        yield
 
 
 @pytest.mark.parametrize('service_name', ['slow-shutdown'])

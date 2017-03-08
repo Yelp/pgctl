@@ -23,9 +23,9 @@ def service_name():
     yield 'slow-startup'
 
 
-def it_times_out():
+def assert_it_times_out_regardless_force(is_force):
     assert_command(
-        ('pgctl', 'start'),
+        ('pgctl', 'start') + (('--force',) if is_force else ()),
         '''\
 ''',
         '''\
@@ -54,6 +54,14 @@ def it_times_out():
         0,
         norm=norm.pgctl,
     )
+
+
+def it_times_out():
+    assert_it_times_out_regardless_force(is_force=False)
+
+
+def it_times_out_because_force_is_ignored():
+    assert_it_times_out_regardless_force(is_force=True)
 
 
 def it_can_succeed():

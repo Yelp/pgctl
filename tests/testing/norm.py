@@ -48,6 +48,7 @@ class pgctl(Normalized):
         (Regex(r'/(pypy3?|python[23])(\.[0-9]+)? '), '/python '),
         (Regex(r' LOCK: \d+\n'), ' LOCK: ${LOCK}\n'),
         (Regex(r' loop: check_time [0-9.]+\n'), ' loop: check_time $TIME\n'),
+        (Regex(r' s6-supervise .*\n'), ' {S6-PROCESS}\n'),
     )
 
 
