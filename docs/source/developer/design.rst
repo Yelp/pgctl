@@ -60,6 +60,14 @@ base directory.  Having pipes present in the projects main directory attempts to
 To remedy this situation, we have symlinked the supervise directory to the user's home directory to prevent
 any pip issues.
 
+--force option
+++++++++++++++
+``--force`` takes effect only upon ``pgctl stop``, not ``pgctl start``.
+``--force`` implies that pgctl would try whatever it can to accomplish a task.
+This would not apply to ``pgctl start`` under many cases.
+For example, if a service takes 30 minutes to warm itself up before ready,
+pgctl cannot force it to start up within a short period of time. Instead,
+users should take the responsibility to adjust the timeout value.
 
 Design Decisions
 ----------------
