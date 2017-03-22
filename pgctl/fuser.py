@@ -56,6 +56,10 @@ def fuser(path, allow_deleted=False):
             from os.path import join
             fd = join(fddir, fd)
             found = stat(fd)
+            if found is None:
+                # fd disappeared since we listed
+                continue
+
             if found == search:
                 yield pid
                 break
@@ -76,8 +80,6 @@ def main(args=None):
     parser.add_argument('-d', '--allow-deleted', action='store_true', help='allow deleted files')
     parser.add_argument('file', nargs='+')
     args = parser.parse_args(args[1:])
-    if not args.file:
-        parser.print_help()
 
     for f in args.file:
         for pid in fuser(f, allow_deleted=args.allow_deleted):
