@@ -11,22 +11,16 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-from collections import namedtuple
-
 from .debug import trace
-
-StatTuple = namedtuple('StatTuple', ('st_ino', 'std_dev', 'st_nlink'))
 
 
 def stat(path):
     from os import stat
     try:
-        path = stat(path)
+        return stat(path)
     except EnvironmentError as error:
         trace('fuser suppressed: %s', error)
-        return None
-    else:
-        return StatTuple(path.st_ino, path.st_dev, path.st_nlink)
+    return None
 
 
 def listdir(path):
