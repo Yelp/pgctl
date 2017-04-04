@@ -215,14 +215,15 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             return
 
         with self.flock() as lock:
+            env = self.supervise_env(lock, debug=False)
             log = self.path.join('log').open('a')
-            log = prepend_timestamps_to(log)
+            log = prepend_timestamps_to(log, env)
             Popen(
                 ('s6-supervise', self.path.strpath),
                 stdin=open(os.devnull, 'w'),
                 stdout=log.fileno(),
                 stderr=log.fileno(),
-                env=self.supervise_env(lock, debug=False),
+                env=env,
                 close_fds=False,  # we must keep the flock file descriptor opened.
             )
             log.close()

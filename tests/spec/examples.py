@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 import json
 import os
 
+import psutil
 import pytest
 import six
 from testing import norm
@@ -874,3 +875,42 @@ hello, i am a post-stop script
             0,
             norm=norm.pgctl,
         )
+
+
+class DescribePGCTLEnvironment(object):
+
+    @pytest.fixture
+    def pgctl_environ(self):
+        return ('PGCTL_SCRATCH', 'PGCTL_SERVICE', 'PGCTL_SERVICE_LOCK')
+
+    @pytest.yield_fixture
+    def service_name(self):
+        yield 'pgctl-environment'
+
+    def it_runs_processes_with_pgctl_environ(self, in_example_dir, pgctl_environ):
+        check_call(('pgctl', 'start'))
+
+        stdout, stderr, returncode = run(
+            ('pgctl', '--json', 'status'),
+        )
+        assert returncode == 0
+        assert stderr == ''
+
+        # the service main process
+        proc = psutil.Process(json.loads(stdout)['pgctl-environment']['pid'])
+        env = proc.environ()
+        assert all(var in env for var in pgctl_environ)
+
+        # the pgctl-timestamp process
+        stdout, stderr, returncode = run(
+            ('lsof', '-t', env['PGCTL_SERVICE'])
+        )
+        assert returncode == 0
+        assert stderr == ''
+        for pid in stdout.split('\n'):
+            if not pid:
+                continue
+
+            proc = psutil.Process(int(pid))
+            if proc.name() == 'pgctl-timestamp':
+                assert all(var in proc.environ() for var in pgctl_environ)
