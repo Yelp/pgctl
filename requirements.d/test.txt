@@ -8,5 +8,6 @@ mock
 pre-commit>=0.3.6
 pylint
 pytest
+pytest-env
 pytest-xdist
 testfixtures

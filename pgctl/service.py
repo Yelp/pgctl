@@ -10,7 +10,6 @@ from contextlib import contextmanager
 from cached_property import cached_property
 from frozendict import frozendict
 
-from .daemontools import prepend_timestamps_to
 from .daemontools import svc
 from .daemontools import SvStat
 from .daemontools import svstat
@@ -159,7 +158,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def ensure_logs(self):
         self.ensure_exists()
-        self.path.ensure('log')
+        self.path.ensure_dir('logs')
+        self.path.join('logs').ensure('current')
 
     def ensure_directory_structure(self):
         """Ensure that the scratch directory exists and symlinks supervise.
@@ -215,17 +215,53 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             return
 
         with self.flock() as lock:
-            log = self.path.join('log').open('a')
-            log = prepend_timestamps_to(log)
+            log_fifo_path = self.path.join('log_pipe').strpath
+            if not os.path.exists(log_fifo_path):
+                os.mkfifo(log_fifo_path)
+
+            # The writer (opened as RW to avoid blocking) must be opened
+            # before checking if the logging process is running,
+            # since we're guaranteed* that if a writing pipe is open,
+            # and the logger is running, it will remain running.
+            #
+            # Thus, we can maintain the assertion that if we find the logger
+            # is running, it will remain running.
+            #
+            # * assuming the process isn't manually killed
+            log_fifo_writer = os.open(log_fifo_path, os.O_RDWR)
+            if not self.is_logger_running():
+
+                with open(os.devnull, 'w') as devnull:
+                    log_fifo_reader = os.open(log_fifo_path, os.O_RDONLY)
+                    Popen(
+                        (
+                            's6-log',
+                            'n5',
+                            's10485760',  # 10MB
+                            'T',
+                            self.path.join('logs').strpath,
+                        ),
+                        stdin=log_fifo_reader,
+                        stdout=devnull.fileno(),
+                        stderr=devnull.fileno(),
+
+                        # This dies automatically when stdin closes, so we
+                        # don't need to maintain a lock
+                        close_fds=True,
+                    )
+                    os.close(log_fifo_reader)
+
             Popen(
                 ('s6-supervise', self.path.strpath),
                 stdin=open(os.devnull, 'w'),
-                stdout=log.fileno(),
-                stderr=log.fileno(),
+                stdout=log_fifo_writer,
+                stderr=log_fifo_writer,
                 env=self.supervise_env(lock, debug=False),
-                close_fds=False,  # we must keep the flock file descriptor opened.
+
+                # we must keep the flock file descriptor opened.
+                close_fds=False,
             )
-            log.close()
+            os.close(log_fifo_writer)
 
     def foreground(self):
         with self.flock() as lock:
@@ -233,6 +269,14 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                 (str(self.path.join('run')),),
                 env=self.supervise_env(lock, debug=True),
             )  # never returns
+
+    def is_logger_running(self):
+        from .flock import flock, Locked
+        try:
+            with flock(self.path.join('logs', 'lock').strpath):
+                return False
+        except Locked:
+            return True
 
     @cached_property
     def name(self):

@@ -40,9 +40,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 ''',
             '',
             0,
@@ -54,9 +54,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 ''',
@@ -70,9 +70,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 {TIMESTAMP} sweet
@@ -127,13 +127,13 @@ class DescribePgctlLog(object):
         print('NORMED:')
         print(buf)
         assert buf == S('''(?s)\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 {TIMESTAMP} [oe].*
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 .*{TIMESTAMP} .*$''')
         assert p.poll() is None  # it's still running
 
@@ -587,7 +587,7 @@ class DescribeEnvironment(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/environment/log <==
+==> playground/environment/logs/current <==
 {TIMESTAMP} ohhi
 ''',
             '',
@@ -600,7 +600,7 @@ class DescribeEnvironment(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/environment/log <==
+==> playground/environment/logs/current <==
 {TIMESTAMP} ohhi
 {TIMESTAMP} bye
 ''',
@@ -724,7 +724,7 @@ class DescribeDependentServices(object):
         wait_for(lambda: assert_command(
             ('pgctl', 'log', 'A'),
             '''\
-==> playground/A/log <==
+==> playground/A/logs/current <==
 {TIMESTAMP} [pgctl] Starting: B
 {TIMESTAMP} [pgctl] DEBUG: parentlock: '%s/playground/A'
 {TIMESTAMP} [pgctl] DEBUG: LOCK: ${LOCK}

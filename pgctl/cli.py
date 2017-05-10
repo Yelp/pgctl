@@ -333,7 +333,7 @@ class PgctlApp(object):
         pgctl_print()
         pgctl_print('There might be useful information further up in the log; you can view it by running:')
         for service in failapp.services:
-            pgctl_print('    less +G {}'.format(bestrelpath(service.path.join('log').strpath)))
+            pgctl_print('    less +G {}'.format(bestrelpath(service.path.join('logs', 'current').strpath)))
 
         raise PgctlUserMessage('Some services failed to %s: %s' % (state, commafy(failed)))
 
@@ -414,7 +414,7 @@ class PgctlApp(object):
         logfiles = []
         for service in self.services:
             service.ensure_logs()
-            logfile = service.path.join('log')
+            logfile = service.path.join('logs', 'current')
             logfile = bestrelpath(str(logfile))
             logfiles.append(logfile)
         exec_(tail + tuple(logfiles))  # never returns

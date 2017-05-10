@@ -46,12 +46,12 @@ def _unique(iterable):
 class JSONEncoder(json.JSONEncoder):
     """knows that frozendict is like dict"""
 
-    def default(self, obj):  # pylint:disable=method-hidden
-        if isinstance(obj, frozendict):
-            return dict(obj)
+    def default(self, o):  # pylint:disable=method-hidden
+        if isinstance(o, frozendict):
+            return dict(o)
         else:
             # Let the base class default method raise the TypeError
-            return json.JSONEncoder.default(self, obj)
+            return json.JSONEncoder.default(self, o)
 
 
 def bestrelpath(path, relto=None):

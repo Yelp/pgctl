@@ -22,7 +22,7 @@ try:
     from yaml import load as yaml_load
 except ImportError:  # pragma: no cover
     def yaml_load(dummy_file):
-        pass
+        del dummy_file
 
 from pgctl.configsearch import search_parent_directories
 

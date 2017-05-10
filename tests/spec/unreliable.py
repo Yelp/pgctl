@@ -33,7 +33,7 @@ def it_fails_twice_but_doesnt_restart():
     assert_command(
         ('pgctl', 'log'),
         '''\
-==> playground/unreliable/log <==
+==> playground/unreliable/logs/current <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
