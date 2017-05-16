@@ -37,7 +37,6 @@ def main():
             'console_scripts': [
                 'pgctl = pgctl.cli:main',
                 'pgctl-poll-ready = pgctl.poll_ready:main',
-                'pgctl-timestamp = pgctl.timestamp:main',
                 'pgctl-fuser = pgctl.fuser:main',
             ],
         },
