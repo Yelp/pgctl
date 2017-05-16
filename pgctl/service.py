@@ -242,8 +242,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                             self.path.join('logs').strpath,
                         ),
                         stdin=log_fifo_reader,
-                        stdout=devnull.fileno(),
-                        stderr=devnull.fileno(),
+                        stdout=devnull,
+                        stderr=devnull,
 
                         # This dies automatically when stdin closes, so we
                         # don't need to maintain a lock
