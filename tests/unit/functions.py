@@ -4,9 +4,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import os
 import StringIO
 
 import mock
+import pytest
 import six
 from frozendict import frozendict
 from testfixtures import ShouldRaise
@@ -16,7 +18,9 @@ from testing.norm import norm_trailing_whitespace_json
 from pgctl.errors import LockHeld
 from pgctl.functions import bestrelpath
 from pgctl.functions import JSONEncoder
+from pgctl.functions import logger_preexec
 from pgctl.functions import show_runaway_processes
+from pgctl.functions import supervisor_preexec
 from pgctl.functions import terminate_runaway_processes
 from pgctl.functions import unique
 from pgctl.fuser import fuser
@@ -110,3 +114,60 @@ class DescribeTerminateRunawayProcesses(object):
         with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
             terminate_runaway_processes(lockfile.strpath)
         assert mock_stderr.getvalue() == ''
+
+
+class DescribePreexecFuncs(object):
+    LOG_PIPE_FD = 5
+    DEV_NULL_FD = 10
+
+    @pytest.fixture(autouse=True)
+    def mock_open(self):
+        def fake_open(file_path, mode):  # pylint:disable=unused-argument
+            if file_path == '/dev/null':
+                return self.DEV_NULL_FD
+            elif file_path == '/log/path':
+                return self.LOG_PIPE_FD
+            else:  # pragma: no cover
+                raise Exception('Bad open call.')
+
+        with mock.patch.object(os, 'open', new=fake_open):
+            yield
+
+    @pytest.fixture(autouse=True)
+    def mock_close(self):
+        def fake_close(fd):
+            if fd not in [self.DEV_NULL_FD, self.LOG_PIPE_FD]:  # pragma: no cover
+                raise Exception('Bad close call.')
+
+        with mock.patch.object(os, 'close', new=fake_close):
+            yield
+
+    def it_works_for_loggers(self):
+        # This can't be moved to a fixture because pytest
+        # related dup2 calls will leak into the mock_calls list
+        with mock.patch.object(
+            os,
+            'dup2',
+            autospec=True,
+        ) as mock_dup2:
+            logger_preexec('/log/path')
+
+        assert mock_dup2.mock_calls == [
+            mock.call(self.LOG_PIPE_FD, 0),
+            mock.call(self.DEV_NULL_FD, 1),
+            mock.call(self.DEV_NULL_FD, 2),
+        ]
+
+    def it_works_for_superivsors(self):
+        with mock.patch.object(
+            os,
+            'dup2',
+            autospec=True,
+        ) as mock_dup2:
+            supervisor_preexec('/log/path')
+
+        assert mock_dup2.mock_calls == [
+            mock.call(self.DEV_NULL_FD, 0),
+            mock.call(self.LOG_PIPE_FD, 1),
+            mock.call(self.LOG_PIPE_FD, 2),
+        ]

@@ -3,7 +3,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import errno
+import functools
 import os
+import stat
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -21,7 +24,9 @@ from .errors import NotReady
 from .errors import reraise
 from .functions import bestrelpath
 from .functions import exec_
+from .functions import logger_preexec
 from .functions import show_runaway_processes
+from .functions import supervisor_preexec
 from .functions import symlink_if_necessary
 from .functions import terminate_runaway_processes
 from .subprocess import check_call
@@ -59,8 +64,11 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def svstat(self):
         self.ensure_exists()
-        with self.path.dirpath().as_cwd():
-            result = svstat(self.name)
+        return self._svstat_path(self.path)
+
+    def _svstat_path(self, path):
+        with path.dirpath().as_cwd():
+            result = svstat(path.basename)
         if not self.notification_fd.exists():
             # services without notification need to be considered ready sometimes
             if (
@@ -101,12 +109,20 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def start(self):
         """Idempotent start of a service or group of services"""
         self.background()
+        svc(('-u', self.path.join('log').strpath))
         svc(('-u', self.path.strpath))
 
-    def stop(self):
+    def stop(self, with_log_running=False):
         """Idempotent stop of a service or group of services"""
         self.ensure_exists()
-        svc(('-dx', self.path.strpath))
+        # TODO: ensure_logs
+        try:
+            svc(('-dx', self.path.strpath))
+        except Exception as e:
+            raise e
+        finally:
+            if not with_log_running:
+                svc(('-dx', self.path.join('log').strpath))
 
     def force_cleanup(self):
         """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""
@@ -129,10 +145,13 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def timeout_ready(self):
         return self.__get_timeout('timeout-ready', self.default_timeout)
 
-    def assert_stopped(self):
+    def assert_stopped(self, with_log_running=False):
         status = self.svstat()
         if status.state != SvStat.UNSUPERVISED:
             raise NotReady('its status is ' + str(status))
+
+        if not with_log_running and self.is_logger_running():
+            raise NotReady('its status is its s6-log is still running.')
 
         with self.flock():
             return  # assertion success; nothing is running
@@ -160,6 +179,18 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.ensure_exists()
         self.path.ensure_dir('logs')
         self.path.join('logs').ensure('current')
+
+        self.path.ensure_dir('log')
+        with open(self.path.join('log', 'run').strpath, 'w') as log_run:
+            log_run.write('#!/bin/bash\n')
+            log_run.write(
+                'exec s6-log n5 s10485760 T {log_path}'.format(
+                    log_path=self.path.join('logs').strpath,
+                ),
+            )
+            log_run_stat = os.fstat(log_run.fileno())
+            os.fchmod(log_run.fileno(), log_run_stat.st_mode | stat.S_IXUSR)
+        # TODO: This must symlink log/supervise to scratch
 
     def ensure_directory_structure(self):
         """Ensure that the scratch directory exists and symlinks supervise.
@@ -216,52 +247,37 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
         with self.flock() as lock:
             log_fifo_path = self.path.join('log_pipe').strpath
-            if not os.path.exists(log_fifo_path):
+
+            try:
                 os.mkfifo(log_fifo_path)
+            except OSError as e:
+                if e.errno != errno.EEXIST:
+                    raise
 
-            # The writer (opened as RW to avoid blocking) must be opened
-            # before checking if the logging process is running,
-            # since we're guaranteed* that if a writing pipe is open,
-            # and the logger is running, it will remain running.
-            #
-            # Thus, we can maintain the assertion that if we find the logger
-            # is running, it will remain running.
-            #
-            # * assuming the process isn't manually killed
-            log_fifo_writer = os.open(log_fifo_path, os.O_RDWR)
             if not self.is_logger_running():
-
-                with open(os.devnull, 'w') as devnull:
-                    log_fifo_reader = os.open(log_fifo_path, os.O_RDONLY)
-                    Popen(
-                        (
-                            's6-log',
-                            'n5',
-                            's10485760',  # 10MB
-                            'T',
-                            self.path.join('logs').strpath,
-                        ),
-                        stdin=log_fifo_reader,
-                        stdout=devnull,
-                        stderr=devnull,
-
-                        # This dies automatically when stdin closes, so we
-                        # don't need to maintain a lock
-                        close_fds=True,
-                    )
-                    os.close(log_fifo_reader)
+                Popen(
+                    (
+                        's6-supervise',
+                        self.path.join('log').strpath,
+                    ),
+                    preexec_fn=functools.partial(
+                        logger_preexec,
+                        log_fifo_path,
+                    ),
+                    close_fds=True,
+                )
 
             Popen(
-                ('s6-supervise', self.path.strpath),
-                stdin=open(os.devnull, 'w'),
-                stdout=log_fifo_writer,
-                stderr=log_fifo_writer,
+                (
+                    's6-supervise',
+                    self.path.strpath,
+                ),
                 env=self.supervise_env(lock, debug=False),
-
-                # we must keep the flock file descriptor opened.
-                close_fds=False,
+                preexec_fn=functools.partial(
+                    supervisor_preexec,
+                    log_fifo_path,
+                ),
             )
-            os.close(log_fifo_writer)
 
     def foreground(self):
         with self.flock() as lock:
@@ -271,12 +287,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             )  # never returns
 
     def is_logger_running(self):
-        from .flock import flock, Locked
-        try:
-            with flock(self.path.join('logs', 'lock').strpath):
-                return False
-        except Locked:
-            return True
+        status = self._svstat_path(self.path.join('log'))
+        return status.state != SvStat.UNSUPERVISED
 
     @cached_property
     def name(self):

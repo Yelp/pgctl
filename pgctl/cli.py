@@ -129,6 +129,17 @@ class Stop(StateChange):
         changed = 'Stopped:'
 
 
+class StopWithLogsRunning(Stop):
+    # Allows us to stop services while leaving their loggers running,
+    # which is required for poll-ready to not lose log lines when restarting
+    # unhealthy services
+    def change(self):
+        return self.service.stop(with_log_running=True)
+
+    def assert_(self):
+        return self.service.assert_stopped(with_log_running=True)
+
+
 def unbuf_print(*args, **kwargs):
     """Print unbuffered in utf8."""
     kwargs.setdefault('file', sys.stdout)
@@ -257,6 +268,7 @@ class PgctlApp(object):
         """the critical section of __change_state"""
         pgctl_print(state.strings.changing, commafy(self.service_names))
         services = [state(service) for service in self.services]
+        is_stopping = state is Stop or state is StopWithLogsRunning
         failed = []
         start_time = now()
         while services:
@@ -272,7 +284,7 @@ class PgctlApp(object):
                 except PgctlUserMessage as error:
                     curr_time = now()
                     if timeout(service, start_time, check_time, curr_time):
-                        if state is Stop and self.pgconf['force']:
+                        if is_stopping and self.pgconf['force']:
                             service.fail()
                         else:
                             error_message_on_timeout(
@@ -342,9 +354,10 @@ class PgctlApp(object):
         failed = self.__change_state(Start)
         return self.__show_failure('start', failed)
 
-    def stop(self):
+    def stop(self, with_log_running=False):
         """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(Stop)
+        new_state = StopWithLogsRunning if with_log_running else Stop
+        failed = self.__change_state(new_state)
         return self.__show_failure('stop', failed)
 
     def status(self):
@@ -389,7 +402,7 @@ class PgctlApp(object):
 
     def restart(self):
         """Starts and stops a service"""
-        self.stop()
+        self.stop(with_log_running=True)
         self.start()
 
     def reload(self):

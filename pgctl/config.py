@@ -21,8 +21,8 @@ import six
 try:
     from yaml import load as yaml_load
 except ImportError:  # pragma: no cover
-    def yaml_load(dummy_file):
-        del dummy_file
+    def yaml_load(dummy_file):  # pylint:disable=unused-argument
+        pass
 
 from pgctl.configsearch import search_parent_directories
 

@@ -149,3 +149,32 @@ def print_stderr(s):
     # Sadness: https://bugs.python.org/issue13601
     print(s, file=sys.stderr)
     sys.stderr.flush()
+
+
+def logger_preexec(log_path):
+    # Even though this is technically RDONLY, we open
+    # it as RDWR to avoid blocking
+    #
+    # http://bugs.python.org/issue10635
+    log_fifo_reader = os.open(log_path, os.O_RDWR)
+    devnull = os.open('/dev/null', os.O_WRONLY)
+
+    os.dup2(log_fifo_reader, 0)
+    os.dup2(devnull, 1)
+    os.dup2(devnull, 2)
+
+    os.close(log_fifo_reader)
+    os.close(devnull)
+
+
+def supervisor_preexec(log_path):
+    # Should be WRONLY, but we can't block (see logger_preexec)
+    log_fifo_writer = os.open(log_path, os.O_RDWR)
+
+    devnull = os.open('/dev/null', os.O_RDONLY)
+    os.dup2(devnull, 0)
+    os.dup2(log_fifo_writer, 1)
+    os.dup2(log_fifo_writer, 2)
+
+    os.close(log_fifo_writer)
+    os.close(devnull)
