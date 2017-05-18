@@ -115,7 +115,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def stop(self, with_log_running=False):
         """Idempotent stop of a service or group of services"""
         self.ensure_exists()
-        # TODO: ensure_logs
+        self.ensure_logs()
         try:
             svc(('-dx', self.path.strpath))
         except Exception as e:
@@ -168,11 +168,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if not self.path.check(dir=True):
             raise NoSuchService("No such service: '%s'" % bestrelpath(str(self.path)))
 
-        # ensure symlink {service_dir}/supervise -> {scratch_dir}/supervise
-        # this will re-connect the service to its state descriptors if the symlinks have been deleted or moved
-        supervise_in_scratch = self.scratch_dir.join('supervise')
-        supervise_in_scratch.ensure_dir()
-        symlink_if_necessary(supervise_in_scratch, self.path.join('supervise'))
+        self._ensure_supervise_is_scratch('supervise')
         self.__exists = True
 
     def ensure_logs(self):
@@ -190,7 +186,18 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             )
             log_run_stat = os.fstat(log_run.fileno())
             os.fchmod(log_run.fileno(), log_run_stat.st_mode | stat.S_IXUSR)
-        # TODO: This must symlink log/supervise to scratch
+
+        self._ensure_supervise_is_scratch('log/supervise')
+
+    def _ensure_supervise_is_scratch(self, supervise_rel_path):
+        # ensure symlink {service_dir}/supervise_rel_path -> {scratch_dir}/supervise_rel_path
+        # this will re-connect the service to its state descriptors if the symlinks have been deleted or moved
+        supervise_in_scratch = self.scratch_dir.join(supervise_rel_path)
+        supervise_in_scratch.ensure_dir()
+        symlink_if_necessary(
+            supervise_in_scratch,
+            self.path.join(supervise_rel_path),
+        )
 
     def ensure_directory_structure(self):
         """Ensure that the scratch directory exists and symlinks supervise.
