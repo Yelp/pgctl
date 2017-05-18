@@ -112,17 +112,14 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         svc(('-u', self.path.join('log').strpath))
         svc(('-u', self.path.strpath))
 
-    def stop(self, with_log_running=False):
+    def stop(self):
         """Idempotent stop of a service or group of services"""
         self.ensure_exists()
+        svc(('-dx', self.path.strpath))
+
+    def stop_logs(self):
         self.ensure_logs()
-        try:
-            svc(('-dx', self.path.strpath))
-        except Exception as e:
-            raise e
-        finally:
-            if not with_log_running:
-                svc(('-dx', self.path.join('log').strpath))
+        svc(('-dx', self.path.join('log').strpath))
 
     def force_cleanup(self):
         """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""

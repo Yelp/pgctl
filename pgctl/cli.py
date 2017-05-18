@@ -103,6 +103,8 @@ class Start(StateChange):
     def fail(self):
         raise NotImplementedError
 
+    is_user_facing = True
+
     class strings(object):
         change = 'start'
         changing = 'Starting:'
@@ -115,7 +117,7 @@ class Stop(StateChange):
         return self.service.stop()
 
     def assert_(self):
-        return self.service.assert_stopped()
+        return self.service.assert_stopped(with_log_running=True)
 
     def get_timeout(self):
         return self.service.timeout_stop
@@ -123,21 +125,33 @@ class Stop(StateChange):
     def fail(self):
         return self.service.force_cleanup()
 
+    is_user_facing = True
+
     class strings(object):
         change = 'stop'
         changing = 'Stopping:'
         changed = 'Stopped:'
 
 
-class StopWithLogsRunning(Stop):
-    # Allows us to stop services while leaving their loggers running,
-    # which is required for poll-ready to not lose log lines when restarting
-    # unhealthy services
+class StopLogs(StateChange):
     def change(self):
-        return self.service.stop(with_log_running=True)
+        return self.service.stop_logs()
 
     def assert_(self):
-        return self.service.assert_stopped(with_log_running=True)
+        return self.service.assert_stopped(with_log_running=False)
+
+    def fail(self):
+        raise NotImplementedError
+
+    def get_timeout(self):
+        return self.service.timeout_ready
+
+    is_user_facing = False
+
+    class strings(object):
+        change = 'stop'
+        changing = 'Stopping logger for:'
+        changed = 'Stopped logger for:'
 
 
 def unbuf_print(*args, **kwargs):
@@ -227,21 +241,22 @@ class PgctlApp(object):
 
             yield
 
-    def __change_state(self, state):
+    def __change_state(self, state, services):
         """Changes the state of a supervised service using the svc command"""
         with self.playground_locked():
-            for service in self.services:
+            for service in services:
                 try:
                     state(service).assert_()
                 except PgctlUserMessage:
                     break
             else:
                 # Short-circuit, everything is in the correct state.
-                pgctl_print('Already {} {}'.format(
-                    state.strings.changed.lower(),
-                    commafy(self.service_names)),
-                )
-                return
+                if state.is_user_facing:
+                    pgctl_print('Already {} {}'.format(
+                        state.strings.changed.lower(),
+                        commafy(_services_to_names(services))),
+                    )
+                return []
 
         # If we're starting a service, run the playground-wide "pre-start" hook (if it exists).
         # This is intentionally done without holding a lock, since this might be very slow.
@@ -250,7 +265,7 @@ class PgctlApp(object):
 
         run_post_stop_hook = False
         with self.playground_locked():
-            failures = self.__locked_change_state(state)
+            failures = self.__locked_change_state(state, services)
             if state is Stop:
                 run_post_stop_hook = all(
                     service.state['state'] == 'down'
@@ -264,11 +279,16 @@ class PgctlApp(object):
 
         return failures
 
-    def __locked_change_state(self, state):
+    def __locked_change_state(self, state, services):
         """the critical section of __change_state"""
-        pgctl_print(state.strings.changing, commafy(self.service_names))
-        services = [state(service) for service in self.services]
-        is_stopping = state is Stop or state is StopWithLogsRunning
+        if state.is_user_facing:
+            # TODO: Fix this to use the services param
+            pgctl_print(
+                state.strings.changing,
+                commafy(_services_to_names(services)),
+            )
+
+        services = [state(service) for service in services]
         failed = []
         start_time = now()
         while services:
@@ -284,7 +304,7 @@ class PgctlApp(object):
                 except PgctlUserMessage as error:
                     curr_time = now()
                     if timeout(service, start_time, check_time, curr_time):
-                        if is_stopping and self.pgconf['force']:
+                        if state is Stop and self.pgconf['force']:
                             service.fail()
                         else:
                             error_message_on_timeout(
@@ -299,7 +319,8 @@ class PgctlApp(object):
                 else:
                     # TODO: debug() takes a lambda
                     debug('loop: check_time %.3f', now() - check_time)
-                    pgctl_print(state.strings.changed, service.name)
+                    if state.is_user_facing:
+                        pgctl_print(state.strings.changed, service.name)
                     service.service.message(state)
                     services.remove(service)
 
@@ -351,13 +372,23 @@ class PgctlApp(object):
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(Start)
+        failed = self.__change_state(Start, self.services)
         return self.__show_failure('start', failed)
 
     def stop(self, with_log_running=False):
         """Idempotent stop of a service or group of services"""
-        new_state = StopWithLogsRunning if with_log_running else Stop
-        failed = self.__change_state(new_state)
+        failed = self.__change_state(Stop, self.services)
+
+        if not with_log_running:
+            failed_set = set(failed)
+            services_to_stop_logs_on = [
+                service for service in self.services
+                if service.name not in failed_set
+            ]
+            failed.extend(
+                self.__change_state(StopLogs, services_to_stop_logs_on),
+            )
+
         return self.__show_failure('stop', failed)
 
     def status(self):
@@ -515,7 +546,7 @@ class PgctlApp(object):
 
     @cached_property
     def service_names(self):
-        return tuple([service.name for service in self.services])
+        return _services_to_names(self.services)
 
     @cached_property
     def pgdir(self):
@@ -566,6 +597,10 @@ def parser():
     group.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
 
     return parser
+
+
+def _services_to_names(services):
+    return tuple([service.name for service in services])
 
 
 def _humanize_seconds(seconds):
