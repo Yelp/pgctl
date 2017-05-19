@@ -65,6 +65,12 @@ PGCTL_DEFAULTS = frozendict({
 CHANNEL = '[pgctl]'
 
 
+class StateChangeResult(object):
+    SUCCESS = 0
+    FAILURE = 1
+    RECHECK_NEEDED = 2
+
+
 class TermStyle(object):
 
     BOLD = '\033[1m'
@@ -298,35 +304,82 @@ class PgctlApp(object):
                 except Unsupervised:
                     pass  # handled in state assertion, below
             for service in tuple(services):
-                check_time = now()
-                try:
-                    service.assert_()
-                except PgctlUserMessage as error:
-                    curr_time = now()
-                    if timeout(service, start_time, check_time, curr_time):
-                        if state is Stop and self.pgconf['force']:
-                            service.fail()
-                        else:
-                            error_message_on_timeout(
-                                service,
-                                error,
-                                state.strings.change,
-                                actual_timeout_length=curr_time - start_time,
-                                check_length=curr_time - check_time,
-                            )
-                            failed.append(service.name)
-                            services.remove(service)
+                state_change_result = self.__locked_handle_service_change_state(
+                    state,
+                    service,
+                    start_time,
+                )
+
+                if state_change_result == StateChangeResult.RECHECK_NEEDED:
+                    # This service should be rechecked by the next iteration
+                    # of the outer loop
+                    continue
+                elif state_change_result == StateChangeResult.SUCCESS:
+                    services.remove(service)
                 else:
-                    # TODO: debug() takes a lambda
-                    debug('loop: check_time %.3f', now() - check_time)
-                    if state.is_user_facing:
-                        pgctl_print(state.strings.changed, service.name)
-                    service.service.message(state)
+                    # StateChangeResult.FAILURE
+                    failed.append(service.name)
                     services.remove(service)
 
             time.sleep(float(self.pgconf['poll']))
 
         return failed
+
+    def __locked_handle_service_change_state(
+        self,
+        state,
+        service,
+        start_time,
+    ):
+        """Handles a state change for a service and returns whether
+        the state change was successful,
+        """
+        check_time = now()
+        try:
+            service.assert_()
+        except PgctlUserMessage as error:
+            state_change_result = self.__locked_handle_state_change_exception(
+                state,
+                service,
+                error,
+                start_time,
+                check_time,
+            )
+            return state_change_result
+        else:
+            # TODO: debug() takes a lambda
+            debug('loop: check_time %.3f', now() - check_time)
+            if state.is_user_facing:
+                pgctl_print(state.strings.changed, service.name)
+            service.service.message(state)
+            return StateChangeResult.SUCCESS
+
+    def __locked_handle_state_change_exception(
+        self,
+        state,
+        service,
+        error,
+        start_time,
+        check_time,
+    ):
+        """Handles a state change timeout for a service and returns whether
+        the service unrecoverably failed its state change.
+        """
+        curr_time = now()
+        if timeout(service, start_time, check_time, curr_time):
+            if state is Stop and self.pgconf['force']:
+                service.fail()
+            else:
+                error_message_on_timeout(
+                    service,
+                    error,
+                    state.strings.change,
+                    actual_timeout_length=curr_time - start_time,
+                    check_length=curr_time - check_time,
+                )
+                return StateChangeResult.FAILURE
+
+        return StateChangeResult.RECHECK_NEEDED
 
     def _run_playground_wide_hook(self, hook_name):
         """Runs the given playground-wide hook, if it exists."""
