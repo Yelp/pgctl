@@ -429,7 +429,12 @@ class PgctlApp(object):
         return self.__show_failure('start', failed)
 
     def stop(self, with_log_running=False):
-        """Idempotent stop of a service or group of services"""
+        """Idempotent stop of a service or group of services
+        :param with_log_running: controls whether the logger associated with
+        this service should be stopped or left running. For restart cases, we
+        want to leave the logger running (since poll-ready may still be writing
+        log messages).
+        """
         failed = self.__change_state(Stop, self.services)
 
         if not with_log_running:
