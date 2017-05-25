@@ -262,6 +262,21 @@ class DescribeStop(object):
 
         assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED)
 
+    def it_prints_log_stop_info_for_verbose(self, in_example_dir):
+        check_call(('pgctl', 'start', 'sleep'))
+        # TODO: Finish this
+        assert_command(
+            ('pgctl', 'stop', 'sleep', '--verbose'),
+            '',
+            '''\
+[pgctl] Stopping: sleep
+[pgctl] Stopped: sleep
+[pgctl] Stopping logger for: sleep
+[pgctl] Stopped logger for: sleep
+''',
+            0,
+        )
+
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl', 'stop', 'sleep'))
 
