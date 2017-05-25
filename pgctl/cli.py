@@ -434,6 +434,7 @@ class PgctlApp(object):
 
     def stop(self, with_log_running=False):
         """Idempotent stop of a service or group of services
+
         :param with_log_running: controls whether the logger associated with
         this service should be stopped or left running. For restart cases, we
         want to leave the logger running (since poll-ready may still be writing

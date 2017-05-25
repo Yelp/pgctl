@@ -159,10 +159,13 @@ def print_stderr(s):
 
 
 def logger_preexec(log_path):
-    """Before execing the logger service (s6-log), connect stdin to the logging
+    """Pre exec func. for starting the logger process for a service.
+
+    Before execing the logger service (s6-log), connect stdin to the logging
     FIFO so that it reads log lines from the service, and connect stdout/stderr
     to the void since we ignore the logger's console output.
     (The logger writes actual log output to files in $SERVICE_DIR/logs.)
+
     :param log_path: path to the logging FIFO
     """
     # Even though this is technically RDONLY, we open
@@ -181,11 +184,14 @@ def logger_preexec(log_path):
 
 
 def supervisor_preexec(log_path):
-    """Before execing the service, attach the output streams of the supervised
+    """Pre exec func. for starting a service.
+
+    Before execing the service, attach the output streams of the supervised
     process to the logging FIFO so that they will be logged to a file by the
     service's logger (s6-log). Also, attach the service's stdin to the void
     since it's running in a supervised context (and shouldn't have any data
     going to stdin).
+
     :param log_path: path to the logging pipe
     """
     # Should be WRONLY, but we can't block (see logger_preexec)
