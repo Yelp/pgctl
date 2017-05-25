@@ -118,7 +118,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def start(self):
         """Idempotent start of a service or group of services"""
         self.background()
-        svc(('-u', self.path.join('log').strpath))
+        svc(('-u', self.path.join('.log').strpath))
         svc(('-u', self.path.strpath))
 
     def stop(self):
@@ -128,7 +128,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def stop_logs(self):
         self.ensure_logs()
-        svc(('-dx', self.path.join('log').strpath))
+        svc(('-dx', self.path.join('.log').strpath))
 
     def force_cleanup(self):
         """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""
@@ -182,8 +182,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.path.ensure_dir('logs')
         self.path.join('logs').ensure('current')
 
-        self.path.ensure_dir('log')
-        with open(self.path.join('log', 'run').strpath, 'w') as log_run:
+        self.path.ensure_dir('.log')
+        with open(self.path.join('.log', 'run').strpath, 'w') as log_run:
             log_run.write(LOG_RUN_HEADER)
             log_run.write(
                 'exec s6-log n5 s10485760 T {log_path}\n'.format(
@@ -193,7 +193,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             log_run_stat = os.fstat(log_run.fileno())
             os.fchmod(log_run.fileno(), log_run_stat.st_mode | stat.S_IXUSR)
 
-        self._ensure_supervise_is_scratch('log/supervise')
+        self._ensure_supervise_is_scratch('.log/supervise')
 
     def _ensure_supervise_is_scratch(self, supervise_rel_path):
         # ensure symlink {service_dir}/supervise_rel_path -> {scratch_dir}/supervise_rel_path
@@ -271,7 +271,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                 Popen(
                     (
                         's6-supervise',
-                        self.path.join('log').strpath,
+                        self.path.join('.log').strpath,
                     ),
                     preexec_fn=functools.partial(
                         logger_preexec,
@@ -300,7 +300,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             )  # never returns
 
     def is_logger_running(self):
-        status = self._svstat_path(self.path.join('log'))
+        status = self._svstat_path(self.path.join('.log'))
         return status.state != SvStat.UNSUPERVISED
 
     @cached_property
