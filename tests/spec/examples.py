@@ -642,7 +642,8 @@ class DescribePgdirMissing(object):
     "services": [
         "default"
     ],
-    "timeout": "2.0"
+    "timeout": "2.0",
+    "verbose": false
 }
 '''
 
@@ -660,8 +661,8 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl', '--help'),
                 '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--force] [--all]
+usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
+             [--json] [--force] [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -673,6 +674,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
+  --verbose             show additional service action information
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
   --json                output in JSON (only supported by some commands)
@@ -686,8 +688,8 @@ optional arguments:
 
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--force] [--all]
+usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
+             [--json] [--force] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}

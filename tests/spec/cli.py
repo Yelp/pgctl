@@ -46,7 +46,8 @@ class DescribeCli(object):
     "services": [
         "default"
     ],
-    "timeout": "2.0"
+    "timeout": "2.0",
+    "verbose": false
 }}
 '''.format(pghome=expected_pghome)
 
@@ -76,8 +77,8 @@ class DescribeCli(object):
             ('pgctl',),
             '',
             '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--force] [--all]
+usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
+             [--json] [--force] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}

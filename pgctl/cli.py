@@ -61,6 +61,8 @@ PGCTL_DEFAULTS = frozendict({
     'json': False,
     # kill bad service processes?
     'force': False,
+    # extra state change output?
+    'verbose': False,
 })
 CHANNEL = '[pgctl]'
 
@@ -257,7 +259,7 @@ class PgctlApp(object):
                     break
             else:
                 # Short-circuit, everything is in the correct state.
-                if state.is_user_facing:
+                if self._should_display_state(state):
                     pgctl_print('Already {} {}'.format(
                         state.strings.changed.lower(),
                         commafy(_services_to_names(services))),
@@ -287,8 +289,7 @@ class PgctlApp(object):
 
     def __locked_change_state(self, state, services):
         """the critical section of __change_state"""
-        if state.is_user_facing:
-            # TODO: Fix this to use the services param
+        if self._should_display_state(state):
             pgctl_print(
                 state.strings.changing,
                 commafy(_services_to_names(services)),
@@ -349,7 +350,7 @@ class PgctlApp(object):
         else:
             # TODO: debug() takes a lambda
             debug('loop: check_time %.3f', now() - check_time)
-            if state.is_user_facing:
+            if self._should_display_state(state):
                 pgctl_print(state.strings.changed, service.name)
             service.service.message(state)
             return StateChangeResult.SUCCESS
@@ -380,6 +381,9 @@ class PgctlApp(object):
                 return StateChangeResult.FAILURE
 
         return StateChangeResult.RECHECK_NEEDED
+
+    def _should_display_state(self, state):
+        return state.is_user_facing or self.pgconf['verbose']
 
     def _run_playground_wide_hook(self, hook_name):
         """Runs the given playground-wide hook, if it exists."""
@@ -632,6 +636,12 @@ def parser():
     commands = [command.__name__ for command in PgctlApp.commands]
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        default=False,
+        help='show additional service action information',
+    )
     parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
     parser.add_argument('--pghome', help='directory to keep user-level playground state', default=argparse.SUPPRESS)
     parser.add_argument(
