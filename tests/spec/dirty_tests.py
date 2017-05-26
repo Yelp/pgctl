@@ -94,10 +94,10 @@ class DescribeOrphanSubprocess(DirtyTest):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/slow-startup/log <==
+==> playground/slow-startup/logs/current <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 ''',
@@ -121,12 +121,12 @@ There are two ways you can fix this:
   * temporarily: pgctl stop --force playground/sweet
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 [pgctl]
 [pgctl] There might be useful information further up in the log; you can view it by running:
-[pgctl]     less +G playground/sweet/log
+[pgctl]     less +G playground/sweet/logs/current
 [pgctl] ERROR: Some services failed to stop: sweet
 ''',
             1,
@@ -148,12 +148,12 @@ There are two ways you can fix this:
   * temporarily: pgctl stop --force playground/slow-startup
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
-==> playground/slow-startup/log <==
+==> playground/slow-startup/logs/current <==
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
 {TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
 [pgctl]
 [pgctl] There might be useful information further up in the log; you can view it by running:
-[pgctl]     less +G playground/slow-startup/log
+[pgctl]     less +G playground/slow-startup/logs/current
 [pgctl] ERROR: Some services failed to stop: slow-startup
 ''',
             1,
@@ -265,12 +265,12 @@ class DescribeSlowShutdownOnForeground(DirtyTest):
             '''\
 [pgctl] Stopping: sweet
 [pgctl] ERROR: service 'sweet' failed to stop after {TIME} seconds, its status is ready (pid {PID}) {TIME} seconds
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 [pgctl]
 [pgctl] There might be useful information further up in the log; you can view it by running:
-[pgctl]     less +G playground/sweet/log
+[pgctl]     less +G playground/sweet/logs/current
 [pgctl] ERROR: Some services failed to stop: sweet
 ''',
             1,
@@ -348,12 +348,12 @@ There are two ways you can fix this:
   * temporarily: pgctl stop --force playground/sweet
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 [pgctl]
 [pgctl] There might be useful information further up in the log; you can view it by running:
-[pgctl]     less +G playground/sweet/log
+[pgctl]     less +G playground/sweet/logs/current
 [pgctl] ERROR: Some services failed to stop: sweet
 ''',
             1,

@@ -40,9 +40,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 ''',
             '',
             0,
@@ -54,9 +54,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 ''',
@@ -70,9 +70,9 @@ class DescribePgctlLog(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 {TIMESTAMP} sweet
@@ -127,13 +127,13 @@ class DescribePgctlLog(object):
         print('NORMED:')
         print(buf)
         assert buf == S('''(?s)\
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 {TIMESTAMP} [oe].*
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 
-==> playground/ohhi/log <==
+==> playground/ohhi/logs/current <==
 .*{TIMESTAMP} .*$''')
         assert p.poll() is None  # it's still running
 
@@ -261,6 +261,21 @@ class DescribeStop(object):
         check_call(('pgctl', 'stop', 'sleep'))
 
         assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED)
+
+    def it_prints_log_stop_info_for_verbose(self, in_example_dir):
+        check_call(('pgctl', 'start', 'sleep'))
+        # TODO: Finish this
+        assert_command(
+            ('pgctl', 'stop', 'sleep', '--verbose'),
+            '',
+            '''\
+[pgctl] Stopping: sleep
+[pgctl] Stopped: sleep
+[pgctl] Stopping logger for: sleep
+[pgctl] Stopped logger for: sleep
+''',
+            0,
+        )
 
     def it_is_successful_before_start(self, in_example_dir):
         check_call(('pgctl', 'stop', 'sleep'))
@@ -587,7 +602,7 @@ class DescribeEnvironment(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/environment/log <==
+==> playground/environment/logs/current <==
 {TIMESTAMP} ohhi
 ''',
             '',
@@ -600,7 +615,7 @@ class DescribeEnvironment(object):
         assert_command(
             ('pgctl', 'log'),
             '''\
-==> playground/environment/log <==
+==> playground/environment/logs/current <==
 {TIMESTAMP} ohhi
 {TIMESTAMP} bye
 ''',
@@ -642,7 +657,8 @@ class DescribePgdirMissing(object):
     "services": [
         "default"
     ],
-    "timeout": "2.0"
+    "timeout": "2.0",
+    "verbose": false
 }
 '''
 
@@ -660,8 +676,8 @@ class DescribePgdirMissing(object):
             assert_command(
                 ('pgctl', '--help'),
                 '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--force] [--all]
+usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
+             [--json] [--force] [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -673,6 +689,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --version             show program's version number and exit
+  --verbose             show additional service action information
   --pgdir PGDIR         name the playground directory
   --pghome PGHOME       directory to keep user-level playground state
   --json                output in JSON (only supported by some commands)
@@ -686,8 +703,8 @@ optional arguments:
 
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
-usage: pgctl [-h] [--version] [--pgdir PGDIR] [--pghome PGHOME] [--json]
-             [--force] [--all]
+usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
+             [--json] [--force] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}
@@ -724,7 +741,7 @@ class DescribeDependentServices(object):
         wait_for(lambda: assert_command(
             ('pgctl', 'log', 'A'),
             '''\
-==> playground/A/log <==
+==> playground/A/logs/current <==
 {TIMESTAMP} [pgctl] Starting: B
 {TIMESTAMP} [pgctl] DEBUG: parentlock: '%s/playground/A'
 {TIMESTAMP} [pgctl] DEBUG: LOCK: ${LOCK}

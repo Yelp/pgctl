@@ -24,7 +24,7 @@ class timestamp(Normalized):
     """normalize pgctl's output"""
     rules = (
         # 2015-10-16 17:05:56.635827500
-        (Regex(r'(?m)^\d{4}(-\d\d){2} (\d\d:){2}\d\d\.\d{6,9} '), '{TIMESTAMP} '),
+        (Regex(r'(?m)^\d{4}(-\d\d){2} (\d\d:){2}\d\d\.\d{6,9}  '), '{TIMESTAMP} '),
     )
 
 

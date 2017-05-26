@@ -45,12 +45,12 @@ def it_is_disallowed():
     assert norm.pgctl(first_stderr) == '''\
 [pgctl] Stopping: sweet
 [pgctl] ERROR: service 'sweet' failed to stop after {TIME} seconds, its status is ready (pid {PID}) {TIME} seconds
-==> playground/sweet/log <==
+==> playground/sweet/logs/current <==
 {TIMESTAMP} sweet
 {TIMESTAMP} sweet_error
 [pgctl]
 [pgctl] There might be useful information further up in the log; you can view it by running:
-[pgctl]     less +G playground/sweet/log
+[pgctl]     less +G playground/sweet/logs/current
 [pgctl] ERROR: Some services failed to stop: sweet
 '''
     assert first_stdout == ''

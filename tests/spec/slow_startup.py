@@ -31,12 +31,12 @@ def assert_it_times_out_regardless_force(is_force):
         '''\
 [pgctl] Starting: slow-startup
 [pgctl] ERROR: service 'slow-startup' failed to start after {TIME} seconds, its status is up (pid {PID}) {TIME} seconds
-==> playground/slow-startup/log <==
+==> playground/slow-startup/logs/current <==
 [pgctl] Stopping: slow-startup
 [pgctl] Stopped: slow-startup
 [pgctl]
 [pgctl] There might be useful information further up in the log; you can view it by running:
-[pgctl]     less +G playground/slow-startup/log
+[pgctl]     less +G playground/slow-startup/logs/current
 [pgctl] ERROR: Some services failed to start: slow-startup
 ''',
         1,
@@ -47,7 +47,7 @@ def assert_it_times_out_regardless_force(is_force):
     assert_command(
         ('pgctl', 'log'),
         '''\
-==> playground/slow-startup/log <==
+==> playground/slow-startup/logs/current <==
 {TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
 ''',
         '',
@@ -95,7 +95,7 @@ def it_restarts_on_unready():
     assert_command(
         ('pgctl', 'log'),
         '''\
-==> playground/slow-startup/log <==
+==> playground/slow-startup/logs/current <==
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)

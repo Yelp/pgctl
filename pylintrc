@@ -13,6 +13,7 @@ disable=
     wrong-import-order,
     useless-else-on-loop,
     unbalanced-tuple-unpacking,
+    no-else-return
 
 [REPORTS]
 output-format=colorized

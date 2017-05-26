@@ -14,6 +14,13 @@ from frozendict import frozendict
 from .errors import LockHeld
 
 
+class StreamFileDescriptor(object):
+    """For some reason, Python neglected to put this in the standard lib."""
+    STDIN = 0
+    STDOUT = 1
+    STDERR = 2
+
+
 def exec_(argv, env=None):  # never returns
     """Wrapper to os.execv which runs any atexit handlers (for coverage's sake).
     Like os.execv, this function never returns.
@@ -46,12 +53,12 @@ def _unique(iterable):
 class JSONEncoder(json.JSONEncoder):
     """knows that frozendict is like dict"""
 
-    def default(self, obj):  # pylint:disable=method-hidden
-        if isinstance(obj, frozendict):
-            return dict(obj)
+    def default(self, o):  # pylint:disable=method-hidden
+        if isinstance(o, frozendict):
+            return dict(o)
         else:
             # Let the base class default method raise the TypeError
-            return json.JSONEncoder.default(self, obj)
+            return json.JSONEncoder.default(self, o)
 
 
 def bestrelpath(path, relto=None):
@@ -149,3 +156,51 @@ def print_stderr(s):
     # Sadness: https://bugs.python.org/issue13601
     print(s, file=sys.stderr)
     sys.stderr.flush()
+
+
+def logger_preexec(log_path):
+    """Pre exec func. for starting the logger process for a service.
+
+    Before execing the logger service (s6-log), connect stdin to the logging
+    FIFO so that it reads log lines from the service, and connect stdout/stderr
+    to the void since we ignore the logger's console output.
+    (The logger writes actual log output to files in $SERVICE_DIR/logs.)
+
+    :param log_path: path to the logging FIFO
+    """
+    # Even though this is technically RDONLY, we open
+    # it as RDWR to avoid blocking
+    #
+    # http://bugs.python.org/issue10635
+    log_fifo_reader = os.open(log_path, os.O_RDWR)
+    devnull = os.open(os.devnull, os.O_WRONLY)
+
+    os.dup2(log_fifo_reader, StreamFileDescriptor.STDIN)
+    os.dup2(devnull, StreamFileDescriptor.STDOUT)
+    os.dup2(devnull, StreamFileDescriptor.STDERR)
+
+    os.close(log_fifo_reader)
+    os.close(devnull)
+
+
+def supervisor_preexec(log_path):
+    """Pre exec func. for starting a service.
+
+    Before execing the service, attach the output streams of the supervised
+    process to the logging FIFO so that they will be logged to a file by the
+    service's logger (s6-log). Also, attach the service's stdin to the void
+    since it's running in a supervised context (and shouldn't have any data
+    going to stdin).
+
+    :param log_path: path to the logging pipe
+    """
+    # Should be WRONLY, but we can't block (see logger_preexec)
+    log_fifo_writer = os.open(log_path, os.O_RDWR)
+
+    devnull = os.open(os.devnull, os.O_RDONLY)
+    os.dup2(devnull, StreamFileDescriptor.STDIN)
+    os.dup2(log_fifo_writer, StreamFileDescriptor.STDOUT)
+    os.dup2(log_fifo_writer, StreamFileDescriptor.STDERR)
+
+    os.close(log_fifo_writer)
+    os.close(devnull)

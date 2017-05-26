@@ -61,8 +61,16 @@ PGCTL_DEFAULTS = frozendict({
     'json': False,
     # kill bad service processes?
     'force': False,
+    # extra state change output?
+    'verbose': False,
 })
 CHANNEL = '[pgctl]'
+
+
+class StateChangeResult(object):
+    SUCCESS = 0
+    FAILURE = 1
+    RECHECK_NEEDED = 2
 
 
 class TermStyle(object):
@@ -103,6 +111,8 @@ class Start(StateChange):
     def fail(self):
         raise NotImplementedError
 
+    is_user_facing = True
+
     class strings(object):
         change = 'start'
         changing = 'Starting:'
@@ -115,7 +125,7 @@ class Stop(StateChange):
         return self.service.stop()
 
     def assert_(self):
-        return self.service.assert_stopped()
+        return self.service.assert_stopped(with_log_running=True)
 
     def get_timeout(self):
         return self.service.timeout_stop
@@ -123,10 +133,33 @@ class Stop(StateChange):
     def fail(self):
         return self.service.force_cleanup()
 
+    is_user_facing = True
+
     class strings(object):
         change = 'stop'
         changing = 'Stopping:'
         changed = 'Stopped:'
+
+
+class StopLogs(StateChange):
+    def change(self):
+        return self.service.stop_logs()
+
+    def assert_(self):
+        return self.service.assert_stopped(with_log_running=False)
+
+    def fail(self):
+        raise NotImplementedError
+
+    def get_timeout(self):
+        return self.service.timeout_ready
+
+    is_user_facing = False
+
+    class strings(object):
+        change = 'stop'
+        changing = 'Stopping logger for:'
+        changed = 'Stopped logger for:'
 
 
 def unbuf_print(*args, **kwargs):
@@ -216,21 +249,22 @@ class PgctlApp(object):
 
             yield
 
-    def __change_state(self, state):
+    def __change_state(self, state, services):
         """Changes the state of a supervised service using the svc command"""
         with self.playground_locked():
-            for service in self.services:
+            for service in services:
                 try:
                     state(service).assert_()
                 except PgctlUserMessage:
                     break
             else:
                 # Short-circuit, everything is in the correct state.
-                pgctl_print('Already {} {}'.format(
-                    state.strings.changed.lower(),
-                    commafy(self.service_names)),
-                )
-                return
+                if self._should_display_state(state):
+                    pgctl_print('Already {} {}'.format(
+                        state.strings.changed.lower(),
+                        commafy(_services_to_names(services))),
+                    )
+                return []
 
         # If we're starting a service, run the playground-wide "pre-start" hook (if it exists).
         # This is intentionally done without holding a lock, since this might be very slow.
@@ -239,7 +273,7 @@ class PgctlApp(object):
 
         run_post_stop_hook = False
         with self.playground_locked():
-            failures = self.__locked_change_state(state)
+            failures = self.__locked_change_state(state, services)
             if state is Stop:
                 run_post_stop_hook = all(
                     service.state['state'] == 'down'
@@ -253,10 +287,15 @@ class PgctlApp(object):
 
         return failures
 
-    def __locked_change_state(self, state):
+    def __locked_change_state(self, state, services):
         """the critical section of __change_state"""
-        pgctl_print(state.strings.changing, commafy(self.service_names))
-        services = [state(service) for service in self.services]
+        if self._should_display_state(state):
+            pgctl_print(
+                state.strings.changing,
+                commafy(_services_to_names(services)),
+            )
+
+        services = [state(service) for service in services]
         failed = []
         start_time = now()
         while services:
@@ -266,34 +305,85 @@ class PgctlApp(object):
                 except Unsupervised:
                     pass  # handled in state assertion, below
             for service in tuple(services):
-                check_time = now()
-                try:
-                    service.assert_()
-                except PgctlUserMessage as error:
-                    curr_time = now()
-                    if timeout(service, start_time, check_time, curr_time):
-                        if state is Stop and self.pgconf['force']:
-                            service.fail()
-                        else:
-                            error_message_on_timeout(
-                                service,
-                                error,
-                                state.strings.change,
-                                actual_timeout_length=curr_time - start_time,
-                                check_length=curr_time - check_time,
-                            )
-                            failed.append(service.name)
-                            services.remove(service)
+                state_change_result = self.__locked_handle_service_change_state(
+                    state,
+                    service,
+                    start_time,
+                )
+
+                if state_change_result == StateChangeResult.RECHECK_NEEDED:
+                    # This service should be rechecked by the next iteration
+                    # of the outer loop
+                    continue
+                elif state_change_result == StateChangeResult.SUCCESS:
+                    services.remove(service)
                 else:
-                    # TODO: debug() takes a lambda
-                    debug('loop: check_time %.3f', now() - check_time)
-                    pgctl_print(state.strings.changed, service.name)
-                    service.service.message(state)
+                    # StateChangeResult.FAILURE
+                    failed.append(service.name)
                     services.remove(service)
 
             time.sleep(float(self.pgconf['poll']))
 
         return failed
+
+    def __locked_handle_service_change_state(
+        self,
+        state,
+        service,
+        start_time,
+    ):
+        """Handles a state change for a service and returns whether
+        the state change was successful,
+        """
+        check_time = now()
+        try:
+            service.assert_()
+        except PgctlUserMessage as error:
+            state_change_result = self.__locked_handle_state_change_exception(
+                state,
+                service,
+                error,
+                start_time,
+                check_time,
+            )
+            return state_change_result
+        else:
+            # TODO: debug() takes a lambda
+            debug('loop: check_time %.3f', now() - check_time)
+            if self._should_display_state(state):
+                pgctl_print(state.strings.changed, service.name)
+            service.service.message(state)
+            return StateChangeResult.SUCCESS
+
+    def __locked_handle_state_change_exception(
+        self,
+        state,
+        service,
+        error,
+        start_time,
+        check_time,
+    ):
+        """Handles a state change timeout for a service and returns whether
+        the service unrecoverably failed its state change.
+        """
+        curr_time = now()
+        if timeout(service, start_time, check_time, curr_time):
+            if state is Stop and self.pgconf['force']:
+                service.fail()
+            else:
+                error_message_on_timeout(
+                    service,
+                    error,
+                    state.strings.change,
+                    actual_timeout_length=curr_time - start_time,
+                    check_length=curr_time - check_time,
+                )
+                return StateChangeResult.FAILURE
+
+        return StateChangeResult.RECHECK_NEEDED
+
+    def _should_display_state(self, state):
+        return state.is_user_facing or self.pgconf['verbose']
 
     def _run_playground_wide_hook(self, hook_name):
         """Runs the given playground-wide hook, if it exists."""
@@ -333,18 +423,35 @@ class PgctlApp(object):
         pgctl_print()
         pgctl_print('There might be useful information further up in the log; you can view it by running:')
         for service in failapp.services:
-            pgctl_print('    less +G {}'.format(bestrelpath(service.path.join('log').strpath)))
+            pgctl_print('    less +G {}'.format(bestrelpath(service.path.join('logs', 'current').strpath)))
 
         raise PgctlUserMessage('Some services failed to %s: %s' % (state, commafy(failed)))
 
     def start(self):
         """Idempotent start of a service or group of services"""
-        failed = self.__change_state(Start)
+        failed = self.__change_state(Start, self.services)
         return self.__show_failure('start', failed)
 
-    def stop(self):
-        """Idempotent stop of a service or group of services"""
-        failed = self.__change_state(Stop)
+    def stop(self, with_log_running=False):
+        """Idempotent stop of a service or group of services
+
+        :param with_log_running: controls whether the logger associated with
+        this service should be stopped or left running. For restart cases, we
+        want to leave the logger running (since poll-ready may still be writing
+        log messages).
+        """
+        failed = self.__change_state(Stop, self.services)
+
+        if not with_log_running:
+            failed_set = set(failed)
+            services_to_stop_logs_on = [
+                service for service in self.services
+                if service.name not in failed_set
+            ]
+            failed.extend(
+                self.__change_state(StopLogs, services_to_stop_logs_on),
+            )
+
         return self.__show_failure('stop', failed)
 
     def status(self):
@@ -389,7 +496,7 @@ class PgctlApp(object):
 
     def restart(self):
         """Starts and stops a service"""
-        self.stop()
+        self.stop(with_log_running=True)
         self.start()
 
     def reload(self):
@@ -414,7 +521,7 @@ class PgctlApp(object):
         logfiles = []
         for service in self.services:
             service.ensure_logs()
-            logfile = service.path.join('log')
+            logfile = service.path.join('logs', 'current')
             logfile = bestrelpath(str(logfile))
             logfiles.append(logfile)
         exec_(tail + tuple(logfiles))  # never returns
@@ -502,7 +609,7 @@ class PgctlApp(object):
 
     @cached_property
     def service_names(self):
-        return tuple([service.name for service in self.services])
+        return _services_to_names(self.services)
 
     @cached_property
     def pgdir(self):
@@ -530,6 +637,12 @@ def parser():
     commands = [command.__name__ for command in PgctlApp.commands]
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', action='version', version=__version__)
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        default=False,
+        help='show additional service action information',
+    )
     parser.add_argument('--pgdir', help='name the playground directory', default=argparse.SUPPRESS)
     parser.add_argument('--pghome', help='directory to keep user-level playground state', default=argparse.SUPPRESS)
     parser.add_argument(
@@ -553,6 +666,10 @@ def parser():
     group.add_argument('services', nargs='*', help='specify which services to act upon', default=argparse.SUPPRESS)
 
     return parser
+
+
+def _services_to_names(services):
+    return tuple([service.name for service in services])
 
 
 def _humanize_seconds(seconds):
