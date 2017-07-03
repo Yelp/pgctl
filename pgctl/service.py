@@ -273,6 +273,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                         's6-supervise',
                         self.path.join('.log').strpath,
                     ),
+                    env=self.supervise_env(lock, debug=False),
                     preexec_fn=functools.partial(
                         logger_preexec,
                         log_fifo_path,
