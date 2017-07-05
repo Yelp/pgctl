@@ -73,7 +73,7 @@ becomes a problem:
                         USER        PID ACCESS COMMAND
     playground/sleeper:    buck     2847827 f.c.. sleep
 
-    To fix this temporarily, run: pgctl stop --force playground/sleeper
+    To fix this temporarily, run: pgctl stop playground/sleeper --force
     To fix it permanently, see:
         http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
