@@ -118,7 +118,7 @@ class DescribeOrphanSubprocess(DirtyTest):
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop --force playground/sweet
+  * temporarily: pgctl stop playground/sweet --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/logs/current <==
@@ -145,7 +145,7 @@ There are two ways you can fix this:
 {PS-STATS} sleep 987654
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop --force playground/slow-startup
+  * temporarily: pgctl stop playground/slow-startup --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/slow-startup/logs/current <==
@@ -229,7 +229,7 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop --force playground/sweet
+  * temporarily: pgctl stop playground/sweet --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ''',
@@ -345,7 +345,7 @@ class DescribeSlowShutdownOnBackground(DirtyTest):
 {PS-STATS} sleep 2.5
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop --force playground/sweet
+  * temporarily: pgctl stop playground/sweet --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/logs/current <==
