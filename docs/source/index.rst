@@ -31,7 +31,7 @@ framework (although the tool happens to be written in Python).
 
 
 As a simple example, let's say that we want a `date` service in our playground,
-that ensures our `now.date` file always has the current date. 
+that ensures our `now.date` file always has the current date.
 
 ::
 
@@ -52,7 +52,7 @@ that ensures our `now.date` file always has the current date.
 
 Feature Support
 ---------------
-  
+
   -  User-friendly Command Line Interface
   -  Simple Configuration
   -  Python 2.7—3.5

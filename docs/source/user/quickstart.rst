@@ -31,7 +31,7 @@ Once this is in place, you can start your playground and see it run.
   $ pgctl log
   [webapp] Serving HTTP on 0.0.0.0 port 36474 ...
 
-  $ curl 
+  $ curl
 
 
 .. _writing_services:

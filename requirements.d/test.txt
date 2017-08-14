@@ -5,7 +5,7 @@ coverage-enable-subprocess
 
 flake8
 mock
-pre-commit>=0.3.6
+pre-commit>=0.15.0
 pylint
 pytest
 pytest-env
