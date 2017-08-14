@@ -152,7 +152,7 @@ class StopLogs(StateChange):
         raise NotImplementedError
 
     def get_timeout(self):
-        return self.service.timeout_ready
+        return self.service.timeout_stop
 
     is_user_facing = False
 
