@@ -128,7 +128,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
 
     def stop_logs(self):
         self.ensure_logs()
-        svc(('-dx', self.path.join('.log').strpath))
+        svc(('-kx', self.path.join('.log').strpath))
 
     def force_cleanup(self):
         """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""
@@ -186,7 +186,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         with open(self.path.join('.log', 'run').strpath, 'w') as log_run:
             log_run.write(LOG_RUN_HEADER)
             log_run.write(
-                'exec s6-log n5 s10485760 T {log_path}\n'.format(
+                'exec s6-log -b n5 s10485760 T {log_path}\n'.format(
                     log_path=self.path.join('logs').strpath,
                 ),
             )
