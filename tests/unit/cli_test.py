@@ -71,3 +71,13 @@ def test_status(statuses, expected):
         call[0][0] for call in mock_print.call_args_list
     )
     assert printed == expected
+
+
+def test_stop_logs_state():
+    """Because StopLogs executes a SIGKILL, the timeout can go unused in tests,
+    which causes coverage to miss the function. So we test it directly here.
+    """
+    class FakeService(object):
+        timeout_stop = 5
+        name = 'fake_service'
+    assert pgctl.cli.StopLogs(FakeService).get_timeout() == 5
