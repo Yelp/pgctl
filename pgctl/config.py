@@ -125,8 +125,8 @@ class Config(object):
             defaults,
             self.from_system(),
             self.from_homedir(),
-            self.from_environ(),
             self.from_app(),
+            self.from_environ(),
             self.from_cli(args),
         ))
 
