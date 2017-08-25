@@ -103,7 +103,7 @@ these runaway processes did not stop:
 There are two ways you can fix this:
   * temporarily: pgctl stop %s --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-''' % (processes, bestrelpath(path))
+''' % (processes, os.path.basename(path))
         )
     else:
         pass
