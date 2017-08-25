@@ -46,19 +46,6 @@ def clean_service(service_path):
 
 class DirtyTest(object):
 
-    LOCKERROR = '''\
-[pgctl] Stopping: {service}
-\\[pgctl\\] ERROR: service '{service}' failed to stop after [\\d.]+ seconds.*, these runaway processes did not stop:
-UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD
-\\S+ +\\d+ +\\d+ +\\d+ +\\d+ +\\d+ +\\S+ +\\S+ +\\S+ +\\S+ +{cmd}
-
-There are two ways you can fix this:
-  \\* temporarily: pgctl stop --force playground/{service}
-  \\* permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-
-{log}\\[pgctl\\] ERROR: Some services failed to stop: {service}
-$'''
-
     @pytest.yield_fixture(autouse=True)
     def cleanup(self, in_example_dir):
         try:
@@ -118,7 +105,7 @@ class DescribeOrphanSubprocess(DirtyTest):
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop playground/sweet --force
+  * temporarily: pgctl stop sweet --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/logs/current <==
@@ -145,7 +132,7 @@ There are two ways you can fix this:
 {PS-STATS} sleep 987654
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop playground/slow-startup --force
+  * temporarily: pgctl stop slow-startup --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/slow-startup/logs/current <==
@@ -229,7 +216,7 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
 {PS-STATS} sleep infinity
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop playground/sweet --force
+  * temporarily: pgctl stop sweet --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ''',
@@ -345,7 +332,7 @@ class DescribeSlowShutdownOnBackground(DirtyTest):
 {PS-STATS} sleep 2.5
 
 There are two ways you can fix this:
-  * temporarily: pgctl stop playground/sweet --force
+  * temporarily: pgctl stop sweet --force
   * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 ==> playground/sweet/logs/current <==
