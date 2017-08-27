@@ -1,15 +1,11 @@
 .PHONY: all
 all: venv test
 
-venv: setup.py requirements.d/*.txt Makefile tox.ini
-	# it's simpler to not try to make tox do this.
-	rm -rf venv
-	virtualenv --prompt='(pgctl)' --python=python2.7 venv
-	venv/bin/pip install --upgrade pip setuptools wheel
-	venv/bin/pip install --upgrade -r requirements.d/dev.txt
+.PHONY: venv
+venv:
+	tox -e venv
 
 .PHONY: tests test
-tests: test
 test: .tox/py27 install-hooks
 	tox -e py27 -- $(ARGS)
 
