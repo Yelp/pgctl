@@ -10,5 +10,4 @@ pytest-xdist
 sphinx
 sphinx_rtd_theme
 testfixtures
-tox
 twine
