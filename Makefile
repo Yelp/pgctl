@@ -6,7 +6,7 @@ venv:
 	tox -e venv
 
 .PHONY: tests test
-test: .tox/py27 install-hooks
+test: install-hooks
 	tox -e py27 -- $(ARGS)
 
 .PHONY: install-hooks
@@ -25,12 +25,8 @@ coverage-server:
 	cd coverage-html && python -m SimpleHTTPServer 0
 
 .PHONY: docs
-docs: .tox/docs
+docs:
 	tox -e docs
-
-# start the tox from scratch if any of these files change
-.tox/%: setup.py requirements.d/*.txt Makefile tox.ini
-	rm -rf .tox/$*
 
 .PHONY: clean
 clean:
@@ -40,9 +36,6 @@ clean:
 	rm -rf docs/build
 	rm -f .coverage.*
 	rm -f .coverage
-
-.PHONY: realclean
-realclean: clean
 	rm -rf .tox
 
 .PHONY: release

@@ -1,8 +1,5 @@
-# packages installed during test
-
 coverage
 coverage-enable-subprocess
-
 flake8
 mock
 pre-commit>=0.15.0
@@ -10,4 +7,8 @@ pylint
 pytest
 pytest-env
 pytest-xdist
+sphinx
+sphinx_rtd_theme
 testfixtures
+tox
+twine
