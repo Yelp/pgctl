@@ -30,8 +30,8 @@ docs:
 
 .PHONY: clean
 clean:
-	find -name '*.pyc' -print0 | xargs -0r rm
-	find -name '__pycache__' -print0 | xargs -0r rm -r
+	find -name '*.pyc' -delete
+	find -name '__pycache__' -delete
 	rm -rf dist
 	rm -rf docs/build
 	rm -f .coverage.*
