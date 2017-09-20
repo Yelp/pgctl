@@ -1,5 +1,0 @@
-# packages installed during `make docs`
-
-py
-sphinx
-sphinx_rtd_theme
