@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import io
 import json
 import logging
 from os import environ
@@ -60,7 +61,7 @@ class Config(object):
                     result[key] = value
             return result
         elif filename.endswith(('.yaml', '.yml')):
-            return yaml_load(open(filename, mode='rb').read().decode('UTF-8'))
+            return yaml_load(io.open(filename))
         elif filename.endswith('.json'):
             return json.load(open(filename))
         else:
