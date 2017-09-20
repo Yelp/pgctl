@@ -11,6 +11,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import io
 import json
 import logging
 from os import environ
@@ -19,7 +20,7 @@ from os.path import join
 import six
 
 try:
-    from yaml import load as yaml_load
+    from yaml import safe_load as yaml_load
 except ImportError:  # pragma: no cover
     def yaml_load(dummy_file):  # pylint:disable=unused-argument
         pass
@@ -60,7 +61,7 @@ class Config(object):
                     result[key] = value
             return result
         elif filename.endswith(('.yaml', '.yml')):
-            return yaml_load(open(filename))
+            return yaml_load(io.open(filename))
         elif filename.endswith('.json'):
             return json.load(open(filename))
         else:
