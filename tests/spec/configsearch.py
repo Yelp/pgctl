@@ -20,13 +20,14 @@ class DescribeCombined(object):
         a.ensure(prefix + '.yaml')
         b.ensure(prefix + '.conf')
         c.ensure(prefix + '.a')
-        c.ensure(prefix + '.b').chmod(0o666)
+        c.ensure(prefix + '.b')
 
         with c.as_cwd():
             assert_command(
                 (executable, '-m', 'pgctl.configsearch', prefix + '*'),
                 '''\
 {tmpdir}/a/b/c/{prefix}.a
+{tmpdir}/a/b/c/{prefix}.b
 {tmpdir}/a/b/{prefix}.conf
 {tmpdir}/a/{prefix}.yaml
 {tmpdir}/{prefix}.ini

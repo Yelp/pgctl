@@ -85,13 +85,13 @@ def pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down,
             start = time.time()
             is_service_down = wait_for_down_signal(down_fifo, poll_down)
         elif elapsed < timeout:
-            print_stderr('pgctl-poll-ready: failed (restarting in {0:.2f} seconds)'.format(timeout - elapsed))
+            print_stderr('pgctl-poll-ready: failed (restarting in {:.2f} seconds)'.format(timeout - elapsed))
             is_service_down = wait_for_down_signal(down_fifo, poll_down)
         else:
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
             print_stderr(
-                'pgctl-poll-ready: failed for more than {0:.2f} seconds -- we are restarting this service for you'.format(timeout)
+                'pgctl-poll-ready: failed for more than {:.2f} seconds -- we are restarting this service for you'.format(timeout)
             )
             exec_(('pgctl', 'restart', service))  # doesn't return
 

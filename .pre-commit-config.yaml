@@ -32,3 +32,8 @@
         entry: python -m pylint.__main__
         language: system
         files: \.py$
+-   repo: https://github.com/asottile/pyupgrade
+    sha: v1.0.4
+    hooks:
+    -   id: pyupgrade
+        language_version: python2.7
