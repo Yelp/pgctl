@@ -57,7 +57,10 @@ class Config(object):
                     result[key] = value
             return result
         elif filename.endswith(('.yaml', '.yml')):
-            return yaml.safe_load(io.open(filename))
+            return yaml.load(
+                io.open(filename),
+                Loader=getattr(yaml, 'CSafeLoader', yaml.SafeLoader),
+            )
         elif filename.endswith('.json'):
             return json.load(open(filename))
         else:
