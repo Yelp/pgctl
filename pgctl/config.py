@@ -18,12 +18,7 @@ from os import environ
 from os.path import join
 
 import six
-
-try:
-    from yaml import safe_load as yaml_load
-except ImportError:  # pragma: no cover
-    def yaml_load(dummy_file):  # pylint:disable=unused-argument
-        pass
+import yaml
 
 from pgctl.configsearch import search_parent_directories
 
@@ -50,6 +45,7 @@ class Config(object):
 
     def from_file(self, filename):
         # TODO P3: refactor this spaghetti
+        # TODO(ckuehl|2019-08-08): why do we support .ini files??
         if filename.endswith(('.conf', '.ini')):
             parser = six.moves.configparser.SafeConfigParser()
             parser.read(filename)
@@ -61,7 +57,10 @@ class Config(object):
                     result[key] = value
             return result
         elif filename.endswith(('.yaml', '.yml')):
-            return yaml_load(io.open(filename))
+            return yaml.load(
+                io.open(filename),
+                Loader=getattr(yaml, 'CSafeLoader', yaml.SafeLoader),
+            )
         elif filename.endswith('.json'):
             return json.load(open(filename))
         else:

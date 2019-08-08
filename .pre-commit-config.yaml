@@ -25,13 +25,6 @@
         - from __future__ import absolute_import
         - --add-import
         - from __future__ import unicode_literals
--   repo: local
-    hooks:
-    -   id: system
-        name: PyLint
-        entry: python -m pylint.__main__
-        language: system
-        files: \.py$
 -   repo: https://github.com/asottile/pyupgrade
     sha: v1.0.4
     hooks:

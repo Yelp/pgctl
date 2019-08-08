@@ -1,5 +1,4 @@
 #!/usr/bin/env python2.7
-# pylint:disable=missing-docstring,invalid-name,redefined-outer-name,too-few-public-methods
 """\
 usage: pgctl-fuser [-d] file [file ...]
 

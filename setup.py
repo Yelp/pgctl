@@ -29,6 +29,7 @@ def main():
             'cached-property',
             'contextlib2',
             'py',
+            'pyyaml',
             'six',
             's6',
         ],

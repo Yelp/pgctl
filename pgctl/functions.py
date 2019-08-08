@@ -1,4 +1,3 @@
-# pylint:disable=invalid-name
 """miscellany pgctl functions"""
 from __future__ import absolute_import
 from __future__ import print_function
@@ -31,7 +30,7 @@ def exec_(argv, env=None):  # never returns
     # in python3, sys.exitfunc has gone away, and atexit._run_exitfuncs seems to be the only pubic-ish interface
     #   https://hg.python.org/cpython/file/3.4/Modules/atexitmodule.c#l289
     import atexit
-    atexit._run_exitfuncs()  # pylint:disable=protected-access
+    atexit._run_exitfuncs()
     os.execvpe(argv[0], argv, env)
 
 
@@ -53,7 +52,7 @@ def _unique(iterable):
 class JSONEncoder(json.JSONEncoder):
     """knows that frozendict is like dict"""
 
-    def default(self, o):  # pylint:disable=method-hidden
+    def default(self, o):
         if isinstance(o, frozendict):
             return dict(o)
         else:
