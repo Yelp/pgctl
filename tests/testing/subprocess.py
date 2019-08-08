@@ -36,7 +36,7 @@ def _banner(message):
 # TODO: move to testing.subprocess
 def assert_command(cmd, stdout, stderr, returncode, norm=None, **popen_args):
     # this allows py.test to hide this frame during test debugging
-    #__tracebackhide__ = True  # pylint:disable=unused-variable
+    #__tracebackhide__ = True
     message = 'TEST: assert_command()\t%s\n' % quote(cmd)
     show_both(message, message)
     _banner('actual')

@@ -530,7 +530,7 @@ class PgctlApp(object):
         """Allow a service to run in the foreground"""
         try:
             # start supervise in the foreground with the service up
-            service, = self.services  # pylint:disable=unpacking-non-sequence
+            service, = self.services
         except ValueError:
             raise PgctlUserMessage(
                 'Must debug exactly one service, not: ' + commafy(self.service_names),

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# pylint:disable=no-self-use
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
@@ -122,7 +121,7 @@ class DescribePreexecFuncs(object):
 
     @pytest.fixture(autouse=True)
     def mock_open(self):
-        def fake_open(file_path, mode):  # pylint:disable=unused-argument
+        def fake_open(file_path, mode):
             if file_path == '/dev/null':
                 return self.DEV_NULL_FD
             elif file_path == '/log/path':
