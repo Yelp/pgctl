@@ -116,6 +116,10 @@ class Config(object):
             for parentdir in reversed(tuple(search_parent_directories(path)))
         )
 
+    def from_config_arg(self, args):
+        if hasattr(args, 'config') and args.config is not None:
+            return self.from_file(args.config)
+
     @staticmethod
     def from_cli(args):
         return vars(args)
@@ -127,6 +131,7 @@ class Config(object):
             self.from_homedir(),
             self.from_app(),
             self.from_environ(),
+            self.from_config_arg(args),
             self.from_cli(args),
         ))
 

@@ -648,6 +648,7 @@ class DescribePgdirMissing(object):
         ]
     },
     "command": "config",
+    "config": null,
     "force": false,
     "json": false,
     "pgdir": "playground",
@@ -676,7 +677,7 @@ class DescribePgdirMissing(object):
                 ('pgctl', '--help'),
                 '''\
 usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
-             [--json] [--force] [--all]
+             [--json] [--force] [--config CONFIG] [--all]
              {start,stop,status,restart,reload,log,debug,config}
              [services [services ...]]
 
@@ -694,6 +695,7 @@ optional arguments:
   --json                output in JSON (only supported by some commands)
   --force               forcefully terminate runaway processes that prevent
                         services from starting/stopping
+  --config CONFIG       specify a config file path to load
   --all, -a             act upon all services
 ''',
                 '',
@@ -703,7 +705,7 @@ optional arguments:
     def it_still_shows_help_without_args(self, tmpdir):
         expected = '''\
 usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
-             [--json] [--force] [--all]
+             [--json] [--force] [--config CONFIG] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}

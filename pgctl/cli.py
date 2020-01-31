@@ -653,6 +653,10 @@ def parser():
         '--force', action='store_true', default=False,
         help='forcefully terminate runaway processes that prevent services from starting/stopping',
     )
+    parser.add_argument(
+        '--config',
+        help='specify a config file path to load',
+    )
     parser.add_argument('command', help='specify what action to take', choices=commands, default=argparse.SUPPRESS)
 
     group = parser.add_mutually_exclusive_group()

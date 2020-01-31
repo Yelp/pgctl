@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import os
+from argparse import Namespace
 from contextlib import contextmanager
 
 import mock
@@ -33,6 +34,7 @@ apps_list =
     a.join('my.yaml').write('app/a: app/a')
     b.join('my.yaml').write('app/b: app/b')
     c.join('my.junk').write('junk!')
+    c.join('foo.json').write('{"foo": "bar"}')
 
     with mock.patch.dict(os.environ, {
         'PREFIX': tmpdir.strpath,
@@ -49,9 +51,10 @@ class DescribeCombined(object):
     def it_combines_all_the_configs(self, tmpdir):
         config = Config('my', {'default': 'default'})
         with setup(tmpdir):
-            conf = config.combined()
+            conf = config.combined(args=Namespace(config='foo.json'))
 
         assert conf == {
+            'config': 'foo.json',
             'etc': 'etc',
             'home': 'home',
             'app': 'app',
@@ -60,6 +63,7 @@ class DescribeCombined(object):
             'app/b': 'app/b',
             'environ': 'environ',
             'environs': ['1', '2', '3'],
+            'foo': 'bar',
         }
 
     def it_can_be_run_via_python_m(self, tmpdir):

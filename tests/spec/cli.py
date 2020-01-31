@@ -37,6 +37,7 @@ class DescribeCli(object):
         ]
     }},
     "command": "config",
+    "config": null,
     "force": false,
     "json": false,
     "pgdir": "playground",
@@ -77,7 +78,7 @@ class DescribeCli(object):
             '',
             '''\
 usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
-             [--json] [--force] [--all]
+             [--json] [--force] [--config CONFIG] [--all]
              {{start,stop,status,restart,reload,log,debug,config}}
              [services [services ...]]
 pgctl: error: {}
