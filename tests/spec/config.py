@@ -78,6 +78,7 @@ class DescribeCombined(object):
         "2",
         "3"
     ],
+    "config": null,
     "environ": "environ",
     "environs": [
         "1",

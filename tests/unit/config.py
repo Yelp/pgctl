@@ -57,6 +57,7 @@ services:
         pgdir='mypgdir',
         pgconf='my.conf',
         services=['first', 'second', 'third'],
+        config=None,
     )
 
     parsed = {
@@ -97,7 +98,12 @@ class DescribeConfig(object):
 
     def it_can_be_derived_from_args(self):
         conf = example1.config.from_cli(example1.cli_args)
-        assert conf == example1.parsed
+
+        # this one is slightly different because of how cli arguments are parsed
+        expected = example1.parsed.copy()
+        expected['config'] = None
+
+        assert conf == expected
 
     def it_can_be_derived_from_homedir(self, tmpdir):
         conffile = tmpdir.join('.example1.ini')

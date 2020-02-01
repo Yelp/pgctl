@@ -34,7 +34,8 @@ class AmbiguousConfig(EnvironmentError):
 
 
 class Dummy(object):
-    pass
+    def __init__(self):
+        self.config = None
 
 
 class Config(object):
@@ -118,7 +119,7 @@ class Config(object):
 
     def from_cli(self, args):
         configs = []
-        if hasattr(args, 'config') and args.config is not None:
+        if args.config is not None:
             configs.append(self.from_file(args.config))
         configs.append(vars(args))
         return merge(configs)
