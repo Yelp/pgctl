@@ -25,6 +25,7 @@
         - from __future__ import absolute_import
         - --add-import
         - from __future__ import unicode_literals
+    python_version: python3.6
 -   repo: https://github.com/asottile/pyupgrade
     sha: v1.0.4
     hooks:
