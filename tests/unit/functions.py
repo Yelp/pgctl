@@ -4,7 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-import StringIO
 
 import mock
 import pytest
@@ -60,8 +59,7 @@ class DescribeJSONEncoder(object):
 }'''
 
     def it_encodes_other(self):
-        msg = 'type' if six.PY2 else 'class'
-        with ShouldRaise(TypeError("<{} 'object'> is not JSON serializable".format(msg))):
+        with pytest.raises(TypeError):
             JSONEncoder(sort_keys=True, indent=4).encode(object)
 
 
@@ -101,7 +99,7 @@ class DescribeTerminateRunawayProcesses(object):
         # assert `process` has `lock`
         assert list(fuser(lockfile.strpath)) == [process.pid]
 
-        with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
+        with mock.patch('sys.stderr', new_callable=six.StringIO) as mock_stderr:
             terminate_runaway_processes(lockfile.strpath)
 
         assert 'WARNING: Killing these runaway ' in mock_stderr.getvalue()
@@ -110,7 +108,7 @@ class DescribeTerminateRunawayProcesses(object):
     def it_passes_when_there_are_no_locks(self, tmpdir):
         lockfile = tmpdir.ensure('lock')
 
-        with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
+        with mock.patch('sys.stderr', new_callable=six.StringIO) as mock_stderr:
             terminate_runaway_processes(lockfile.strpath)
         assert mock_stderr.getvalue() == ''
 

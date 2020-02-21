@@ -823,7 +823,7 @@ hello, i am a pre-start script in stderr
         proc = Popen(('setsid', 'pgctl', 'debug', 'sweet'), stdin=PIPE, stdout=PIPE)
         proc.stdin.close()
         try:
-            assert proc.stdout.readline() == 'hello, i am a pre-start script in stdout\n'
+            assert proc.stdout.readline().decode('utf-8') == 'hello, i am a pre-start script in stdout\n'
         finally:
             ctrl_c(proc)
             proc.wait()
