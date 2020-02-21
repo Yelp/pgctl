@@ -93,7 +93,12 @@ class DescribeTerminateRunawayProcesses(object):
     def it_kills_processes_holding_the_lock(self, tmpdir):
         lockfile = tmpdir.ensure('lock')
         lock = lockfile.open()
-        process = Popen(('sleep', 'infinity'))
+
+        # python 3.4+ closes file descriptors made by python unless explicitly
+        # passed and pass_fds isn't a parameter to Popen in python 2
+        extra_process_kwargs = {} if six.PY2 else dict(pass_fds=[lock.fileno()])
+        process = Popen(('sleep', 'infinity'), **extra_process_kwargs)
+
         lock.close()
 
         # assert `process` has `lock`
