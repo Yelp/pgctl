@@ -4,7 +4,6 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
-import StringIO
 
 import mock
 import pytest
@@ -60,8 +59,7 @@ class DescribeJSONEncoder(object):
 }'''
 
     def it_encodes_other(self):
-        msg = 'type' if six.PY2 else 'class'
-        with ShouldRaise(TypeError("<{} 'object'> is not JSON serializable".format(msg))):
+        with pytest.raises(TypeError):
             JSONEncoder(sort_keys=True, indent=4).encode(object)
 
 
@@ -92,27 +90,32 @@ class DescribeShowRunawayProcesses(object):
 
 class DescribeTerminateRunawayProcesses(object):
 
-    def it_kills_processes_holding_the_lock(self, tmpdir):
+    def it_kills_processes_holding_the_lock(self, tmpdir, capsys):
         lockfile = tmpdir.ensure('lock')
         lock = lockfile.open()
-        process = Popen(('sleep', 'infinity'))
+
+        # python 3.4+ closes file descriptors made by python unless explicitly
+        # passed and pass_fds isn't a parameter to Popen in python 2
+        extra_process_kwargs = {} if six.PY2 else dict(pass_fds=[lock.fileno()])
+        process = Popen(('sleep', 'infinity'), **extra_process_kwargs)
+
         lock.close()
 
         # assert `process` has `lock`
         assert list(fuser(lockfile.strpath)) == [process.pid]
 
-        with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
-            terminate_runaway_processes(lockfile.strpath)
+        terminate_runaway_processes(lockfile.strpath)
 
-        assert 'WARNING: Killing these runaway ' in mock_stderr.getvalue()
+        _, stderr = capsys.readouterr()
+        assert 'WARNING: Killing these runaway ' in stderr
         wait_for(lambda: process.poll() == -9)
 
-    def it_passes_when_there_are_no_locks(self, tmpdir):
+    def it_passes_when_there_are_no_locks(self, tmpdir, capsys):
         lockfile = tmpdir.ensure('lock')
 
-        with mock.patch('sys.stderr', new_callable=StringIO.StringIO) as mock_stderr:
-            terminate_runaway_processes(lockfile.strpath)
-        assert mock_stderr.getvalue() == ''
+        terminate_runaway_processes(lockfile.strpath)
+        _, stderr = capsys.readouterr()
+        assert stderr == ''
 
 
 class DescribePreexecFuncs(object):

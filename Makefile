@@ -7,7 +7,7 @@ venv:
 
 .PHONY: tests test
 test: install-hooks
-	tox -e py27 -- $(ARGS)
+	tox
 
 .PHONY: install-hooks
 install-hooks: venv

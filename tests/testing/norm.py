@@ -32,7 +32,7 @@ class pgctl(Normalized):
     """normalize pgctl's output"""
     rules = timestamp.rules + (
         (Regex(r'\(pid \d+\)'), '(pid {PID})'),
-        (Regex(r'\pid: \d+'), 'pid: {PID}'),
+        (Regex(r'pid: \d+'), 'pid: {PID}'),
         (Regex(r' [\d.]+ seconds'), ' {TIME} seconds'),
         (
             Regex(r'(?m)^UID +PID +PPID +PGID +SID +C +STIME +TTY +STAT +TIME +CMD'),
