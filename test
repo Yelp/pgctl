@@ -16,9 +16,6 @@ fail() {
 }
 trap fail ERR
 
-# the travis default umask is 002, but ubuntu's is 022
-umask 022
-
 set -x
 # See: https://bitbucket.org/ned/coveragepy/issue/340/keyerror-subpy
 if [ -n "$VIRTUAL_ENV" -a -d $VIRTUAL_ENV/local ]; then
