@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7
 """\
 usage: pgctl-fuser [-d] file [file ...]
 
