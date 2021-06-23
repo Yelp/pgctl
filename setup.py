@@ -26,7 +26,6 @@ def main():
             'contextlib2',
             'py',
             'pyyaml',
-            'six',
             's6',
         ],
         # FIXME: all tests still pass if you break this.

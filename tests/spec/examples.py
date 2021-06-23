@@ -2,7 +2,6 @@ import json
 import os
 
 import pytest
-import six
 from testing import norm
 from testing import pty
 from testing.assertions import assert_svstat
@@ -705,8 +704,6 @@ usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
              [services [services ...]]
 pgctl: error: {}
 '''.format(
-            'too few arguments'
-            if six.PY2 else
             'the following arguments are required: command'
         )
         with tmpdir.as_cwd():

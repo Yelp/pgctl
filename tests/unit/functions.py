@@ -2,7 +2,6 @@ import os
 from unittest import mock
 
 import pytest
-import six
 from frozendict import frozendict
 from testfixtures import ShouldRaise
 from testing.assertions import wait_for
@@ -91,7 +90,7 @@ class DescribeTerminateRunawayProcesses:
 
         # python 3.4+ closes file descriptors made by python unless explicitly
         # passed and pass_fds isn't a parameter to Popen in python 2
-        extra_process_kwargs = {} if six.PY2 else dict(pass_fds=[lock.fileno()])
+        extra_process_kwargs = dict(pass_fds=[lock.fileno()])
         process = Popen(('sleep', 'infinity'), **extra_process_kwargs)
 
         lock.close()

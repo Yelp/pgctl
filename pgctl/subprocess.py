@@ -1,4 +1,7 @@
-"""normalize python2/3 subprocess calls"""
+"""normalize python2/3 subprocess calls
+
+TODO(ckuehl|2021-06-23): Stop using this and relying on old Python 2 defaults.
+"""
 import functools
 import subprocess
 

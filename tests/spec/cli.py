@@ -1,7 +1,6 @@
 import os
 
 import pytest
-import six
 from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
@@ -80,8 +79,6 @@ usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
              [services [services ...]]
 pgctl: error: {}
 '''.format(
-                'too few arguments'
-                if six.PY2 else
                 'the following arguments are required: command'
             ),
             2,  # too few arguments
@@ -91,8 +88,7 @@ pgctl: error: {}
         version_s = __version__ + '\n'
         assert_command(
             ('pgctl', '--version'),
-            # argparse changes where `version` goes in py3
-            '' if six.PY2 else version_s,
-            version_s if six.PY2 else '',
+            version_s,
+            '',
             0,  # too few arguments
         )

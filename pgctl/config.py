@@ -7,12 +7,12 @@ configuration: (decreasing scope, increasing priority)
   4) app level:     ..., $PWD/../.mything.conf, $PWD/.mything.conf
   5) cli:           --x
 """
+import configparser
 import json
 import logging
 from os import environ
 from os.path import join
 
-import six
 import yaml
 
 from pgctl.configsearch import search_parent_directories
@@ -43,7 +43,7 @@ class Config:
         # TODO P3: refactor this spaghetti
         # TODO(ckuehl|2019-08-08): why do we support .ini files??
         if filename.endswith(('.conf', '.ini')):
-            parser = six.moves.configparser.SafeConfigParser()
+            parser = configparser.ConfigParser()
             parser.read(filename)
             result = dict(parser.items(self.projectname))
             for key, value in result.items():
@@ -143,7 +143,7 @@ def merge(values):
 
 def _merge(old, new):
     """assume both are mappings, and the old is our mutable result"""
-    from collections import Mapping
+    from collections.abc import Mapping
     if new is None:
         return
     for key in new:
