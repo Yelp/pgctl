@@ -1,11 +1,8 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 from argparse import Namespace
 from contextlib import contextmanager
+from unittest import mock
 
-import mock
 from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
@@ -46,7 +43,7 @@ apps_list =
             yield
 
 
-class DescribeCombined(object):
+class DescribeCombined:
 
     def it_combines_all_the_configs(self, tmpdir):
         config = Config('my', {'default': 'default'})

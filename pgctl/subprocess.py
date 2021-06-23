@@ -1,7 +1,4 @@
 """normalize python2/3 subprocess calls"""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import functools
 import subprocess
 

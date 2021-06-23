@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # TODO: open source this thing?
 """
 General handling of POSIX file locks (flocks).
@@ -8,15 +7,9 @@ pgctl-specific functionality belongs elsewhere.
 
 TODO: put this in its own package?
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import fcntl
 import os
 from contextlib import contextmanager
-
-import six
 
 
 class Locked(IOError):
@@ -41,7 +34,7 @@ def set_fd_inheritable(fd, inheritable):
 
 
 def _acquire_fail(path):
-    six.reraise(Locked, Locked(path))
+    raise Locked(path).with_traceback(None)
 
 
 def acquire(file_or_dir, on_fail=_acquire_fail):
@@ -57,7 +50,7 @@ def acquire(file_or_dir, on_fail=_acquire_fail):
     try:
         # exclusive, nonblocking
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except IOError as error:
+    except OSError as error:
         if error.errno == 11:
             release(fd)
             return on_fail(file_or_dir)

@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from pgctl import configsearch
 
 
-class DescribeGlob(object):
+class DescribeGlob:
 
     def it_globs_files(self, tmpdir):
         tmpdir.ensure('a/file.1')

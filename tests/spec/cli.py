@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 
 import pytest
@@ -11,7 +8,7 @@ from testing.subprocess import assert_command
 from pgctl import __version__
 
 
-class DescribeCli(object):
+class DescribeCli:
 
     @pytest.mark.parametrize(
         ('xdg_runtime_dir', 'expected_pghome'),

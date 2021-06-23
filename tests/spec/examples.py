@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import json
 import os
 
@@ -23,13 +18,13 @@ from pgctl.subprocess import PIPE
 from pgctl.subprocess import Popen
 
 
-class ANY_INTEGER(object):
+class ANY_INTEGER:
 
     def __eq__(self, other):
         return isinstance(other, int)
 
 
-class DescribePgctlLog(object):
+class DescribePgctlLog:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -180,7 +175,7 @@ class DescribePgctlLog(object):
         """When printing to a file, don't produce color, by default. V3"""
 
 
-class DescribeDateExample(object):
+class DescribeDateExample:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -207,7 +202,7 @@ class DescribeDateExample(object):
             wait_for(lambda: scratch_dir.join('now.date').isfile())
 
 
-class DescribeTailExample(object):
+class DescribeTailExample:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -224,7 +219,7 @@ class DescribeTailExample(object):
         assert open('output').read() == test_string
 
 
-class DescribeStart(object):
+class DescribeStart:
 
     def it_fails_given_unknown(self, in_example_dir):
         assert_command(
@@ -253,7 +248,7 @@ class DescribeStart(object):
         )
 
 
-class DescribeStop(object):
+class DescribeStop:
 
     def it_does_stop(self, in_example_dir):
         check_call(('pgctl', 'start', 'sleep'))
@@ -290,7 +285,7 @@ class DescribeStop(object):
         )
 
 
-class DescribeRestart(object):
+class DescribeRestart:
 
     def it_is_just_stop_then_start(self, in_example_dir):
         assert_command(
@@ -323,7 +318,7 @@ class DescribeRestart(object):
         assert_svstat('playground/sleep', state='up')
 
 
-class DescribeStartMultipleServices(object):
+class DescribeStartMultipleServices:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -359,7 +354,7 @@ class DescribeStartMultipleServices(object):
         assert_svstat('playground/tail', state='up')
 
 
-class DescribeStatus(object):
+class DescribeStatus:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -513,7 +508,7 @@ class DescribeStatus(object):
         assert_status()
 
 
-class DescribeReload(object):
+class DescribeReload:
 
     def it_is_unimplemented(self, in_example_dir):
         assert_command(
@@ -527,7 +522,7 @@ class DescribeReload(object):
         )
 
 
-class DescribeAliases(object):
+class DescribeAliases:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -589,7 +584,7 @@ class DescribeAliases(object):
         )
 
 
-class DescribeEnvironment(object):
+class DescribeEnvironment:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -624,7 +619,7 @@ class DescribeEnvironment(object):
         )
 
 
-class DescribePgdirMissing(object):
+class DescribePgdirMissing:
 
     @pytest.mark.parametrize(
         'command',
@@ -723,7 +718,7 @@ pgctl: error: {}
             )
 
 
-class DescribeDependentServices(object):
+class DescribeDependentServices:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -766,7 +761,7 @@ class DescribeDependentServices(object):
         )
 
 
-class DescribeStartMessageSuccess(object):
+class DescribeStartMessageSuccess:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -785,7 +780,7 @@ Service has started at localhost:9001
         )
 
 
-class DescribePreStartHook(object):
+class DescribePreStartHook:
 
     @pytest.yield_fixture
     def service_name(self):
@@ -829,7 +824,7 @@ hello, i am a pre-start script in stderr
             proc.wait()
 
 
-class DescribePostStopHook(object):
+class DescribePostStopHook:
 
     @pytest.yield_fixture
     def service_name(self):

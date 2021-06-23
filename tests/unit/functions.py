@@ -1,11 +1,6 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
+from unittest import mock
 
-import mock
 import pytest
 import six
 from frozendict import frozendict
@@ -25,7 +20,7 @@ from pgctl.fuser import fuser
 from pgctl.subprocess import Popen
 
 
-class DescribeUnique(object):
+class DescribeUnique:
 
     def it_does_not_have_duplicates(self):
         data = ['b', 'b', 'b']
@@ -36,7 +31,7 @@ class DescribeUnique(object):
         assert list(unique(data)) == ['a', 'b', 'c', 'd']
 
 
-class DescribeJSONEncoder(object):
+class DescribeJSONEncoder:
 
     def it_encodes_frozendict(self):
         test_dict = frozendict({
@@ -63,7 +58,7 @@ class DescribeJSONEncoder(object):
             JSONEncoder(sort_keys=True, indent=4).encode(object)
 
 
-class DescribeBestrelpath(object):
+class DescribeBestrelpath:
 
     def it_prefers_shorter_strings(self):
         assert bestrelpath('/a/b/c', '/a/b') == 'c'
@@ -71,7 +66,7 @@ class DescribeBestrelpath(object):
         assert bestrelpath('/a/b', '/a/b/c/d') == '/a/b'
 
 
-class DescribeShowRunawayProcesses(object):
+class DescribeShowRunawayProcesses:
 
     def it_fails_when_there_are_locks(self, tmpdir):
         lockfile = tmpdir.ensure('lock')
@@ -88,7 +83,7 @@ class DescribeShowRunawayProcesses(object):
         assert show_runaway_processes(tmpdir.strpath) is None
 
 
-class DescribeTerminateRunawayProcesses(object):
+class DescribeTerminateRunawayProcesses:
 
     def it_kills_processes_holding_the_lock(self, tmpdir, capsys):
         lockfile = tmpdir.ensure('lock')
@@ -118,7 +113,7 @@ class DescribeTerminateRunawayProcesses(object):
         assert stderr == ''
 
 
-class DescribePreexecFuncs(object):
+class DescribePreexecFuncs:
     LOG_PIPE_FD = 5
     DEV_NULL_FD = 10
 

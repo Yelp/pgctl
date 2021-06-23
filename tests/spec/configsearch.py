@@ -1,13 +1,10 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import uuid
 from sys import executable
 
 from testing.subprocess import assert_command
 
 
-class DescribeCombined(object):
+class DescribeCombined:
 
     def it_can_be_run_via_python_m(self, tmpdir):
         a = tmpdir.ensure_dir('a')

@@ -7,11 +7,6 @@ configuration: (decreasing scope, increasing priority)
   4) app level:     ..., $PWD/../.mything.conf, $PWD/.mything.conf
   5) cli:           --x
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import io
 import json
 import logging
 from os import environ
@@ -33,12 +28,12 @@ class AmbiguousConfig(EnvironmentError):
     pass
 
 
-class Dummy(object):
+class Dummy:
     def __init__(self):
         self.config = None
 
 
-class Config(object):
+class Config:
 
     def __init__(self, projectname, defaults=None):
         self.projectname = projectname
@@ -59,7 +54,7 @@ class Config(object):
             return result
         elif filename.endswith(('.yaml', '.yml')):
             return yaml.load(
-                io.open(filename),
+                open(filename),
                 Loader=getattr(yaml, 'CSafeLoader', yaml.SafeLoader),
             )
         elif filename.endswith('.json'):

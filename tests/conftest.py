@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
 
 from py._path.local import LocalPath as Path
@@ -33,7 +28,7 @@ def in_example_dir(tmpdir, homedir, service_name):
 
 @fixture
 def scratch_dir(pghome_dir, service_name, in_example_dir):
-    yield pghome_dir.join(Path().join('playground', service_name).relto(str('/')), abs=1)
+    yield pghome_dir.join(Path().join('playground', service_name).relto('/'), abs=1)
 
 
 @fixture
@@ -63,7 +58,7 @@ def disinherit_pytest_pipe():
     from pgctl.flock import set_fd_inheritable
     try:
         set_fd_inheritable(3, False)
-    except IOError as error:  # this only happens under single-process pytest  :pragma:nocover:
+    except OSError as error:  # this only happens under single-process pytest  :pragma:nocover:
         if error.errno == 9:  # no such fd
             pass
         else:

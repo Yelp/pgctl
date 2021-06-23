@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import argparse
 import contextlib
 import json
@@ -14,7 +8,6 @@ import time
 from time import time as now
 
 import contextlib2
-import six
 from cached_property import cached_property
 from frozendict import frozendict
 from py._path.local import LocalPath as Path
@@ -67,13 +60,13 @@ PGCTL_DEFAULTS = frozendict({
 CHANNEL = '[pgctl]'
 
 
-class StateChangeResult(object):
+class StateChangeResult:
     SUCCESS = 0
     FAILURE = 1
     RECHECK_NEEDED = 2
 
 
-class TermStyle(object):
+class TermStyle:
 
     BOLD = '\033[1m'
     ENDC = '\033[0m'
@@ -85,12 +78,12 @@ class TermStyle(object):
     @classmethod
     def wrap(cls, text, style):
         if sys.stdout.isatty():
-            return '{}{}{}'.format(style, text, cls.ENDC)
+            return f'{style}{text}{cls.ENDC}'
         else:
             return text
 
 
-class StateChange(object):
+class StateChange:
 
     def __init__(self, service):
         self.service = service
@@ -113,7 +106,7 @@ class Start(StateChange):
 
     is_user_facing = True
 
-    class strings(object):
+    class strings:
         change = 'start'
         changing = 'Starting:'
         changed = 'Started:'
@@ -135,7 +128,7 @@ class Stop(StateChange):
 
     is_user_facing = True
 
-    class strings(object):
+    class strings:
         change = 'stop'
         changing = 'Stopping:'
         changed = 'Stopped:'
@@ -156,7 +149,7 @@ class StopLogs(StateChange):
 
     is_user_facing = False
 
-    class strings(object):
+    class strings:
         change = 'stop'
         changing = 'Stopping logger for:'
         changed = 'Stopped logger for:'
@@ -203,7 +196,7 @@ def error_message_on_timeout(service, error, action_name, actual_timeout_length,
     pgctl_print(error_message)
 
 
-class PgctlApp(object):
+class PgctlApp:
 
     def __init__(self, config=PGCTL_DEFAULTS):
         self.pgconf = frozendict(config)
@@ -220,7 +213,7 @@ class PgctlApp(object):
             # we don't need or want a stack trace for user errors
             result = str(error)
 
-        if isinstance(result, six.string_types):
+        if isinstance(result, str):
             return CHANNEL + ' ERROR: ' + result
         else:
             return result
@@ -425,7 +418,7 @@ class PgctlApp(object):
         for service in failapp.services:
             pgctl_print('    less +G {}'.format(bestrelpath(service.path.join('logs', 'current').strpath)))
 
-        raise PgctlUserMessage('Some services failed to %s: %s' % (state, commafy(failed)))
+        raise PgctlUserMessage(f'Some services failed to {state}: {commafy(failed)}')
 
     def start(self):
         """Idempotent start of a service or group of services"""
@@ -554,7 +547,7 @@ class PgctlApp(object):
             path = self.pgdir.join(service_name, abs=1)
         return Service(
             path,
-            self.pghome.join(path.relto(str('/')), abs=1),
+            self.pghome.join(path.relto('/'), abs=1),
             self.pgconf['timeout'],
         )
 
@@ -673,7 +666,7 @@ def parser():
 
 
 def _services_to_names(services):
-    return tuple([service.name for service in services])
+    return tuple(service.name for service in services)
 
 
 def _humanize_seconds(seconds):
@@ -688,7 +681,7 @@ def _humanize_seconds(seconds):
                 period_name,
             )
     else:
-        return '{} seconds'.format(seconds)
+        return f'{seconds} seconds'
 
 
 def main(argv=None):

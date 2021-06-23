@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from setuptools import find_packages
 from setuptools import setup
 
@@ -10,7 +6,7 @@ from pgctl import __version__
 
 def main():
     setup(
-        name=str('pgctl'),
+        name='pgctl',
         description='A tool to configure and manage developer playgrounds.',
         url='http://pgctl.readthedocs.org/en/latest/',
         version=__version__,

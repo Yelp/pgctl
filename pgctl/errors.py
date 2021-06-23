@@ -1,10 +1,5 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-
 def reraise(error):
-    import six
-    six.reraise(type(error), error)
+    raise error.with_traceback(None)
 
 
 class Impossible(AssertionError):

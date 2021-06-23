@@ -1,6 +1,4 @@
 """Helpers for test assertions."""
-from __future__ import absolute_import
-from __future__ import unicode_literals
 
 
 def assert_svstat(service, **attrs):

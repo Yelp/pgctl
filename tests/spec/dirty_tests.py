@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
 import signal
 import subprocess
@@ -43,7 +39,7 @@ def clean_service(service_path):
         limit -= 1
 
 
-class DirtyTest(object):
+class DirtyTest:
 
     @pytest.yield_fixture(autouse=True)
     def cleanup(self, in_example_dir):
