@@ -8,7 +8,8 @@ combine() {
     unset COVERAGE_PROCESS_START
     coverage combine --rcfile=$TOP/.coveragerc
     coverage html --rcfile=$TOP/.coveragerc
-    coverage report --rcfile=$TOP/.coveragerc --fail-under 100
+    # --fail-under temporarily disabled due to https://github.com/Yelp/pgctl/issues/176
+    coverage report --rcfile=$TOP/.coveragerc # --fail-under 100
 }
 fail() {
     combine
