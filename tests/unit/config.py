@@ -1,9 +1,6 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
+from unittest import mock
 
-import mock
 import pytest
 from testfixtures import ShouldRaise
 from testfixtures import StringComparison as S
@@ -11,7 +8,7 @@ from testfixtures import StringComparison as S
 import pgctl.config as C
 
 
-class example1(object):
+class example1:
     config = C.Config('example1')
 
     ini = '''\
@@ -78,7 +75,7 @@ services:
     )
 
 
-class DescribeConfig(object):
+class DescribeConfig:
 
     @example1.parameters
     def it_can_parse_files(self, tmpdir, format, suffix):
@@ -119,7 +116,7 @@ class DescribeConfig(object):
             assert example1.config.from_system() == example1.parsed
 
 
-class DescribeFromEnviron(object):
+class DescribeFromEnviron:
 
     def it_can_parse(self):
         config = C.Config(projectname='my')
@@ -135,7 +132,7 @@ class DescribeFromEnviron(object):
             assert config.from_environ() == example1.parsed
 
 
-class DescribeMerge(object):
+class DescribeMerge:
 
     def it_overrides_correctly(self):
         assert C.merge((
@@ -203,7 +200,7 @@ class DescribeMerge(object):
         }
 
 
-class DescribeFromPathPrefix(object):
+class DescribeFromPathPrefix:
 
     @example1.parameters
     def it_can_find_configs(self, tmpdir, format, suffix):
@@ -238,7 +235,7 @@ class DescribeFromPathPrefix(object):
             example1.config.from_path_prefix(tmpdir.strpath + '/')
 
 
-class DescribeFromApp(object):
+class DescribeFromApp:
 
     def it_searches_pwd(self, tmpdir):
         conffile = tmpdir.join('example1.json')

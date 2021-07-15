@@ -1,11 +1,6 @@
 #!/usr/bin/env python
-# -*- coding: UTF-8 -*-
 """stolen from aactivator"""
 # TODO: package and share
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import logging
 import os
 
@@ -31,15 +26,13 @@ def search_parent_directories(path='.'):
 
 def glob(pattern):
     from glob import glob
-    for fname in sorted(glob(pattern)):
-        yield fname
+    yield from sorted(glob(pattern))
 
 
 def parentglob(pattern, path='.'):
     from os.path import join
     for parent_dir in search_parent_directories(path):
-        for found in glob(join(parent_dir, pattern)):
-            yield found
+        yield from glob(join(parent_dir, pattern))
 
 
 def main():

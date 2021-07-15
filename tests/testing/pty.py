@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-
 def normalize_newlines(fd):
     r"""
     Twiddle the tty flags such that \n won't get munged to \r\n.

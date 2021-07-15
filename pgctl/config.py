@@ -7,17 +7,12 @@ configuration: (decreasing scope, increasing priority)
   4) app level:     ..., $PWD/../.mything.conf, $PWD/.mything.conf
   5) cli:           --x
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import io
+import configparser
 import json
 import logging
 from os import environ
 from os.path import join
 
-import six
 import yaml
 
 from pgctl.configsearch import search_parent_directories
@@ -33,12 +28,12 @@ class AmbiguousConfig(EnvironmentError):
     pass
 
 
-class Dummy(object):
+class Dummy:
     def __init__(self):
         self.config = None
 
 
-class Config(object):
+class Config:
 
     def __init__(self, projectname, defaults=None):
         self.projectname = projectname
@@ -48,7 +43,7 @@ class Config(object):
         # TODO P3: refactor this spaghetti
         # TODO(ckuehl|2019-08-08): why do we support .ini files??
         if filename.endswith(('.conf', '.ini')):
-            parser = six.moves.configparser.SafeConfigParser()
+            parser = configparser.ConfigParser()
             parser.read(filename)
             result = dict(parser.items(self.projectname))
             for key, value in result.items():
@@ -59,7 +54,7 @@ class Config(object):
             return result
         elif filename.endswith(('.yaml', '.yml')):
             return yaml.load(
-                io.open(filename),
+                open(filename),
                 Loader=getattr(yaml, 'CSafeLoader', yaml.SafeLoader),
             )
         elif filename.endswith('.json'):
@@ -148,7 +143,7 @@ def merge(values):
 
 def _merge(old, new):
     """assume both are mappings, and the old is our mutable result"""
-    from collections import Mapping
+    from collections.abc import Mapping
     if new is None:
         return
     for key in new:

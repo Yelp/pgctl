@@ -4,11 +4,6 @@ usage: s6-check-poll my-server --option ...
 spawn a background process that writes to a file descriptor indicated
 by ./notification-fd when a ./ready script runs successfully.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
-import os
 import os.path
 import select
 import time
@@ -26,7 +21,7 @@ def floatfile(filename):
 def getval(filename, envname, default):
     try:
         return floatfile(filename)
-    except IOError as err:
+    except OSError as err:
         if err.errno == 2:  # doesn't exist
             pass
         else:
@@ -85,13 +80,13 @@ def pgctl_poll_ready(down_fifo, notification_fd, timeout, poll_ready, poll_down,
             start = time.time()
             is_service_down = wait_for_down_signal(down_fifo, poll_down)
         elif elapsed < timeout:
-            print_stderr('pgctl-poll-ready: failed (restarting in {:.2f} seconds)'.format(timeout - elapsed))
+            print_stderr(f'pgctl-poll-ready: failed (restarting in {timeout - elapsed:.2f} seconds)')
             is_service_down = wait_for_down_signal(down_fifo, poll_down)
         else:
             service = os.path.basename(os.getcwd())
             # TODO: Add support for directories
             print_stderr(
-                'pgctl-poll-ready: failed for more than {:.2f} seconds -- we are restarting this service for you'.format(timeout)
+                f'pgctl-poll-ready: failed for more than {timeout:.2f} seconds -- we are restarting this service for you'
             )
             exec_(('pgctl', 'restart', service))  # doesn't return
 
@@ -114,7 +109,7 @@ def main():
     # naming conventions. See the link below for more information.
     # https://github.com/skarnet/s6/blob/v2.2.2.0/src/libs6/ftrigw_notifyb_nosig.c#L29,L30
     down_fifo_path = os.path.join(
-        'event', 'ftrig1' + 'poll_ready_{}'.format(os.getpid()).ljust(43, '_'),
+        'event', 'ftrig1' + f'poll_ready_{os.getpid()}'.ljust(43, '_'),
     )
 
     # Don't reuse an old FIFO

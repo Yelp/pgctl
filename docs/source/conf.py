@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # pgctl documentation build configuration file, created by
 # sphinx-quickstart on Fri Jun 12 13:43:01 2015.
@@ -11,9 +10,6 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 
 import pgctl

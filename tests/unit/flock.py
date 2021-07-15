@@ -1,8 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from pytest import yield_fixture as fixture
 from testfixtures import ShouldRaise
 
@@ -22,7 +17,7 @@ def assert_locked(tmpfile):
             raise AssertionError('this should not work')
 
 
-class DescribeFlock(object):
+class DescribeFlock:
 
     def it_allows_first_caller(self, tmpfile):
         with flock(tmpfile):

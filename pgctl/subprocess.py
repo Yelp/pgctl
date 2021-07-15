@@ -1,7 +1,7 @@
-"""normalize python2/3 subprocess calls"""
-from __future__ import absolute_import
-from __future__ import unicode_literals
+"""normalize python2/3 subprocess calls
 
+TODO(ckuehl|2021-06-23): Stop using this and relying on old Python 2 defaults.
+"""
 import functools
 import subprocess
 

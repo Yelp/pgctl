@@ -1,8 +1,4 @@
 """miscellany pgctl functions"""
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import json
 import os
 import signal
@@ -13,7 +9,7 @@ from frozendict import frozendict
 from .errors import LockHeld
 
 
-class StreamFileDescriptor(object):
+class StreamFileDescriptor:
     """For some reason, Python neglected to put this in the standard lib."""
     STDIN = 0
     STDOUT = 1
@@ -75,7 +71,7 @@ def bestrelpath(path, relto=None):
 
 def ps(pids):
     """Give a (somewhat) human-readable printout of a list of processes"""
-    pids = tuple([str(pid) for pid in pids])
+    pids = tuple(str(pid) for pid in pids)
     if not pids:
         return ''
 

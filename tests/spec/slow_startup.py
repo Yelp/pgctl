@@ -1,7 +1,3 @@
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
 
 import pytest
@@ -65,7 +61,7 @@ def it_times_out_because_force_is_ignored():
 
 
 def it_can_succeed():
-    from mock import patch, ANY
+    from unittest.mock import patch, ANY
     with patch.dict(os.environ, [('PGCTL_TIMEOUT', str(SLOW_STARTUP_TIME))]):
         assert_command(
             ('pgctl', 'start'),

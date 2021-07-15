@@ -1,4 +1,3 @@
-#!/usr/bin/env python2.7
 """\
 usage: pgctl-fuser [-d] file [file ...]
 
@@ -6,10 +5,6 @@ Shows the pids (of the current user) that have this file opened.
 This is useful for finding which processes hold a file lock (flock).
 This has the same behavior as `lsof -t file`, but is *much* faster.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 from .debug import trace
 
 
@@ -17,7 +12,7 @@ def stat(path):
     from os import stat
     try:
         return stat(path)
-    except EnvironmentError as error:
+    except OSError as error:
         trace('fuser suppressed: %s', error)
     return None
 
@@ -26,7 +21,7 @@ def listdir(path):
     from os import listdir
     try:
         return listdir(path)
-    except EnvironmentError as error:
+    except OSError as error:
         trace('fuser suppressed: %s', error)
         return ()
 

@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from setuptools import find_packages
 from setuptools import setup
 
@@ -10,19 +6,19 @@ from pgctl import __version__
 
 def main():
     setup(
-        name=str('pgctl'),
+        name='pgctl',
         description='A tool to configure and manage developer playgrounds.',
         url='http://pgctl.readthedocs.org/en/latest/',
         version=__version__,
         platforms=['linux'],
         classifiers=[
             'License :: OSI Approved :: MIT License',
-            'Programming Language :: Python :: 2',
-            'Programming Language :: Python :: 2.7',
             'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
             'Programming Language :: Python :: Implementation :: CPython',
         ],
+        python_requires='>=3.6',
         packages=find_packages(exclude=('tests*',)),
         install_requires=[
             'frozendict',
@@ -30,7 +26,6 @@ def main():
             'contextlib2',
             'py',
             'pyyaml',
-            'six',
             's6',
         ],
         # FIXME: all tests still pass if you break this.
@@ -44,11 +39,6 @@ def main():
 
         author='Buck Evan',
         author_email='buck.2019@gmail.com',
-        options={
-            'bdist_wheel': {
-                'universal': 1,
-            }
-        },
     )
 
 

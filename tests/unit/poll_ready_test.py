@@ -1,9 +1,6 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
+from unittest import mock
 
-import mock
 import pytest
 
 from pgctl import poll_ready
@@ -15,7 +12,7 @@ def in_tmpdir(tmpdir):
         yield
 
 
-class DescribeFloatFile(object):
+class DescribeFloatFile:
 
     def it_loads_files(self):
         filename = 'notification-fd'
@@ -26,7 +23,7 @@ class DescribeFloatFile(object):
         assert result == 5.0
 
 
-class DescribeGetVal(object):
+class DescribeGetVal:
 
     def it_loads_environment_var(self):
         with mock.patch.dict(os.environ, [('SVWAIT', '5')]):

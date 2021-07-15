@@ -1,12 +1,9 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from testfixtures import ShouldRaise
 
 from .assertions import wait_for
 
 
-class DescribeRetry(object):
+class DescribeRetry:
 
     def it_can_succeed(self):
         assert wait_for(lambda: True) is True
@@ -16,7 +13,7 @@ class DescribeRetry(object):
             wait_for(lambda: False)
 
     def it_can_succeed_flakily(self):
-        class notlocal(object):
+        class notlocal:
             count = 0
 
         def assertion():

@@ -1,10 +1,6 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import sys
+from unittest import mock
 
-import mock
 import pytest
 
 import pgctl.cli
@@ -77,7 +73,7 @@ def test_stop_logs_state():
     """Because StopLogs executes a SIGKILL, the timeout can go unused in tests,
     which causes coverage to miss the function. So we test it directly here.
     """
-    class FakeService(object):
+    class FakeService:
         timeout_stop = 5
         name = 'fake_service'
     assert pgctl.cli.StopLogs(FakeService).get_timeout() == 5

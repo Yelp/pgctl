@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from testfixtures import ShouldRaise
 from testing.subprocess import assert_command
 from testing.subprocess import run
