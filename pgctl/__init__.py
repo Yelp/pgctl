@@ -1,2 +1,2 @@
 # NOTE: this file is imported by setup.py, so cannot have any dependencies or side-effect.
-__version__ = '3.1.1'
+__version__ = '4.0.0'
