@@ -42,6 +42,8 @@ class DescribeCli:
     "services": [
         "default"
     ],
+    "telemetry": false,
+    "telemetry_clog_config_path": null,
     "timeout": "2.0",
     "verbose": false
 }}

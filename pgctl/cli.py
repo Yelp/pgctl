@@ -31,6 +31,7 @@ from .functions import unique
 from .fuser import fuser
 from .service import Service
 from pgctl import __version__
+from pgctl import telemetry
 
 
 XDG_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR') or '~/.run'
@@ -56,6 +57,10 @@ PGCTL_DEFAULTS = frozendict({
     'force': False,
     # extra state change output?
     'verbose': False,
+    # telemetry enabled?
+    'telemetry': False,
+    # path to clog config file (YAML format) for telemetry
+    'telemetry_clog_config_path': None,
 })
 CHANNEL = '[pgctl]'
 
@@ -207,6 +212,10 @@ class PgctlApp:
         command = self.pgconf['command']
         # argparse guarantees this is an attribute
         command = getattr(self, command)
+
+        start = time.time()
+        telemetry.emit_event('command_run', {'command': self.pgconf['command']})
+
         try:
             result = command()
         except PgctlUserMessage as error:
@@ -214,8 +223,24 @@ class PgctlApp:
             result = str(error)
 
         if isinstance(result, str):
+            telemetry.emit_event(
+                'command_errored',
+                {
+                    'command': self.pgconf['command'],
+                    'result': result,
+                    'elapsed_s': time.time() - start,
+                }
+            )
             return CHANNEL + ' ERROR: ' + result
         else:
+            telemetry.emit_event(
+                'command_succeeded',
+                {
+                    'command': self.pgconf['command'],
+                    'result': result,
+                    'elapsed_s': time.time() - start,
+                }
+            )
             return result
 
     @contextlib.contextmanager
@@ -689,6 +714,10 @@ def main(argv=None):
     args = p.parse_args(argv)
     config = Config('pgctl')
     config = config.combined(PGCTL_DEFAULTS, args)
+
+    if config['telemetry']:
+        telemetry.setup_clog(config['telemetry_clog_config_path'])
+
     app = PgctlApp(config)
 
     return app()

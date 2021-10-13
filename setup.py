@@ -28,6 +28,9 @@ def main():
             'pyyaml',
             's6',
         ],
+        extras_require={
+            'telemetry': ['yelp-clog'],
+        },
         # FIXME: all tests still pass if you break this.
         entry_points={
             'console_scripts': [
