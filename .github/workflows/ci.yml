@@ -9,4 +9,9 @@ jobs:
         with:
           python-version: 3.7
       - run: pip install -r CI/install/requirements.txt
-      - run: tox
+      # s6 can't be built on newer versions of Ubuntu with the version of s6 on
+      # PyPI, and we can't get access to the s6 name on PyPI to fix it.
+      #
+      # For now we manually built and uploaded some wheels here just to
+      # get CI working. The wheel is built for Ubuntu 20.04.
+      - run: PIP_FIND_LINKS=https://yelp-travis-artifacts.s3.amazonaws.com/pgctl/index.html tox
