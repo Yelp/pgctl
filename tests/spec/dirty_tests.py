@@ -6,6 +6,7 @@ import time
 import pytest
 from testing import norm
 from testing.assertions import assert_svstat
+from testing.assertions import wait_for
 from testing.service_context import set_slow_shutdown_sleeptime
 from testing.subprocess import assert_command
 
@@ -375,6 +376,58 @@ There are two ways you can fix this:
 Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 
 [pgctl] Stopped: sweet
+''',
+            0,
+            norm=norm.pgctl,
+        )
+
+
+class DescribeSubprocessWithClosedFds(DirtyTest):
+
+    @pytest.fixture()
+    def service_name(self):
+        yield 'subprocess-with-closed-fds'
+
+    def it_starts_and_cannot_be_stopped_without_force(self):
+        # It should start up properly and write out a PID.
+        check_call(('pgctl', 'start'))
+        assert_svstat('playground/bad-subprocess', state='up')
+
+        pid_path = 'playground/bad-subprocess/child.pid'
+        wait_for(lambda: os.path.exists(pid_path))
+        with open('playground/bad-subprocess/child.pid') as f:
+            pid = f.read().strip()
+
+        # pgctl stop should fail based on environment variable tracing.
+        assert_command(
+            ('pgctl', 'stop'),
+            '',
+            '''\
+[pgctl] Stopping: bad-subprocess
+[pgctl] ERROR: service 'bad-subprocess' failed to stop after {{TIME}} seconds, proccesses still running (but not holding lock): {pid}
+==> playground/bad-subprocess/logs/current <==
+[pgctl]
+[pgctl] There might be useful information further up in the log; you can view it by running:
+[pgctl]     less +G playground/bad-subprocess/logs/current
+[pgctl] ERROR: Some services failed to stop: bad-subprocess
+'''.format(pid=pid),  # noqa: E501
+            1,
+            norm=norm.pgctl,
+        )
+
+        # pgctl stop --force should succeed.
+        assert_command(
+            ('pgctl', 'stop', '--force'),
+            '',
+            '''\
+[pgctl] Stopping: bad-subprocess
+[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+{PS-HEADER}
+{PS-STATS} sleep infinity
+
+Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+
+[pgctl] Stopped: bad-subprocess
 ''',
             0,
             norm=norm.pgctl,

@@ -104,10 +104,8 @@ There are two ways you can fix this:
         pass
 
 
-def terminate_runaway_processes(path):
-    """forcefully kill processes holding the lock to `path`"""
-    from .fuser import fuser
-    pids = list(fuser(path))
+def terminate_processes(pids):
+    """forcefully kill processes"""
     processes = ps(pids)
     if processes:
         print_stderr('''[pgctl] WARNING: Killing these runaway processes at user's request (--force):

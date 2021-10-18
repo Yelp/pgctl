@@ -61,6 +61,8 @@ PGCTL_DEFAULTS = frozendict({
     'telemetry': False,
     # path to clog config file (YAML format) for telemetry
     'telemetry_clog_config_path': None,
+    # process tracing by environment variables enabled?
+    'environment_process_tracing': True,
 })
 CHANNEL = '[pgctl]'
 
@@ -214,7 +216,7 @@ class PgctlApp:
         command = getattr(self, command)
 
         start = time.time()
-        telemetry.emit_event('command_run', {'command': self.pgconf['command']})
+        telemetry.emit_event('command_run', {'command': self.pgconf['command'], 'config': self.pgconf})
 
         try:
             result = command()
@@ -227,6 +229,7 @@ class PgctlApp:
                 'command_errored',
                 {
                     'command': self.pgconf['command'],
+                    'config': self.pgconf,
                     'result': result,
                     'elapsed_s': time.time() - start,
                 }
@@ -237,6 +240,7 @@ class PgctlApp:
                 'command_succeeded',
                 {
                     'command': self.pgconf['command'],
+                    'config': self.pgconf,
                     'result': result,
                     'elapsed_s': time.time() - start,
                 }
@@ -571,9 +575,10 @@ class PgctlApp:
         else:
             path = self.pgdir.join(service_name, abs=1)
         return Service(
-            path,
-            self.pghome.join(path.relto('/'), abs=1),
-            self.pgconf['timeout'],
+            path=path,
+            scratch_dir=self.pghome.join(path.relto('/'), abs=1),
+            default_timeout=self.pgconf['timeout'],
+            environment_tracing_enabled=self.pgconf['environment_process_tracing'],
         )
 
     @cached_property
