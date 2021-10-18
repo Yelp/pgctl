@@ -3,6 +3,7 @@ from argparse import Namespace
 from contextlib import contextmanager
 from unittest import mock
 
+import pytest
 from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
@@ -44,6 +45,11 @@ apps_list =
 
 
 class DescribeCombined:
+
+    @pytest.fixture(autouse=True)
+    def use_global_config_values(self):
+        with mock.patch.dict(os.environ, {'PGCTL_NO_GLOBAL_CONFIG': 'false'}):
+            yield
 
     def it_combines_all_the_configs(self, tmpdir):
         config = Config('my', {'default': 'default'})

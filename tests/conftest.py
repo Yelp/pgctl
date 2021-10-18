@@ -1,4 +1,5 @@
 import os
+from unittest import mock
 
 from py._path.local import LocalPath as Path
 from pytest import fixture
@@ -45,6 +46,13 @@ def homedir(tmpdir):
 def service_name():
     # this fixture will be overridden by some tests
     yield 'sleep'
+
+
+@fixture(autouse=True)
+def do_not_use_global_config_values():
+    # Prevents global or user config files from interfering with tests.
+    with mock.patch.dict(os.environ, {'PGCTL_NO_GLOBAL_CONFIG': 'true'}):
+        yield
 
 
 @fixture(autouse=True)

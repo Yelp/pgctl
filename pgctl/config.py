@@ -83,10 +83,14 @@ class Config:
         return self.from_glob(pattern)
 
     def from_system(self):
+        if environ.get('PGCTL_NO_GLOBAL_CONFIG') == 'true':
+            return {}
         etc = join(environ.get('PREFIX', '/'), 'etc', '')
         return self.from_path_prefix(etc)
 
     def from_homedir(self):
+        if environ.get('PGCTL_NO_GLOBAL_CONFIG') == 'true':
+            return {}
         home = environ.get('HOME', '$HOME')
         return self.from_path_prefix(home + '/.')
 
