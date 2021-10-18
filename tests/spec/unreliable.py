@@ -8,7 +8,7 @@ from testing.subprocess import assert_command
 pytestmark = pytest.mark.usefixtures('in_example_dir')
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def service_name():
     yield 'unreliable'
 

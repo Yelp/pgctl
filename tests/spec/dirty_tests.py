@@ -42,7 +42,7 @@ def clean_service(service_path):
 
 class DirtyTest:
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def cleanup(self, in_example_dir):
         try:
             yield in_example_dir
@@ -53,13 +53,13 @@ class DirtyTest:
 
 class DescribeOrphanSubprocess(DirtyTest):
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def environment(self):
         os.environ['PGCTL_TIMEOUT'] = '5'
         yield
         del os.environ['PGCTL_TIMEOUT']
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'orphan-subprocess'
 
@@ -224,17 +224,17 @@ There are two ways you can fix this:
 class DescribeSlowShutdownOnForeground(DirtyTest):
     """This test case takes three seconds to shut down"""
 
-    @pytest.yield_fixture()
+    @pytest.fixture()
     def service_name(self):
         yield 'slow-shutdown'
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def environment(self):
         os.environ['PGCTL_TIMEOUT'] = '1.5'
         yield
         del os.environ['PGCTL_TIMEOUT']
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def configure_sleeptime(self):
         with set_slow_shutdown_sleeptime(0.75, 2.5):
             yield
@@ -299,17 +299,17 @@ Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickst
 
 class DescribeSlowShutdownOnBackground(DirtyTest):
 
-    @pytest.yield_fixture()
+    @pytest.fixture()
     def service_name(self):
         yield 'slow-shutdown'
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def environment(self):
         os.environ['PGCTL_TIMEOUT'] = '1.5'
         yield
         del os.environ['PGCTL_TIMEOUT']
 
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def configure_sleeptime(self):
         with set_slow_shutdown_sleeptime(2.5, 0.75):
             yield

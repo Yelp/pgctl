@@ -1,7 +1,7 @@
 import os
 
 from py._path.local import LocalPath as Path
-from pytest import yield_fixture as fixture
+from pytest import fixture
 from testing import copy_example
 
 from pgctl.cli import PgctlApp

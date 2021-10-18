@@ -1,4 +1,4 @@
-from pytest import yield_fixture as fixture
+from pytest import fixture
 from testfixtures import ShouldRaise
 
 from pgctl.flock import flock
