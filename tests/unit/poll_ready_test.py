@@ -6,7 +6,7 @@ import pytest
 from pgctl import poll_ready
 
 
-@pytest.yield_fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def in_tmpdir(tmpdir):
     with tmpdir.as_cwd():
         yield

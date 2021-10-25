@@ -10,7 +10,7 @@ from pgctl.subprocess import PIPE
 from pgctl.subprocess import Popen
 
 
-@pytest.yield_fixture(autouse=True)
+@pytest.fixture(autouse=True)
 def sleep_short_background_long_foreground():
     with set_slow_shutdown_sleeptime(0.75, 2.25):
         yield

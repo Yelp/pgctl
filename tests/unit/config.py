@@ -77,6 +77,11 @@ services:
 
 class DescribeConfig:
 
+    @pytest.fixture(autouse=True)
+    def use_global_config_values(self):
+        with mock.patch.dict(os.environ, {'PGCTL_NO_GLOBAL_CONFIG': 'false'}):
+            yield
+
     @example1.parameters
     def it_can_parse_files(self, tmpdir, format, suffix):
         conffile = tmpdir.join('my.' + suffix)

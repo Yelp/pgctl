@@ -1,0 +1,5 @@
+*/playground/*/.pgctl.lock
+*/playground/*/.log
+*/playground/*/logs
+*/playground/*/nosetsid
+*/playground/*/supervise

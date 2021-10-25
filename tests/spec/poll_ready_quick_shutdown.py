@@ -8,7 +8,7 @@ pytestmark = pytest.mark.usefixtures('in_example_dir')
 SLOW_STARTUP_TIME = 6
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def service_name():
     yield 'poll-ready-quick-shutdown'
 

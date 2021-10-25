@@ -13,9 +13,8 @@ from pgctl.functions import JSONEncoder
 from pgctl.functions import logger_preexec
 from pgctl.functions import show_runaway_processes
 from pgctl.functions import supervisor_preexec
-from pgctl.functions import terminate_runaway_processes
+from pgctl.functions import terminate_processes
 from pgctl.functions import unique
-from pgctl.fuser import fuser
 from pgctl.subprocess import Popen
 
 
@@ -82,32 +81,18 @@ class DescribeShowRunawayProcesses:
         assert show_runaway_processes(tmpdir.strpath) is None
 
 
-class DescribeTerminateRunawayProcesses:
+class DescribeTerminateProcesses:
 
-    def it_kills_processes_holding_the_lock(self, tmpdir, capsys):
-        lockfile = tmpdir.ensure('lock')
-        lock = lockfile.open()
-
-        # python 3.4+ closes file descriptors made by python unless explicitly
-        # passed and pass_fds isn't a parameter to Popen in python 2
-        extra_process_kwargs = dict(pass_fds=[lock.fileno()])
-        process = Popen(('sleep', 'infinity'), **extra_process_kwargs)
-
-        lock.close()
-
-        # assert `process` has `lock`
-        assert list(fuser(lockfile.strpath)) == [process.pid]
-
-        terminate_runaway_processes(lockfile.strpath)
+    def it_kills_processes(self, capsys):
+        process = Popen(('sleep', 'infinity'))
+        terminate_processes({process.pid})
 
         _, stderr = capsys.readouterr()
         assert 'WARNING: Killing these runaway ' in stderr
         wait_for(lambda: process.poll() == -9)
 
-    def it_passes_when_there_are_no_locks(self, tmpdir, capsys):
-        lockfile = tmpdir.ensure('lock')
-
-        terminate_runaway_processes(lockfile.strpath)
+    def it_passes_when_there_are_no_pids_given(self, capsys):
+        terminate_processes(set())
         _, stderr = capsys.readouterr()
         assert stderr == ''
 

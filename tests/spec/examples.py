@@ -25,7 +25,7 @@ class ANY_INTEGER:
 
 class DescribePgctlLog:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'output'
 
@@ -176,7 +176,7 @@ class DescribePgctlLog:
 
 class DescribeDateExample:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'date'
 
@@ -203,7 +203,7 @@ class DescribeDateExample:
 
 class DescribeTailExample:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'tail'
 
@@ -319,7 +319,7 @@ class DescribeRestart:
 
 class DescribeStartMultipleServices:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'multiple'
 
@@ -355,7 +355,7 @@ class DescribeStartMultipleServices:
 
 class DescribeStatus:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'multiple'
 
@@ -523,7 +523,7 @@ class DescribeReload:
 
 class DescribeAliases:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'output'
 
@@ -585,7 +585,7 @@ class DescribeAliases:
 
 class DescribeEnvironment:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'environment'
 
@@ -643,8 +643,10 @@ class DescribePgdirMissing:
     },
     "command": "config",
     "config": null,
+    "environment_process_tracing": true,
     "force": false,
     "json": false,
+    "no_global_config": "true",
     "pgdir": "playground",
     "pghome": "~/.run/pgctl",
     "poll": ".01",
@@ -719,7 +721,7 @@ pgctl: error: {}
 
 class DescribeDependentServices:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'dependent'
 
@@ -762,7 +764,7 @@ class DescribeDependentServices:
 
 class DescribeStartMessageSuccess:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'start-message'
 
@@ -781,7 +783,7 @@ Service has started at localhost:9001
 
 class DescribePreStartHook:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'pre-start-hook'
 
@@ -825,7 +827,7 @@ hello, i am a pre-start script in stderr
 
 class DescribePostStopHook:
 
-    @pytest.yield_fixture
+    @pytest.fixture
     def service_name(self):
         yield 'post-stop-hook'
 

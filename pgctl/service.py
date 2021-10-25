@@ -2,6 +2,7 @@ import errno
 import functools
 import os
 import stat
+import typing
 from collections import namedtuple
 from contextlib import contextmanager
 
@@ -23,9 +24,11 @@ from .functions import logger_preexec
 from .functions import show_runaway_processes
 from .functions import supervisor_preexec
 from .functions import symlink_if_necessary
-from .functions import terminate_runaway_processes
+from .functions import terminate_processes
 from .subprocess import check_call
 from .subprocess import Popen
+from pgctl import environment_tracing
+from pgctl import fuser
 
 
 LOG_RUN_HEADER = \
@@ -51,7 +54,7 @@ def flock(path):
     return flock(path, on_fail=handle_race)
 
 
-class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout'])):
+class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', 'environment_tracing_enabled'])):
 
     # TODO-TEST: regression: these cached-properties are actually cached
     __exists = False
@@ -124,9 +127,26 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         self.ensure_logs()
         svc(('-kx', self.path.join('.log').strpath))
 
+    def _pids_running_from_fuser(self) -> typing.Set[int]:
+        return set(fuser.fuser(self.path)) - {os.getpid()}
+
+    def _pids_running_from_environment_tracing(self) -> typing.Set[int]:
+        if self.environment_tracing_enabled:
+            return environment_tracing.find_processes_with_environ(
+                {
+                    b'PGCTL_SERVICE': self.path.strpath.encode('utf8'),
+                    b'PGCTL_SERVICE_PROCESS': b'true',
+                },
+            ) - {os.getpid()}
+        else:
+            return set()
+
+    def processes_currently_running(self) -> typing.Set[int]:
+        return self._pids_running_from_fuser() | self._pids_running_from_environment_tracing()
+
     def force_cleanup(self):
         """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""
-        terminate_runaway_processes(self.path.strpath)
+        terminate_processes(self.processes_currently_running())
 
     def __get_timeout(self, name, default):
         timeout = self.path.join(name, abs=1)
@@ -153,8 +173,20 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
         if not with_log_running and self.is_logger_running():
             raise NotReady('its status is its s6-log is still running.')
 
+        # If we can obtain this flock at all, it means that there are no
+        # subprocesses holding it. (Normally the service and its subprocesses
+        # will hold this lock until they exit.)
         with self.flock():
-            return  # assertion success; nothing is running
+            # Sometimes a service spawns subprocesses without inheriting the flock
+            # fd; we use this special env-var-based detection to catch those.
+            escaped_running_pids = self.processes_currently_running()
+            if escaped_running_pids:
+                raise NotReady('proccesses still running (but not holding lock): {}'.format(
+                    ', '.join(sorted(str(pid) for pid in escaped_running_pids)),
+                ))
+
+        # If we got here, everything is really down.
+        return
 
     def assert_ready(self):
         status = self.svstat()
@@ -267,7 +299,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
                         's6-supervise',
                         self.path.join('.log').strpath,
                     ),
-                    env=self.supervise_env(lock, debug=False),
+                    env=self.supervise_env(lock, debug=False, logs=True),
                     preexec_fn=functools.partial(
                         logger_preexec,
                         log_fifo_path,
@@ -302,7 +334,7 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
     def name(self):
         return self.path.basename
 
-    def supervise_env(self, lock, debug):
+    def supervise_env(self, lock, debug, logs=False):
         """Returns an environment dict to use for running supervise."""
         env = dict(
             os.environ,
@@ -315,4 +347,8 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout']))
             env['PGCTL_DEBUG'] = 'true'
         else:
             env.pop('PGCTL_DEBUG', None)
+        if logs:
+            env.pop('PGCTL_SERVICE_PROCESS', None)
+        else:
+            env['PGCTL_SERVICE_PROCESS'] = 'true'
         return frozendict(env)
