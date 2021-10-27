@@ -1,7 +1,7 @@
-import os
+import json
+import subprocess
 
 import pytest
-from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 
 from pgctl import __version__
@@ -24,69 +24,18 @@ class DescribeCli:
             tmpdir,
             homedir,
     ):
-        env = dict(os.environ, XDG_RUNTIME_DIR=xdg_runtime_dir)
-        expected_output = '''\
-{{
-    "aliases": {{
-        "default": [
-            "(all services)"
-        ]
-    }},
-    "command": "config",
-    "config": null,
-    "environment_process_tracing": true,
-    "force": false,
-    "json": false,
-    "no_global_config": "true",
-    "pgdir": "playground",
-    "pghome": "{pghome}",
-    "poll": ".01",
-    "services": [
-        "default"
-    ],
-    "telemetry": false,
-    "telemetry_clog_config_path": null,
-    "timeout": "2.0",
-    "verbose": false
-}}
-'''.format(pghome=expected_pghome)
+        with tmpdir.as_cwd():
+            output = json.loads(subprocess.check_output(('pgctl', 'config')))
 
-        assert_command(
-            ('pgctl', 'config'),
-            expected_output,
-            '',
-            0,
-            norm=norm_trailing_whitespace_json,
-            cwd=tmpdir.strpath,
-            env=env,
-        )
-
-        from sys import executable
-        assert_command(
-            (executable, '-m', 'pgctl.cli', 'config'),
-            expected_output,
-            '',
-            0,
-            norm=norm_trailing_whitespace_json,
-            cwd=tmpdir.strpath,
-            env=env,
-        )
+        # Just smoke testing that a few values are present.
+        assert 'aliases' in output
+        assert 'verbose' in output
 
     def it_shows_help_with_no_arguments(self):
-        assert_command(
-            ('pgctl',),
-            '',
-            '''\
-usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
-             [--json] [--force] [--config CONFIG] [--all]
-             {{start,stop,status,restart,reload,log,debug,config}}
-             [services [services ...]]
-pgctl: error: {}
-'''.format(
-                'the following arguments are required: command'
-            ),
-            2,  # too few arguments
-        )
+        proc = subprocess.run(('pgctl',), capture_output=True)
+        assert proc.returncode == 2
+        assert b'usage: pgctl' in proc.stderr
+        assert b'pgctl: error: the following arguments are required: command' in proc.stderr
 
     def it_shows_version(self):
         version_s = __version__ + '\n'

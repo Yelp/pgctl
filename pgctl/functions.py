@@ -94,23 +94,22 @@ def show_runaway_processes(path):
         raise LockHeld(
             '''\
 these runaway processes did not stop:
-%s
-There are two ways you can fix this:
-  * temporarily: pgctl stop %s --force
-  * permanently: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-''' % (processes, os.path.basename(path))
+{}
+This usually means these processes are buggy.
+Normally pgctl would kill these automatically for you, but you specified the --no-force option.
+Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''.format(processes)
         )
-    else:
-        pass
 
 
 def terminate_processes(pids):
     """forcefully kill processes"""
     processes = ps(pids)
     if processes:
-        print_stderr('''[pgctl] WARNING: Killing these runaway processes at user's request (--force):
+        print_stderr('''[pgctl] WARNING: Killing these runaway processes which did not stop:
 {}
-Learn why they did not stop: http://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+This usually means these processes are buggy.
+Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
 '''.format(processes)
         )
 

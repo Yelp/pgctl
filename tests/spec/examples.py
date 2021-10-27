@@ -1,12 +1,12 @@
 import json
 import os
+import subprocess
 
 import pytest
 from testing import norm
 from testing import pty
 from testing.assertions import assert_svstat
 from testing.assertions import wait_for
-from testing.norm import norm_trailing_whitespace_json
 from testing.subprocess import assert_command
 from testing.subprocess import ctrl_c
 from testing.subprocess import run
@@ -634,89 +634,24 @@ class DescribePgdirMissing:
             )
 
     def it_can_still_show_config(self, tmpdir):
-        expected_output = '''\
-{
-    "aliases": {
-        "default": [
-            "(all services)"
-        ]
-    },
-    "command": "config",
-    "config": null,
-    "environment_process_tracing": true,
-    "force": false,
-    "json": false,
-    "no_global_config": "true",
-    "pgdir": "playground",
-    "pghome": "~/.run/pgctl",
-    "poll": ".01",
-    "services": [
-        "default"
-    ],
-    "telemetry": false,
-    "telemetry_clog_config_path": null,
-    "timeout": "2.0",
-    "verbose": false
-}
-'''
-
         with tmpdir.as_cwd():
-            assert_command(
-                ('pgctl', 'config'),
-                expected_output,
-                '',
-                0,
-                norm=norm_trailing_whitespace_json,
-            )
+            output = json.loads(subprocess.check_output(('pgctl', 'config')))
+
+        # Just smoke testing that a few values are present.
+        assert 'aliases' in output
+        assert 'verbose' in output
 
     def it_can_still_show_help(self, tmpdir):
         with tmpdir.as_cwd():
-            assert_command(
-                ('pgctl', '--help'),
-                '''\
-usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
-             [--json] [--force] [--config CONFIG] [--all]
-             {start,stop,status,restart,reload,log,debug,config}
-             [services [services ...]]
-
-positional arguments:
-  {start,stop,status,restart,reload,log,debug,config}
-                        specify what action to take
-  services              specify which services to act upon
-
-optional arguments:
-  -h, --help            show this help message and exit
-  --version             show program's version number and exit
-  --verbose             show additional service action information
-  --pgdir PGDIR         name the playground directory
-  --pghome PGHOME       directory to keep user-level playground state
-  --json                output in JSON (only supported by some commands)
-  --force               forcefully terminate runaway processes that prevent
-                        services from starting/stopping
-  --config CONFIG       specify a config file path to load
-  --all, -a             act upon all services
-''',
-                '',
-                0,
-            )
+            output = subprocess.check_output(('pgctl', '--help'), stderr=subprocess.PIPE)
+        assert b'usage: pgctl' in output
 
     def it_still_shows_help_without_args(self, tmpdir):
-        expected = '''\
-usage: pgctl [-h] [--version] [--verbose] [--pgdir PGDIR] [--pghome PGHOME]
-             [--json] [--force] [--config CONFIG] [--all]
-             {{start,stop,status,restart,reload,log,debug,config}}
-             [services [services ...]]
-pgctl: error: {}
-'''.format(
-            'the following arguments are required: command'
-        )
         with tmpdir.as_cwd():
-            assert_command(
-                ('pgctl'),
-                '',
-                expected,
-                2,
-            )
+            proc = subprocess.run(('pgctl',), capture_output=True)
+        assert proc.returncode == 2
+        assert b'usage: pgctl' in proc.stderr
+        assert b'pgctl: error: the following arguments are required: command' in proc.stderr
 
 
 class DescribeDependentServices:
