@@ -216,7 +216,7 @@ class PgctlApp:
         command = getattr(self, command)
 
         start = time.time()
-        telemetry.emit_event('command_run', {'command': self.pgconf['command'], 'config': self.pgconf})
+        telemetry.emit_event('command_run', {'command': self.pgconf['command'], 'config': dict(self.pgconf)})
 
         try:
             result = command()
@@ -229,7 +229,7 @@ class PgctlApp:
                 'command_errored',
                 {
                     'command': self.pgconf['command'],
-                    'config': self.pgconf,
+                    'config': dict(self.pgconf),
                     'result': result,
                     'elapsed_s': time.time() - start,
                 }
@@ -240,7 +240,7 @@ class PgctlApp:
                 'command_succeeded',
                 {
                     'command': self.pgconf['command'],
-                    'config': self.pgconf,
+                    'config': dict(self.pgconf),
                     'result': result,
                     'elapsed_s': time.time() - start,
                 }
