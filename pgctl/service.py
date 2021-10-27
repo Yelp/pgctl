@@ -21,6 +21,7 @@ from .errors import reraise
 from .functions import bestrelpath
 from .functions import exec_
 from .functions import logger_preexec
+from .functions import ps
 from .functions import show_runaway_processes
 from .functions import supervisor_preexec
 from .functions import symlink_if_necessary
@@ -181,9 +182,12 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', '
             # fd; we use this special env-var-based detection to catch those.
             escaped_running_pids = self.processes_currently_running()
             if escaped_running_pids:
-                raise NotReady('proccesses still running (but not holding lock): {}'.format(
-                    ', '.join(sorted(str(pid) for pid in escaped_running_pids)),
-                ))
+                raise NotReady('''\
+these runaway processes did not stop:
+{}
+This usually means these processes are buggy.
+Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''.format(ps(escaped_running_pids)))
 
         # If we got here, everything is really down.
         return

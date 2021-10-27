@@ -53,8 +53,8 @@ PGCTL_DEFAULTS = frozendict({
     }),
     # output as json?
     'json': False,
-    # kill bad service processes?
-    'force': False,
+    # do not kill bad service processes?
+    'no_force': False,
     # extra state change output?
     'verbose': False,
     # telemetry enabled?
@@ -390,17 +390,22 @@ class PgctlApp:
         """
         curr_time = now()
         if timeout(service, start_time, check_time, curr_time):
-            if state is Stop and self.pgconf['force']:
-                service.fail()
-            else:
-                error_message_on_timeout(
-                    service,
-                    error,
-                    state.strings.change,
-                    actual_timeout_length=curr_time - start_time,
-                    check_length=curr_time - check_time,
-                )
-                return StateChangeResult.FAILURE
+            if not self.pgconf['no_force']:
+                try:
+                    service.fail()
+                except NotImplementedError:
+                    pass
+                else:
+                    return StateChangeResult.RECHECK_NEEDED
+
+            error_message_on_timeout(
+                service,
+                error,
+                state.strings.change,
+                actual_timeout_length=curr_time - start_time,
+                check_length=curr_time - check_time,
+            )
+            return StateChangeResult.FAILURE
 
         return StateChangeResult.RECHECK_NEEDED
 
@@ -672,9 +677,14 @@ def parser():
         '--json', action='store_true', default=False,
         help='output in JSON (only supported by some commands)',
     )
+    # This argument is no longer used but is kept as a hidden argument to avoid
+    # breaking consumers which call pgctl with it.
     parser.add_argument(
-        '--force', action='store_true', default=False,
-        help='forcefully terminate runaway processes that prevent services from starting/stopping',
+        '--force', action='store_true', dest='_unused_force', help=argparse.SUPPRESS,
+    )
+    parser.add_argument(
+        '--no-force', action='store_true', default=False,
+        help='do not force bad services to stop',
     )
     parser.add_argument(
         '--config',

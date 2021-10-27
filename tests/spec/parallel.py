@@ -29,12 +29,12 @@ def it_is_disallowed():
         0,
     )
 
-    first = Popen(('pgctl', 'restart'), stdout=PIPE, stderr=PIPE)
+    first = Popen(('pgctl', 'restart', '--no-force'), stdout=PIPE, stderr=PIPE)
 
     # slow-shutdown takes two seconds to shut down; aim for the middle:
     sleep(1)
 
-    second = Popen(('pgctl', 'restart'), stdout=PIPE, stderr=PIPE)
+    second = Popen(('pgctl', 'restart', '--no-force'), stdout=PIPE, stderr=PIPE)
 
     first_stdout, first_stderr = first.communicate()
     first_stdout, first_stderr = first_stdout.decode('UTF-8'), first_stderr.decode('UTF-8')
@@ -59,7 +59,7 @@ def it_is_disallowed():
     assert norm.pgctl(second_stderr) == '''\
 [pgctl] ERROR: another pgctl command is currently managing this service: (playground/sweet/.pgctl.lock)
 {PS-HEADER}
-{PS-STATS} ${PREFIX}/bin/python ${PREFIX}/bin/pgctl restart
+{PS-STATS} ${PREFIX}/bin/python ${PREFIX}/bin/pgctl restart --no-force
 
 '''
     assert second_stdout == ''
