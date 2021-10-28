@@ -1,10 +1,13 @@
 import argparse
 import contextlib
+import enum
+import functools
 import json
 import os
 import subprocess
 import sys
 import time
+import typing
 from time import time as now
 
 import contextlib2
@@ -32,6 +35,7 @@ from .fuser import fuser
 from .service import Service
 from pgctl import __version__
 from pgctl import telemetry
+from pgctl.log_viewer import LogViewer
 
 
 XDG_RUNTIME_DIR = os.environ.get('XDG_RUNTIME_DIR') or '~/.run'
@@ -67,10 +71,15 @@ PGCTL_DEFAULTS = frozendict({
 CHANNEL = '[pgctl]'
 
 
-class StateChangeResult:
-    SUCCESS = 0
-    FAILURE = 1
-    RECHECK_NEEDED = 2
+class StateChangeOutcome(enum.Enum):
+    SUCCESS = enum.auto()
+    FAILURE = enum.auto()
+    RECHECK_NEEDED = enum.auto()
+
+
+class StateChangeResult(typing.NamedTuple):
+    outcome: StateChangeOutcome
+    output_message: typing.Optional[str]
 
 
 class TermStyle:
@@ -116,7 +125,7 @@ class Start(StateChange):
     class strings:
         change = 'start'
         changing = 'Starting:'
-        changed = 'Started:'
+        changed = 'started'
 
 
 class Stop(StateChange):
@@ -138,7 +147,7 @@ class Stop(StateChange):
     class strings:
         change = 'stop'
         changing = 'Stopping:'
-        changed = 'Stopped:'
+        changed = 'stopped'
 
 
 class StopLogs(StateChange):
@@ -159,7 +168,7 @@ class StopLogs(StateChange):
     class strings:
         change = 'stop'
         changing = 'Stopping logger for:'
-        changed = 'Stopped logger for:'
+        changed = 'stopped logger for'
 
 
 def unbuf_print(*args, **kwargs):
@@ -200,7 +209,7 @@ def error_message_on_timeout(service, error, action_name, actual_timeout_length,
             check_length,
         )  # TODO-TEST: pragma: no cover: we only hit this when lsof is being slow; add a unit test
     error_message += ', ' + str(error)
-    pgctl_print(error_message)
+    return '[pgctl] ' + error_message
 
 
 class PgctlApp:
@@ -282,8 +291,8 @@ class PgctlApp:
             else:
                 # Short-circuit, everything is in the correct state.
                 if self._should_display_state(state):
-                    pgctl_print('Already {} {}'.format(
-                        state.strings.changed.lower(),
+                    pgctl_print('Already {}: {}'.format(
+                        state.strings.changed,
                         commafy(_services_to_names(services))),
                     )
                 return []
@@ -311,40 +320,85 @@ class PgctlApp:
 
     def __locked_change_state(self, state, services):
         """the critical section of __change_state"""
+        log_viewer = None
         if self._should_display_state(state):
             pgctl_print(
                 state.strings.changing,
                 commafy(_services_to_names(services)),
             )
+            if sys.stdin.isatty():
+                log_viewer = LogViewer(20, {service.name: service.logfile_path for service in services})
 
-        services = [state(service) for service in services]
-        failed = []
-        start_time = now()
-        while services:
-            for service in services:
-                try:
-                    service.change()
-                except Unsupervised:
-                    pass  # handled in state assertion, below
-            for service in tuple(services):
-                state_change_result = self.__locked_handle_service_change_state(
-                    state,
-                    service,
-                    start_time,
-                )
+        try:
+            services = [state(service) for service in services]
+            failed = []
+            start_time = now()
+            while services:
+                for service in services:
+                    try:
+                        service.change()
+                    except Unsupervised:
+                        pass  # handled in state assertion, below
 
-                if state_change_result == StateChangeResult.RECHECK_NEEDED:
-                    # This service should be rechecked by the next iteration
-                    # of the outer loop
-                    continue
-                elif state_change_result == StateChangeResult.SUCCESS:
-                    services.remove(service)
+                changes_to_print = []
+
+                def print_service_change(service, state):
+                    pgctl_print(f'{state.strings.changed.title()}: {service.name}')
+
+                services_to_change = tuple(services)
+                for service in services_to_change:
+                    state_change_result = self.__locked_handle_service_change_state(
+                        state,
+                        service,
+                        start_time,
+                    )
+
+                    if state_change_result.outcome is StateChangeOutcome.RECHECK_NEEDED:
+                        # This service should be rechecked by the next iteration
+                        # of the outer loop
+                        pass
+                    elif state_change_result.outcome is StateChangeOutcome.SUCCESS:
+                        services.remove(service)
+                        if log_viewer is not None:
+                            log_viewer.stop_tailing(service.name)
+                        if self._should_display_state(state):
+                            changes_to_print.append(functools.partial(print_service_change, service, state))
+                            changes_to_print.append(functools.partial(service.service.message, state))
+                    else:
+                        # StateChangeOutcome.FAILURE
+                        failed.append(service.name)
+                        services.remove(service)
+                        if log_viewer is not None:
+                            log_viewer.stop_tailing(service.name)
+
+                    if state_change_result.output_message:
+                        changes_to_print.append(functools.partial(print, state_change_result.output_message, file=sys.stderr))
+
+                if log_viewer is not None:
+                    if len(changes_to_print) > 0 or log_viewer.redraw_needed():
+                        log_viewer.move_cursor_to_top()
+                        log_viewer.clear_below()
+
+                        for print_fn in changes_to_print:
+                            print_fn()
+
+                        log_viewer.draw_logs(
+                            'Still {} {}'.format(
+                                state.strings.changing.lower(),
+                                ', '.join(sorted(service.name for service in services)) or '<none>',
+                            ),
+                        )
+
+                    if not services:
+                        pgctl_print(f'All services have {state.strings.changed}')
                 else:
-                    # StateChangeResult.FAILURE
-                    failed.append(service.name)
-                    services.remove(service)
+                    for print_fn in changes_to_print:
+                        print_fn()
 
-            time.sleep(float(self.pgconf['poll']))
+                time.sleep(float(self.pgconf['poll']))
+        finally:
+            if log_viewer is not None:
+                log_viewer.cleanup()
 
         return failed
 
@@ -372,10 +426,7 @@ class PgctlApp:
         else:
             # TODO: debug() takes a lambda
             debug('loop: check_time %.3f', now() - check_time)
-            if self._should_display_state(state):
-                pgctl_print(state.strings.changed, service.name)
-            service.service.message(state)
-            return StateChangeResult.SUCCESS
+            return StateChangeResult(StateChangeOutcome.SUCCESS, None)
 
     def __locked_handle_state_change_exception(
         self,
@@ -384,7 +435,7 @@ class PgctlApp:
         error,
         start_time,
         check_time,
-    ):
+    ) -> StateChangeResult:
         """Handles a state change timeout for a service and returns whether
         the service unrecoverably failed its state change.
         """
@@ -392,22 +443,22 @@ class PgctlApp:
         if timeout(service, start_time, check_time, curr_time):
             if not self.pgconf['no_force']:
                 try:
-                    service.fail()
+                    return StateChangeResult(StateChangeOutcome.RECHECK_NEEDED, service.fail())
                 except NotImplementedError:
                     pass
-                else:
-                    return StateChangeResult.RECHECK_NEEDED
 
-            error_message_on_timeout(
-                service,
-                error,
-                state.strings.change,
-                actual_timeout_length=curr_time - start_time,
-                check_length=curr_time - check_time,
+            return StateChangeResult(
+                StateChangeOutcome.FAILURE,
+                error_message_on_timeout(
+                    service,
+                    error,
+                    state.strings.change,
+                    actual_timeout_length=curr_time - start_time,
+                    check_length=curr_time - check_time,
+                ),
             )
-            return StateChangeResult.FAILURE
 
-        return StateChangeResult.RECHECK_NEEDED
+        return StateChangeResult(StateChangeOutcome.RECHECK_NEEDED, None)
 
     def _should_display_state(self, state):
         return state.is_user_facing or self.pgconf['verbose']

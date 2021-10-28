@@ -145,9 +145,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', '
     def processes_currently_running(self) -> typing.Set[int]:
         return self._pids_running_from_fuser() | self._pids_running_from_environment_tracing()
 
-    def force_cleanup(self):
-        """Forcefully stop a service (i.e., `kill -9` all processes locking on `self.path.strpath`)"""
-        terminate_processes(self.processes_currently_running())
+    def force_cleanup(self) -> typing.Optional[str]:
+        """Forcefully stop a service (i.e., `kill -9` all processes still running."""
+        return terminate_processes(self.processes_currently_running())
 
     def __get_timeout(self, name, default):
         timeout = self.path.join(name, abs=1)
@@ -224,6 +224,10 @@ Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing
             os.fchmod(log_run.fileno(), log_run_stat.st_mode | stat.S_IXUSR)
 
         self._ensure_supervise_is_scratch('.log/supervise')
+
+    @property
+    def logfile_path(self):
+        return self.path.join('logs').join('current')
 
     def _ensure_supervise_is_scratch(self, supervise_rel_path):
         # ensure symlink {service_dir}/supervise_rel_path -> {scratch_dir}/supervise_rel_path

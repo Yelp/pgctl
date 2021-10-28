@@ -3,6 +3,7 @@ import json
 import os
 import signal
 import sys
+import typing
 
 from frozendict import frozendict
 
@@ -102,23 +103,22 @@ Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing
         )
 
 
-def terminate_processes(pids):
+def terminate_processes(pids) -> typing.Optional[str]:
     """forcefully kill processes"""
     processes = ps(pids)
     if processes:
-        print_stderr('''[pgctl] WARNING: Killing these runaway processes which did not stop:
-{}
-This usually means these processes are buggy.
-Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
-'''.format(processes)
-        )
-
         for pid in pids:
             try:
                 os.kill(pid, signal.SIGKILL)
             except OSError:  # pragma: no cover
                 # race condition: processes stopped slightly after timeout, before we kill it
                 pass
+
+        return '''[pgctl] WARNING: Killing these runaway processes which did not stop:
+{}
+This usually means these processes are buggy.
+Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''.format(processes)
 
 
 def commafy(items):
