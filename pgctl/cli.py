@@ -364,7 +364,7 @@ class PgctlApp:
                         if log_viewer is not None:
                             log_viewer.stop_tailing(service.name)
                         if self._should_display_state(state):
-                            changes_to_print.append(f'[pgctl] {state.strings.changed.title()}: {service.name}')
+                            changes_to_print.append(f'[pgctl] {state.strings.changed.capitalize()}: {service.name}')
                             state_change_message = (service.service.message(state) or '').strip()
                             if state_change_message:
                                 changes_to_print.append(state_change_message)
@@ -395,13 +395,16 @@ class PgctlApp:
                                 ', '.join(sorted(service.name for service in services)) or '<none>',
                             ),
                         )
-                        print(to_print, flush=True, end='')
+                        print(to_print, flush=True, end='', file=sys.stderr)
 
                     if not services:
                         pgctl_print(f'All services have {state.strings.changed}')
                 else:
                     for change in changes_to_print:
-                        print(change)
+                        # Need to flush here because otherwise the error
+                        # messages can get duplicated when __show_failure calls
+                        # fork().
+                        unbuf_print(change, file=sys.stderr)
 
                 time.sleep(float(self.pgconf['poll']))
         finally:
