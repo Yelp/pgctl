@@ -1,7 +1,6 @@
 import argparse
 import contextlib
 import enum
-import functools
 import json
 import os
 import subprocess
@@ -67,6 +66,8 @@ PGCTL_DEFAULTS = frozendict({
     'telemetry_clog_config_path': None,
     # process tracing by environment variables enabled?
     'environment_process_tracing': True,
+    # enable embedded log viewer during start/stop?
+    'embedded_log_viewer': True,
 })
 CHANNEL = '[pgctl]'
 
@@ -280,6 +281,10 @@ class PgctlApp:
 
             yield
 
+    @property
+    def log_viewer_enabled(self):
+        return self.pgconf['embedded_log_viewer'] and sys.stdin.isatty() and not os.environ.get('CI')
+
     def __change_state(self, state, services):
         """Changes the state of a supervised service using the svc command"""
         with self.playground_locked():
@@ -326,7 +331,7 @@ class PgctlApp:
                 state.strings.changing,
                 commafy(_services_to_names(services)),
             )
-            if sys.stdin.isatty():
+            if self.log_viewer_enabled:
                 log_viewer = LogViewer(20, {service.name: service.logfile_path for service in services})
 
         try:
@@ -341,9 +346,6 @@ class PgctlApp:
                         pass  # handled in state assertion, below
 
                 changes_to_print = []
-
-                def print_service_change(service, state):
-                    pgctl_print(f'{state.strings.changed.title()}: {service.name}')
 
                 services_to_change = tuple(services)
                 for service in services_to_change:
@@ -362,8 +364,10 @@ class PgctlApp:
                         if log_viewer is not None:
                             log_viewer.stop_tailing(service.name)
                         if self._should_display_state(state):
-                            changes_to_print.append(functools.partial(print_service_change, service, state))
-                            changes_to_print.append(functools.partial(service.service.message, state))
+                            changes_to_print.append(f'[pgctl] {state.strings.changed.title()}: {service.name}')
+                            state_change_message = (service.service.message(state) or '').strip()
+                            if state_change_message:
+                                changes_to_print.append(state_change_message)
                     else:
                         # StateChangeOutcome.FAILURE
                         failed.append(service.name)
@@ -372,28 +376,32 @@ class PgctlApp:
                             log_viewer.stop_tailing(service.name)
 
                     if state_change_result.output_message:
-                        changes_to_print.append(functools.partial(print, state_change_result.output_message, file=sys.stderr))
+                        changes_to_print.append(state_change_result.output_message)
 
                 if log_viewer is not None:
                     if len(changes_to_print) > 0 or log_viewer.redraw_needed():
-                        log_viewer.move_cursor_to_top()
-                        log_viewer.clear_below()
+                        # It's a bit awkward to build up strings like this but printing just a single
+                        # time greatly improves the user experience by reducing flashing when the
+                        # screen is cleared.
+                        to_print = log_viewer.move_cursor_to_top()
+                        to_print += log_viewer.clear_below()
 
-                        for print_fn in changes_to_print:
-                            print_fn()
+                        for change in changes_to_print:
+                            to_print += change + '\n'
 
-                        log_viewer.draw_logs(
+                        to_print += log_viewer.draw_logs(
                             'Still {} {}'.format(
                                 state.strings.changing.lower(),
                                 ', '.join(sorted(service.name for service in services)) or '<none>',
                             ),
                         )
+                        print(to_print, flush=True, end='')
 
                     if not services:
                         pgctl_print(f'All services have {state.strings.changed}')
                 else:
-                    for print_fn in changes_to_print:
-                        print_fn()
+                    for change in changes_to_print:
+                        print(change)
 
                 time.sleep(float(self.pgconf['poll']))
         finally:

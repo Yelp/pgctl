@@ -2,6 +2,7 @@ import errno
 import functools
 import os
 import stat
+import subprocess
 import typing
 from collections import namedtuple
 from contextlib import contextmanager
@@ -26,7 +27,6 @@ from .functions import show_runaway_processes
 from .functions import supervisor_preexec
 from .functions import symlink_if_necessary
 from .functions import terminate_processes
-from .subprocess import check_call
 from .subprocess import Popen
 from pgctl import environment_tracing
 from pgctl import fuser
@@ -100,10 +100,14 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', '
             state['state'] = 'down'
         return state
 
-    def message(self, state):
+    def message(self, state) -> typing.Optional[str]:
         script = self.path.join(state.strings.change + '-msg')
         if script.exists():
-            check_call((script.strpath,))
+            proc = subprocess.run((script.strpath,), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            output = proc.stdout.decode('utf8', errors='replace')
+            if proc.returncode != 0:
+                raise AssertionError(f'"{script}" exited with error code {proc.returncode} and output:\n{output}')
+            return output
 
     @cached_property
     def ready_script(self):
