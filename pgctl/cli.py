@@ -283,7 +283,10 @@ class PgctlApp:
 
     @property
     def log_viewer_enabled(self):
-        return self.pgconf['embedded_log_viewer'] and sys.stdin.isatty() and not os.environ.get('CI')
+        return (
+            self.pgconf.get('force_enable_log_viewer') == '1' or
+            (self.pgconf['embedded_log_viewer'] and sys.stdin.isatty() and not os.environ.get('CI'))
+        )
 
     def __change_state(self, state, services):
         """Changes the state of a supervised service using the svc command"""
