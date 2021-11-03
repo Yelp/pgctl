@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+from unittest import mock
 
 import pytest
 from testing import norm
@@ -244,6 +245,38 @@ class DescribeStart:
 [pgctl] Started: sleep
 ''',
             0,
+        )
+
+
+class DescribeStartWithLogViewer:
+
+    @pytest.fixture
+    def service_name(self):
+        yield 'slow-startup'
+
+    def it_should_work_in_a_subdirectory(self, in_example_dir, capfd):
+        os.chdir(in_example_dir.join('playground').strpath)
+        with open(os.path.join('slow-startup', 'timeout-ready'), 'w') as f:
+            f.write('10\n')
+        with mock.patch.dict(
+            os.environ,
+            {'PGCTL_FORCE_ENABLE_LOG_VIEWER': '1'},
+        ):
+            subprocess.check_call(('pgctl', 'start', 'slow-startup'))
+
+        output = capfd.readouterr()
+
+        # Don't want to assert the entire embedded log viewer output, just
+        # testing for a few strings that should be present.
+        assert '[pgctl] Starting: slow-startup\n' in output.err
+        assert 'Still starting: slow-startup\n' in output.err
+        assert '[pgctl] All services have started\n' in output.err
+
+        # Make sure there's a log line that looks like:
+        # ║[slow-startup] 2021-11-02 10:39:51.406518500  waiting 2 seconds to become rea║
+        assert any(
+            '[slow-startup]' in line and 'waiting 2 seconds to become re' in line
+            for line in output.err.splitlines()
         )
 
 

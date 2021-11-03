@@ -28,6 +28,7 @@ def assert_it_times_out_regardless_force(is_force):
 [pgctl] Starting: slow-startup
 [pgctl] ERROR: service 'slow-startup' failed to start after {TIME} seconds, its status is up (pid {PID}) {TIME} seconds
 ==> playground/slow-startup/logs/current <==
+{TIMESTAMP} waiting {TIME} seconds to become ready
 [pgctl] Stopping: slow-startup
 [pgctl] Stopped: slow-startup
 [pgctl]
@@ -44,6 +45,7 @@ def assert_it_times_out_regardless_force(is_force):
         ('pgctl', 'log'),
         '''\
 ==> playground/slow-startup/logs/current <==
+{TIMESTAMP} waiting {TIME} seconds to become ready
 {TIMESTAMP} pgctl-poll-ready: service is stopping -- quitting the poll
 ''',
         '',
@@ -114,12 +116,12 @@ def it_restarts_on_unready():
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
-{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
-{TIMESTAMP} pgctl-poll-ready: failed (restarting in {TIME} seconds)
 {TIMESTAMP} pgctl-poll-ready: failed for more than {TIME} seconds -- we are restarting this service for you
 {TIMESTAMP} [pgctl] Stopping: slow-startup
 {TIMESTAMP} [pgctl] Stopped: slow-startup
 {TIMESTAMP} [pgctl] Starting: slow-startup
+{TIMESTAMP} waiting {TIME} seconds to become ready
+{TIMESTAMP} becoming ready now
 {TIMESTAMP} pgctl-poll-ready: service's ready check succeeded
 {TIMESTAMP} [pgctl] Started: slow-startup
 ''',

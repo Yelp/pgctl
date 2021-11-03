@@ -1,4 +1,6 @@
 #!/bin/bash
+echo 'waiting 2 seconds to become ready'
 sleep 2
+echo 'becoming ready now'
 touch readyfile
 exec sleep infinity

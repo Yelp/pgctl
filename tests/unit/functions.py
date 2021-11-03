@@ -83,18 +83,15 @@ class DescribeShowRunawayProcesses:
 
 class DescribeTerminateProcesses:
 
-    def it_kills_processes(self, capsys):
+    def it_kills_processes(self):
         process = Popen(('sleep', 'infinity'))
-        terminate_processes({process.pid})
+        output = terminate_processes({process.pid})
 
-        _, stderr = capsys.readouterr()
-        assert 'WARNING: Killing these runaway ' in stderr
+        assert 'WARNING: Killing these runaway ' in output
         wait_for(lambda: process.poll() == -9)
 
-    def it_passes_when_there_are_no_pids_given(self, capsys):
-        terminate_processes(set())
-        _, stderr = capsys.readouterr()
-        assert stderr == ''
+    def it_passes_when_there_are_no_pids_given(self):
+        assert terminate_processes(set()) is None
 
 
 class DescribePreexecFuncs:
