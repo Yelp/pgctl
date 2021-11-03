@@ -24,7 +24,8 @@ def main():
             'frozendict',
             'cached-property',
             'contextlib2',
-            'py',
+            # 1.4.32 adds PathLike compatibility to py.path
+            'py>=1.4.32',
             'pyyaml',
             's6',
         ],
