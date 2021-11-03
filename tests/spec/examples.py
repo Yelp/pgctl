@@ -270,7 +270,6 @@ class DescribeStartWithLogViewer:
         # testing for a few strings that should be present.
         assert '[pgctl] Starting: slow-startup\n' in output.err
         assert 'Still starting: slow-startup\n' in output.err
-        assert 'Still starting: <none>\n' in output.err
         assert '[pgctl] All services have started\n' in output.err
 
         # Make sure there's a log line that looks like:

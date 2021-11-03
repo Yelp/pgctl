@@ -392,12 +392,14 @@ class PgctlApp:
                         for change in changes_to_print:
                             to_print += change + '\n'
 
-                        to_print += log_viewer.draw_logs(
-                            'Still {} {}'.format(
-                                state.strings.changing.lower(),
-                                ', '.join(sorted(service.name for service in services)) or '<none>',
-                            ),
-                        )
+                        if services:
+                            to_print += log_viewer.draw_logs(
+                                'Still {} {}'.format(
+                                    state.strings.changing.lower(),
+                                    ', '.join(sorted(service.name for service in services)),
+                                ),
+                            )
+
                         print(to_print, flush=True, end='', file=sys.stderr)
 
                     if not services:
