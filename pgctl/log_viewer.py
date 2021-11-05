@@ -130,7 +130,13 @@ class LogViewer:
             return ''
 
     def _terminal_width(self) -> int:
-        return shutil.get_terminal_size((80, 20)).columns
+        columns = shutil.get_terminal_size((80, 20)).columns
+        if columns <= 5:
+            # This happens a lot with pty spawning (usually with 0x0 size).
+            # Just default to something reasonable.
+            return 80
+        else:
+            return columns
 
     def redraw_needed(self) -> bool:
         return self._tailer.new_lines_available() or self._prev_width != self._terminal_width()
