@@ -55,8 +55,22 @@ def test_tailer(tmp_path):
 @pytest.fixture
 def mock_terminal_width():
     fake_size = os.terminal_size((40, 40))
-    with mock.patch.object(shutil, 'get_terminal_size', autospec=True, return_value=fake_size):
-        yield
+    with mock.patch.object(shutil, 'get_terminal_size', autospec=True, return_value=fake_size) as m:
+        yield m
+
+
+@pytest.mark.parametrize(
+    ('size', 'expected_width'),
+    (
+        (os.terminal_size((40, 20)), 40),
+        (os.terminal_size((0, 0)), 80),
+        (os.terminal_size((-1, -1)), 80),
+    ),
+)
+def test_log_viewer_terminal_width(size, expected_width, mock_terminal_width):
+    mock_terminal_width.return_value = size
+    log_viewer = LogViewer(10, {})
+    assert log_viewer._terminal_width() == expected_width
 
 
 @pytest.mark.usefixtures('mock_terminal_width')
