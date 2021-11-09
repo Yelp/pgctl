@@ -11,6 +11,7 @@ from testing.service_context import set_slow_shutdown_sleeptime
 from testing.subprocess import assert_command
 
 from pgctl.daemontools import SvStat
+from pgctl.daemontools import svstat
 from pgctl.errors import LockHeld
 from pgctl.functions import show_runaway_processes
 from pgctl.fuser import fuser
@@ -351,3 +352,47 @@ Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing
             0,
             norm=norm.pgctl,
         )
+
+
+class DescribeStartKillsLeakedProcesses(DirtyTest):
+
+    @pytest.fixture()
+    def service_name(self):
+        yield 'sleep'
+
+    def test_pgctl_start_kills_leaked_processes(self):
+        """pgctl start should kill any leaked processes."""
+        check_call(('pgctl', 'start'))
+        assert_svstat('playground/sleep', state='up')
+
+        # Get the PID of s6-supervise.
+        stat = svstat('playground/sleep')
+        with open(os.path.join('/proc', str(stat.pid), 'stat')) as f:
+            parent_pid = int(f.read().split()[3])
+        parent_exe = os.path.realpath(os.path.join('/proc', str(parent_pid), 'exe'))
+        assert parent_exe.split('/')[-1] == 's6-supervise'
+
+        # Force kill the s6-supervise and make sure that s6 thinks the service
+        # is down even though the child is still running.
+        os.kill(parent_pid, signal.SIGKILL)
+        wait_for(lambda: assert_svstat('playground/sleep', state=SvStat.UNSUPERVISED))
+
+        # pgctl start should kill the orphaned process before starting it again.
+        assert_command(
+            ('pgctl', 'start'),
+            '',
+            '''\
+[pgctl] Starting: sleep
+[pgctl] WARNING: Killing these processes which were still running but escaped supervision:
+{PS-HEADER}
+{PS-STATS} sleep infinity
+
+This usually means that {S6-PROCESS}
+Learn more: https://pgctl.readthedocs.io/en/latest/user/usage.html#stop
+
+[pgctl] Started: sleep
+''',  # noqa: E501
+            0,
+            norm=norm.pgctl,
+        )
+        check_call(('pgctl', 'stop'))
