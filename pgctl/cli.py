@@ -109,8 +109,21 @@ class StateChange:
 
 class Start(StateChange):
 
-    def change(self):
-        return self.service.start()
+    has_cleaned_up_processes: bool = False
+
+    def change(self) -> typing.Optional[str]:
+        # On the first change() call, clean up any lingering processes.
+        # This is usually a no-op because we already verified that the service
+        # is down according to s6, but this can catch processes which are still
+        # running even though s6-supervise was killed.
+        if not self.has_cleaned_up_processes:
+            status_change_message = self.service.force_cleanup(is_stop=False)
+            self.has_cleaned_up_processes = True
+        else:
+            status_change_message = None
+
+        self.service.start()
+        return status_change_message
 
     def assert_(self):
         return self.service.assert_ready()
@@ -131,7 +144,7 @@ class Start(StateChange):
 
 class Stop(StateChange):
 
-    def change(self):
+    def change(self) -> typing.Optional[str]:
         return self.service.stop()
 
     def assert_(self):
@@ -152,7 +165,7 @@ class Stop(StateChange):
 
 
 class StopLogs(StateChange):
-    def change(self):
+    def change(self) -> typing.Optional[str]:
         return self.service.stop_logs()
 
     def assert_(self):
@@ -344,9 +357,12 @@ class PgctlApp:
             while services:
                 for service in services:
                     try:
-                        service.change()
+                        message = service.change()
                     except Unsupervised:
                         pass  # handled in state assertion, below
+                    else:
+                        if message:
+                            pgctl_print(message)
 
                 changes_to_print = []
 
@@ -459,7 +475,10 @@ class PgctlApp:
         if timeout(service, start_time, check_time, curr_time):
             if not self.pgconf['no_force']:
                 try:
-                    return StateChangeResult(StateChangeOutcome.RECHECK_NEEDED, service.fail())
+                    message = service.fail()
+                    if message:
+                        message = f'[pgctl] {message}'
+                    return StateChangeResult(StateChangeOutcome.RECHECK_NEEDED, message)
                 except NotImplementedError:
                     pass
 

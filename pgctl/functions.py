@@ -103,7 +103,7 @@ Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing
         )
 
 
-def terminate_processes(pids) -> typing.Optional[str]:
+def terminate_processes(pids: typing.Iterable[int], is_stop: bool = True) -> typing.Optional[str]:
     """forcefully kill processes"""
     processes = ps(pids)
     if processes:
@@ -114,10 +114,17 @@ def terminate_processes(pids) -> typing.Optional[str]:
                 # race condition: processes stopped slightly after timeout, before we kill it
                 pass
 
-        return '''[pgctl] WARNING: Killing these runaway processes which did not stop:
+        if is_stop:
+            return '''WARNING: Killing these runaway processes which did not stop:
 {}
 This usually means these processes are buggy.
 Learn more: https://pgctl.readthedocs.org/en/latest/user/quickstart.html#writing-playground-services
+'''.format(processes)
+        else:
+            return '''WARNING: Killing these processes which were still running but escaped supervision:
+{}
+This usually means that s6-supervise was not stopped cleanly (e.g. manually killed).
+Learn more: https://pgctl.readthedocs.io/en/latest/user/usage.html#stop
 '''.format(processes)
 
 

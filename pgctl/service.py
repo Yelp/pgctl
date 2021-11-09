@@ -149,9 +149,9 @@ class Service(namedtuple('Service', ['path', 'scratch_dir', 'default_timeout', '
     def processes_currently_running(self) -> typing.Set[int]:
         return self._pids_running_from_fuser() | self._pids_running_from_environment_tracing()
 
-    def force_cleanup(self) -> typing.Optional[str]:
+    def force_cleanup(self, is_stop: bool = True) -> typing.Optional[str]:
         """Forcefully stop a service (i.e., `kill -9` all processes still running."""
-        return terminate_processes(self.processes_currently_running())
+        return terminate_processes(self.processes_currently_running(), is_stop=is_stop)
 
     def __get_timeout(self, name, default):
         timeout = self.path.join(name, abs=1)
