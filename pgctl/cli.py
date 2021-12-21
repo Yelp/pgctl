@@ -422,9 +422,6 @@ class PgctlApp:
                         pgctl_print(f'All services have {state.strings.changed}')
                 else:
                     for change in changes_to_print:
-                        # Need to flush here because otherwise the error
-                        # messages can get duplicated when __show_failure calls
-                        # fork().
                         unbuf_print(change, file=sys.stderr)
 
                 time.sleep(float(self.pgconf['poll']))
@@ -523,12 +520,7 @@ class PgctlApp:
             return
 
         failapp = self.with_services(failed)
-        childpid = os.fork()
-        if childpid:
-            os.waitpid(childpid, 0)
-        else:
-            os.dup2(2, 1)  # send log to stderr
-            failapp.log(interactive=False)  # doesn't return
+        subprocess.call(failapp._log_command(), stdout=sys.stderr)
         if state == 'start':
             # we don't want services that failed to start to be 'up'
             failapp.stop()
@@ -617,15 +609,12 @@ class PgctlApp:
         pgctl_print('reload:', commafy(self.service_names))
         raise PgctlUserMessage('reloading is not yet implemented.')
 
-    def log(self, interactive=None):
-        """Displays the stdout and stderr for a service or group of services"""
+    def _log_command(self, interactive: bool = False) -> typing.Tuple[str]:
         # TODO(p3): -n: send the value to tail -n
         # TODO(p3): -f: force iteractive behavior
         # TODO(p3): -F: force iteractive behavior off
         tail = ('tail', '-n', '30', '--verbose')  # show file headers
 
-        if interactive is None:
-            interactive = sys.stdout.isatty()
         if interactive:
             # we're interactive; give a continuous log
             # TODO-TEST: pgctl log | pb should be non-interactive
@@ -637,7 +626,14 @@ class PgctlApp:
             logfile = service.path.join('logs', 'current')
             logfile = bestrelpath(str(logfile))
             logfiles.append(logfile)
-        exec_(tail + tuple(logfiles))  # never returns
+
+        return tail + tuple(logfiles)
+
+    def log(self, interactive=None):
+        """Displays the stdout and stderr for a service or group of services"""
+        if interactive is None:
+            interactive = sys.stdout.isatty()
+        exec_(self._log_command(interactive))  # never returns
 
     def debug(self):
         """Allow a service to run in the foreground"""
