@@ -5,6 +5,35 @@ Advanced Usage
 
 You may (or may not) want these notes after using pgctl for a while.
 
+
+Service Dependencies
+--------------------
+
+When services depend on each other, you can declare a startup ordering in ``pgctl.yaml`` so that dependencies are ready before their dependents start. On stop, the order is reversed — dependents stop before their dependencies.
+
+.. code-block:: yaml
+
+    dependencies:
+        api:
+            - db
+            - cache
+        web:
+            - api
+
+In this example, ``pgctl start`` will:
+
+1. Start ``db`` and ``cache`` (in parallel, since they have no mutual dependency)
+2. Wait until both are ready
+3. Start ``api``
+4. Wait until ``api`` is ready
+5. Start ``web``
+
+``pgctl stop`` reverses the order: ``web`` stops first, then ``api``, then ``db`` and ``cache``.
+
+If a dependency fails to start, pgctl will not attempt to start services that depend on it.
+
+Circular dependencies (e.g. A depends on B, B depends on A) are detected and reported as an error.
+
 Services that stop slowly
 -------------------------
 

@@ -22,6 +22,10 @@ class CircularAliases(PgctlUserMessage):
     """The user has configured their pgctl aliases with a circular definition."""
 
 
+class CircularDependencies(PgctlUserMessage):
+    """The user has configured service dependencies with a cycle."""
+
+
 class NoPlayground(PgctlUserMessage):
     """The pgctl system could find no playground to operate on."""
 
